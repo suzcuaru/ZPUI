@@ -1,0 +1,634 @@
+[2026-06-12 14:23:00.058] === Zapret Service Manager started ===
+[2026-06-12 14:23:00.102] findZapretDir: C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\mod\bin\winws.exe not found
+[2026-06-12 14:23:00.102] findZapretDir: found winws.exe in C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2
+[2026-06-12 14:23:00.102] exeDir: C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\mod
+[2026-06-12 14:23:00.102] zapretDir: C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2
+[2026-06-12 14:23:00.102] winws.exe found at C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\winws.exe
+[2026-06-12 14:23:00.150] > reg query HKLM\System\CurrentControlSet\Services\zapret /v zapret-discord-youtube (capture)
+[2026-06-12 14:23:00.177]   exit: exit status 1
+[2026-06-12 14:23:01.537] User selected: Install Service
+[2026-06-12 14:23:01.538] listStrategies from C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2: [general (ALT).bat general (ALT10).bat general (ALT11).bat general (ALT12).bat general (ALT2).bat general (ALT3).bat general (ALT4).bat general (ALT5).bat general (ALT6).bat general (ALT7).bat general (ALT8).bat general (ALT9).bat general (FAKE TLS AUTO ALT).bat general (FAKE TLS AUTO ALT2).bat general (FAKE TLS AUTO ALT3).bat general (FAKE TLS AUTO).bat general (SIMPLE FAKE ALT).bat general (SIMPLE FAKE ALT2).bat general (SIMPLE FAKE).bat general.bat]
+[2026-06-12 14:23:01.538] Found 20 strategy files
+[2026-06-12 14:23:02.302] Selected strategy: general (ALT).bat (index 1)
+[2026-06-12 14:23:02.302] Reading bat file: C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\general (ALT).bat
+[2026-06-12 14:23:02.302] Bat file raw content:
+@echo off
+chcp 65001 > nul
+:: 65001 - UTF-8
+
+cd /d "%~dp0"
+call service.bat status_zapret
+call service.bat check_updates
+call service.bat load_game_filter
+call service.bat load_user_lists
+echo:
+
+set "BIN=%~dp0bin\"
+set "LISTS=%~dp0lists\"
+cd /d %BIN%
+
+start "zapret: %~n0" /min "%BIN%winws.exe" --wf-tcp=80,443,2053,2083,2087,2096,8443,%GameFilterTCP% --wf-udp=443,19294-19344,50000-50100,%GameFilterUDP% ^
+--filter-udp=443 --hostlist="%LISTS%list-general.txt" --hostlist="%LISTS%list-general-user.txt" --hostlist-exclude="%LISTS%list-exclude.txt" --hostlist-exclude="%LISTS%list-exclude-user.txt" --ipset-exclude="%LISTS%ipset-exclude.txt" --ipset-exclude="%LISTS%ipset-exclude-user.txt" --dpi-desync=fake --dpi-desync-repeats=6 --dpi-desync-fake-quic="%BIN%quic_initial_www_google_com.bin" --new ^
+--filter-udp=19294-19344,50000-50100 --filter-l7=discord,stun --dpi-desync=fake --dpi-desync-fake-discord="%BIN%quic_initial_dbankcloud_ru.bin" --dpi-desync-fake-stun="%BIN%quic_initial_dbankcloud_ru.bin" --dpi-desync-repeats=6 --new ^
+--filter-tcp=2053,2083,2087,2096,8443 --hostlist-domains=discord.media --dpi-desync=fake,fakedsplit --dpi-desync-repeats=6 --dpi-desync-fooling=ts --dpi-desync-fakedsplit-pattern=0x00 --dpi-desync-fake-tls="%BIN%tls_clienthello_www_google_com.bin" --new ^
+--filter-tcp=443 --hostlist="%LISTS%list-google.txt" --ip-id=zero --dpi-desync=fake,fakedsplit --dpi-desync-repeats=6 --dpi-desync-fooling=ts --dpi-desync-fakedsplit-pattern=0x00 --dpi-desync-fake-tls="%BIN%tls_clienthello_www_google_com.bin" --new ^
+--filter-tcp=80,443 --hostlist="%LISTS%list-general.txt" --hostlist="%LISTS%list-general-user.txt" --hostlist-exclude="%LISTS%list-exclude.txt" --hostlist-exclude="%LISTS%list-exclude-user.txt" --ipset-exclude="%LISTS%ipset-exclude.txt" --ipset-exclude="%LISTS%ipset-exclude-user.txt" --dpi-desync=fake,fakedsplit --dpi-desync-repeats=6 --dpi-desync-fooling=ts --dpi-desync-fakedsplit-pattern=0x00 --dpi-desync-fake-tls="%BIN%stun.bin" --dpi-desync-fake-tls="%BIN%tls_clienthello_www_google_com.bin" --dpi-desync-fake-http="%BIN%tls_clienthello_max_ru.bin" --new ^
+--filter-udp=443 --ipset="%LISTS%ipset-all.txt" --hostlist-exclude="%LISTS%list-exclude.txt" --hostlist-exclude="%LISTS%list-exclude-user.txt" --ipset-exclude="%LISTS%ipset-exclude.txt" --ipset-exclude="%LISTS%ipset-exclude-user.txt" --dpi-desync=fake --dpi-desync-repeats=6 --dpi-desync-fake-quic="%BIN%quic_initial_www_google_com.bin" --new ^
+--filter-tcp=80,443,8443 --ipset="%LISTS%ipset-all.txt" --hostlist-exclude="%LISTS%list-exclude.txt" --hostlist-exclude="%LISTS%list-exclude-user.txt" --ipset-exclude="%LISTS%ipset-exclude.txt" --ipset-exclude="%LISTS%ipset-exclude-user.txt" --dpi-desync=fake,fakedsplit --dpi-desync-repeats=6 --dpi-desync-fooling=ts --dpi-desync-fakedsplit-pattern=0x00 --dpi-desync-fake-tls="%BIN%stun.bin" --dpi-desync-fake-tls="%BIN%tls_clienthello_www_google_com.bin" --dpi-desync-fake-http="%BIN%tls_clienthello_max_ru.bin" --new ^
+--filter-tcp=%GameFilterTCP% --ipset="%LISTS%ipset-all.txt" --ipset-exclude="%LISTS%ipset-exclude.txt" --ipset-exclude="%LISTS%ipset-exclude-user.txt" --dpi-desync=fake,fakedsplit --dpi-desync-repeats=6 --dpi-desync-any-protocol=1 --dpi-desync-cutoff=n4 --dpi-desync-fooling=ts --dpi-desync-fakedsplit-pattern=0x00 --dpi-desync-fake-tls="%BIN%stun.bin" --dpi-desync-fake-tls="%BIN%tls_clienthello_www_google_com.bin" --dpi-desync-fake-http="%BIN%tls_clienthello_max_ru.bin" --new ^
+--filter-udp=%GameFilterUDP% --ipset="%LISTS%ipset-all.txt" --ipset-exclude="%LISTS%ipset-exclude.txt" --ipset-exclude="%LISTS%ipset-exclude-user.txt" --dpi-desync=fake --dpi-desync-repeats=12 --dpi-desync-any-protocol=1 --dpi-desync-fake-unknown-udp="%BIN%quic_initial_dbankcloud_ru.bin" --dpi-desync-cutoff=n3
+
+[2026-06-12 14:23:02.302]   found winws.exe line, rest: --wf-tcp=80,443,2053,2083,2087,2096,8443,%GameFilterTCP% --wf-udp=443,19294-19344,50000-50100,%GameFilterUDP% ^
+[2026-06-12 14:23:02.302]   full rest: --wf-tcp=80,443,2053,2083,2087,2096,8443,%GameFilterTCP% --wf-udp=443,19294-19344,50000-50100,%GameFilterUDP% ^
+[2026-06-12 14:23:02.302]   continuation line: --filter-udp=443 --hostlist="%LISTS%list-general.txt" --hostlist="%LISTS%list-general-user.txt" --hostlist-exclude="%LIS
+[2026-06-12 14:23:02.302]   continuation line: --filter-udp=19294-19344,50000-50100 --filter-l7=discord,stun --dpi-desync=fake --dpi-desync-fake-discord="%BIN%quic_ini
+[2026-06-12 14:23:02.302]   continuation line: --filter-tcp=2053,2083,2087,2096,8443 --hostlist-domains=discord.media --dpi-desync=fake,fakedsplit --dpi-desync-repeats
+[2026-06-12 14:23:02.302]   continuation line: --filter-tcp=443 --hostlist="%LISTS%list-google.txt" --ip-id=zero --dpi-desync=fake,fakedsplit --dpi-desync-repeats=6 --
+[2026-06-12 14:23:02.302]   continuation line: --filter-tcp=80,443 --hostlist="%LISTS%list-general.txt" --hostlist="%LISTS%list-general-user.txt" --hostlist-exclude="%
+[2026-06-12 14:23:02.302]   continuation line: --filter-udp=443 --ipset="%LISTS%ipset-all.txt" --hostlist-exclude="%LISTS%list-exclude.txt" --hostlist-exclude="%LISTS%
+[2026-06-12 14:23:02.302]   continuation line: --filter-tcp=80,443,8443 --ipset="%LISTS%ipset-all.txt" --hostlist-exclude="%LISTS%list-exclude.txt" --hostlist-exclude=
+[2026-06-12 14:23:02.302]   continuation line: --filter-tcp=%GameFilterTCP% --ipset="%LISTS%ipset-all.txt" --ipset-exclude="%LISTS%ipset-exclude.txt" --ipset-exclude="
+[2026-06-12 14:23:02.302]   continuation line: --filter-udp=%GameFilterUDP% --ipset="%LISTS%ipset-all.txt" --ipset-exclude="%LISTS%ipset-exclude.txt" --ipset-exclude="
+[2026-06-12 14:23:02.302]   args end at line: 
+[2026-06-12 14:23:02.302]   total arg lines: 10
+[2026-06-12 14:23:02.302]   substituting: %BIN% -> C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\, %LISTS% -> C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\
+[2026-06-12 14:23:02.302]   tokenized into 99 tokens
+[2026-06-12 14:23:02.302]   final args: --wf-tcp 80,443,2053,2083,2087,2096,8443,12 --wf-udp 443,19294-19344,50000-50100,12 --filter-udp 443 --hostlist "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-general.txt" --hostlist "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-general-user.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude-user.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync fake --dpi-desync-repeats 6 --dpi-desync-fake-quic "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\quic_initial_www_google_com.bin" --new --filter-udp 19294-19344,50000-50100 --filter-l7 discord,stun --dpi-desync fake --dpi-desync-fake-discord "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\quic_initial_dbankcloud_ru.bin" --dpi-desync-fake-stun "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\quic_initial_dbankcloud_ru.bin" --dpi-desync-repeats 6 --new --filter-tcp 2053,2083,2087,2096,8443 --hostlist-domains discord.media --dpi-desync fake,fakedsplit --dpi-desync-repeats 6 --dpi-desync-fooling ts --dpi-desync-fakedsplit-pattern 0x00 --dpi-desync-fake-tls "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_www_google_com.bin" --new --filter-tcp 443 --hostlist "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-google.txt" --ip-id zero --dpi-desync fake,fakedsplit --dpi-desync-repeats 6 --dpi-desync-fooling ts --dpi-desync-fakedsplit-pattern 0x00 --dpi-desync-fake-tls "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_www_google_com.bin" --new --filter-tcp 80,443 --hostlist "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-general.txt" --hostlist "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-general-user.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude-user.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync fake,fakedsplit --dpi-desync-repeats 6 --dpi-desync-fooling ts --dpi-desync-fakedsplit-pattern 0x00 --dpi-desync-fake-tls "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\stun.bin" --dpi-desync-fake-tls "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_www_google_com.bin" --dpi-desync-fake-http "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_max_ru.bin" --new --filter-udp 443 --ipset "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-all.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude-user.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync fake --dpi-desync-repeats 6 --dpi-desync-fake-quic "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\quic_initial_www_google_com.bin" --new --filter-tcp 80,443,8443 --ipset "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-all.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude-user.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync fake,fakedsplit --dpi-desync-repeats 6 --dpi-desync-fooling ts --dpi-desync-fakedsplit-pattern 0x00 --dpi-desync-fake-tls "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\stun.bin" --dpi-desync-fake-tls "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_www_google_com.bin" --dpi-desync-fake-http "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_max_ru.bin" --new --filter-tcp 12 --ipset "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-all.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync fake,fakedsplit --dpi-desync-repeats 6 --dpi-desync-any-protocol 1 --dpi-desync-cutoff n4 --dpi-desync-fooling ts --dpi-desync-fakedsplit-pattern 0x00 --dpi-desync-fake-tls "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\stun.bin" --dpi-desync-fake-tls "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_www_google_com.bin" --dpi-desync-fake-http "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_max_ru.bin" --new --filter-udp 12 --ipset "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-all.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync fake --dpi-desync-repeats 12 --dpi-desync-any-protocol 1 --dpi-desync-fake-unknown-udp "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\quic_initial_dbankcloud_ru.bin" --dpi-desync-cutoff n3
+[2026-06-12 14:23:02.302] Parsed final args: --wf-tcp 80,443,2053,2083,2087,2096,8443,12 --wf-udp 443,19294-19344,50000-50100,12 --filter-udp 443 --hostlist "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-general.txt" --hostlist "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-general-user.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude-user.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync fake --dpi-desync-repeats 6 --dpi-desync-fake-quic "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\quic_initial_www_google_com.bin" --new --filter-udp 19294-19344,50000-50100 --filter-l7 discord,stun --dpi-desync fake --dpi-desync-fake-discord "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\quic_initial_dbankcloud_ru.bin" --dpi-desync-fake-stun "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\quic_initial_dbankcloud_ru.bin" --dpi-desync-repeats 6 --new --filter-tcp 2053,2083,2087,2096,8443 --hostlist-domains discord.media --dpi-desync fake,fakedsplit --dpi-desync-repeats 6 --dpi-desync-fooling ts --dpi-desync-fakedsplit-pattern 0x00 --dpi-desync-fake-tls "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_www_google_com.bin" --new --filter-tcp 443 --hostlist "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-google.txt" --ip-id zero --dpi-desync fake,fakedsplit --dpi-desync-repeats 6 --dpi-desync-fooling ts --dpi-desync-fakedsplit-pattern 0x00 --dpi-desync-fake-tls "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_www_google_com.bin" --new --filter-tcp 80,443 --hostlist "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-general.txt" --hostlist "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-general-user.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude-user.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync fake,fakedsplit --dpi-desync-repeats 6 --dpi-desync-fooling ts --dpi-desync-fakedsplit-pattern 0x00 --dpi-desync-fake-tls "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\stun.bin" --dpi-desync-fake-tls "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_www_google_com.bin" --dpi-desync-fake-http "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_max_ru.bin" --new --filter-udp 443 --ipset "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-all.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude-user.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync fake --dpi-desync-repeats 6 --dpi-desync-fake-quic "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\quic_initial_www_google_com.bin" --new --filter-tcp 80,443,8443 --ipset "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-all.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude-user.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync fake,fakedsplit --dpi-desync-repeats 6 --dpi-desync-fooling ts --dpi-desync-fakedsplit-pattern 0x00 --dpi-desync-fake-tls "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\stun.bin" --dpi-desync-fake-tls "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_www_google_com.bin" --dpi-desync-fake-http "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_max_ru.bin" --new --filter-tcp 12 --ipset "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-all.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync fake,fakedsplit --dpi-desync-repeats 6 --dpi-desync-any-protocol 1 --dpi-desync-cutoff n4 --dpi-desync-fooling ts --dpi-desync-fakedsplit-pattern 0x00 --dpi-desync-fake-tls "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\stun.bin" --dpi-desync-fake-tls "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_www_google_com.bin" --dpi-desync-fake-http "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_max_ru.bin" --new --filter-udp 12 --ipset "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-all.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync fake --dpi-desync-repeats 12 --dpi-desync-any-protocol 1 --dpi-desync-fake-unknown-udp "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\quic_initial_dbankcloud_ru.bin" --dpi-desync-cutoff n3
+[2026-06-12 14:23:02.303] Stopping/removing existing services...
+[2026-06-12 14:23:02.303]   stop service zapret
+[2026-06-12 14:23:02.303] > net stop zapret
+[2026-06-12 14:23:02.337]   exit: exit status 2
+[2026-06-12 14:23:02.337]   stdout/stderr:
+��㦡� "zapret" �� ����饭�.
+
+��� �맮�� �������⥫쭮� �ࠢ�� ������ NET HELPMSG 3521.
+[2026-06-12 14:23:02.337]   delete service zapret
+[2026-06-12 14:23:02.337] > sc delete zapret
+[2026-06-12 14:23:02.356]   ok
+[2026-06-12 14:23:02.356]   stdout/stderr:
+[SC] DeleteService: �ᯥ�
+[2026-06-12 14:23:02.356]   stop service WinDivert
+[2026-06-12 14:23:02.356] > net stop WinDivert
+[2026-06-12 14:23:02.389]   exit: exit status 2
+[2026-06-12 14:23:02.389]   stdout/stderr:
+���ࠢ��쭮� ��� �㦡�.
+
+��� �맮�� �������⥫쭮� �ࠢ�� ������ NET HELPMSG 2185.
+[2026-06-12 14:23:02.389]   delete service WinDivert
+[2026-06-12 14:23:02.389] > sc delete WinDivert
+[2026-06-12 14:23:02.408]   exit: exit status 1060
+[2026-06-12 14:23:02.408]   stdout/stderr:
+[SC] OpenService: �訡��: 1060:
+
+��������� �㦡� �� ��⠭������.
+[2026-06-12 14:23:02.408]   stop service WinDivert14
+[2026-06-12 14:23:02.408] > net stop WinDivert14
+[2026-06-12 14:23:02.442]   exit: exit status 2
+[2026-06-12 14:23:02.442]   stdout/stderr:
+���ࠢ��쭮� ��� �㦡�.
+
+��� �맮�� �������⥫쭮� �ࠢ�� ������ NET HELPMSG 2185.
+[2026-06-12 14:23:02.442]   delete service WinDivert14
+[2026-06-12 14:23:02.442] > sc delete WinDivert14
+[2026-06-12 14:23:02.461]   exit: exit status 1060
+[2026-06-12 14:23:02.461]   stdout/stderr:
+[SC] OpenService: �訡��: 1060:
+
+��������� �㦡� �� ��⠭������.
+[2026-06-12 14:23:02.461] Full binPath: "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\winws.exe" --wf-tcp 80,443,2053,2083,2087,2096,8443,12 --wf-udp 443,19294-19344,50000-50100,12 --filter-udp 443 --hostlist "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-general.txt" --hostlist "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-general-user.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude-user.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync fake --dpi-desync-repeats 6 --dpi-desync-fake-quic "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\quic_initial_www_google_com.bin" --new --filter-udp 19294-19344,50000-50100 --filter-l7 discord,stun --dpi-desync fake --dpi-desync-fake-discord "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\quic_initial_dbankcloud_ru.bin" --dpi-desync-fake-stun "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\quic_initial_dbankcloud_ru.bin" --dpi-desync-repeats 6 --new --filter-tcp 2053,2083,2087,2096,8443 --hostlist-domains discord.media --dpi-desync fake,fakedsplit --dpi-desync-repeats 6 --dpi-desync-fooling ts --dpi-desync-fakedsplit-pattern 0x00 --dpi-desync-fake-tls "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_www_google_com.bin" --new --filter-tcp 443 --hostlist "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-google.txt" --ip-id zero --dpi-desync fake,fakedsplit --dpi-desync-repeats 6 --dpi-desync-fooling ts --dpi-desync-fakedsplit-pattern 0x00 --dpi-desync-fake-tls "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_www_google_com.bin" --new --filter-tcp 80,443 --hostlist "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-general.txt" --hostlist "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-general-user.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude-user.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync fake,fakedsplit --dpi-desync-repeats 6 --dpi-desync-fooling ts --dpi-desync-fakedsplit-pattern 0x00 --dpi-desync-fake-tls "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\stun.bin" --dpi-desync-fake-tls "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_www_google_com.bin" --dpi-desync-fake-http "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_max_ru.bin" --new --filter-udp 443 --ipset "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-all.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude-user.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync fake --dpi-desync-repeats 6 --dpi-desync-fake-quic "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\quic_initial_www_google_com.bin" --new --filter-tcp 80,443,8443 --ipset "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-all.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude-user.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync fake,fakedsplit --dpi-desync-repeats 6 --dpi-desync-fooling ts --dpi-desync-fakedsplit-pattern 0x00 --dpi-desync-fake-tls "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\stun.bin" --dpi-desync-fake-tls "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_www_google_com.bin" --dpi-desync-fake-http "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_max_ru.bin" --new --filter-tcp 12 --ipset "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-all.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync fake,fakedsplit --dpi-desync-repeats 6 --dpi-desync-any-protocol 1 --dpi-desync-cutoff n4 --dpi-desync-fooling ts --dpi-desync-fakedsplit-pattern 0x00 --dpi-desync-fake-tls "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\stun.bin" --dpi-desync-fake-tls "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_www_google_com.bin" --dpi-desync-fake-http "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_max_ru.bin" --new --filter-udp 12 --ipset "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-all.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync fake --dpi-desync-repeats 12 --dpi-desync-any-protocol 1 --dpi-desync-fake-unknown-udp "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\quic_initial_dbankcloud_ru.bin" --dpi-desync-cutoff n3
+[2026-06-12 14:23:02.461] > sc create zapret binPath= "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\winws.exe" --wf-tcp 80,443,2053,2083,2087,2096,8443,12 --wf-udp 443,19294-19344,50000-50100,12 --filter-udp 443 --hostlist "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-general.txt" --hostlist "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-general-user.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude-user.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync fake --dpi-desync-repeats 6 --dpi-desync-fake-quic "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\quic_initial_www_google_com.bin" --new --filter-udp 19294-19344,50000-50100 --filter-l7 discord,stun --dpi-desync fake --dpi-desync-fake-discord "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\quic_initial_dbankcloud_ru.bin" --dpi-desync-fake-stun "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\quic_initial_dbankcloud_ru.bin" --dpi-desync-repeats 6 --new --filter-tcp 2053,2083,2087,2096,8443 --hostlist-domains discord.media --dpi-desync fake,fakedsplit --dpi-desync-repeats 6 --dpi-desync-fooling ts --dpi-desync-fakedsplit-pattern 0x00 --dpi-desync-fake-tls "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_www_google_com.bin" --new --filter-tcp 443 --hostlist "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-google.txt" --ip-id zero --dpi-desync fake,fakedsplit --dpi-desync-repeats 6 --dpi-desync-fooling ts --dpi-desync-fakedsplit-pattern 0x00 --dpi-desync-fake-tls "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_www_google_com.bin" --new --filter-tcp 80,443 --hostlist "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-general.txt" --hostlist "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-general-user.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude-user.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync fake,fakedsplit --dpi-desync-repeats 6 --dpi-desync-fooling ts --dpi-desync-fakedsplit-pattern 0x00 --dpi-desync-fake-tls "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\stun.bin" --dpi-desync-fake-tls "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_www_google_com.bin" --dpi-desync-fake-http "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_max_ru.bin" --new --filter-udp 443 --ipset "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-all.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude-user.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync fake --dpi-desync-repeats 6 --dpi-desync-fake-quic "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\quic_initial_www_google_com.bin" --new --filter-tcp 80,443,8443 --ipset "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-all.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude-user.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync fake,fakedsplit --dpi-desync-repeats 6 --dpi-desync-fooling ts --dpi-desync-fakedsplit-pattern 0x00 --dpi-desync-fake-tls "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\stun.bin" --dpi-desync-fake-tls "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_www_google_com.bin" --dpi-desync-fake-http "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_max_ru.bin" --new --filter-tcp 12 --ipset "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-all.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync fake,fakedsplit --dpi-desync-repeats 6 --dpi-desync-any-protocol 1 --dpi-desync-cutoff n4 --dpi-desync-fooling ts --dpi-desync-fakedsplit-pattern 0x00 --dpi-desync-fake-tls "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\stun.bin" --dpi-desync-fake-tls "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_www_google_com.bin" --dpi-desync-fake-http "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_max_ru.bin" --new --filter-udp 12 --ipset "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-all.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync fake --dpi-desync-repeats 12 --dpi-desync-any-protocol 1 --dpi-desync-fake-unknown-udp "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\quic_initial_dbankcloud_ru.bin" --dpi-desync-cutoff n3 DisplayName= zapret start= auto
+[2026-06-12 14:23:02.482]   ok
+[2026-06-12 14:23:02.482]   stdout/stderr:
+[SC] CreateService: �ᯥ�
+[2026-06-12 14:23:02.482] sc create SUCCESS
+[2026-06-12 14:23:02.482] > sc description zapret Zapret DPI bypass software
+[2026-06-12 14:23:02.501]   ok
+[2026-06-12 14:23:02.501]   stdout/stderr:
+[SC] ChangeServiceConfig2: �ᯥ�
+[2026-06-12 14:23:02.501] > reg add HKLM\System\CurrentControlSet\Services\zapret /v zapret-discord-youtube /t REG_SZ /d general (ALT) /f
+[2026-06-12 14:23:02.522]   ok
+[2026-06-12 14:23:02.522]   stdout/stderr:
+������ �ᯥ譮 �����襭�.
+[2026-06-12 14:23:02.522] > sc start zapret
+[2026-06-12 14:23:02.574]   ok
+[2026-06-12 14:23:02.574]   stdout/stderr:
+���_�㦡�: zapret 
+        ���                : 10  WIN32_OWN_PROCESS  
+        ����ﭨ�          : 4  RUNNING 
+                                (STOPPABLE, NOT_PAUSABLE, ACCEPTS_SHUTDOWN)
+        ���_��室�_Win32   : 0  (0x0)
+        ���_��室�_�㦡�  : 0  (0x0)
+        ����஫쭠�_�窠  : 0x0
+        ��������           : 0x0
+        ID_�����        : 23596
+        �����              :
+[2026-06-12 14:23:02.574] > sc query zapret
+[2026-06-12 14:23:02.593]   ok
+[2026-06-12 14:23:02.593]   stdout/stderr:
+���_�㦡�: zapret 
+        ���                : 10  WIN32_OWN_PROCESS  
+        ����ﭨ�          : 4  RUNNING 
+                                (STOPPABLE, NOT_PAUSABLE, ACCEPTS_SHUTDOWN)
+        ���_��室�_Win32   : 0  (0x0)
+        ���_��室�_�㦡�  : 0  (0x0)
+        ����஫쭠�_�窠  : 0x0
+        ��������           : 0x0
+[2026-06-12 14:23:02.593]   service zapret exists: true
+[2026-06-12 14:23:02.593] > sc query zapret
+[2026-06-12 14:23:02.614]   ok
+[2026-06-12 14:23:02.614]   stdout/stderr:
+���_�㦡�: zapret 
+        ���                : 10  WIN32_OWN_PROCESS  
+        ����ﭨ�          : 4  RUNNING 
+                                (STOPPABLE, NOT_PAUSABLE, ACCEPTS_SHUTDOWN)
+        ���_��室�_Win32   : 0  (0x0)
+        ���_��室�_�㦡�  : 0  (0x0)
+        ����஫쭠�_�窠  : 0x0
+        ��������           : 0x0
+[2026-06-12 14:23:02.614] Service status: RUNNING
+[2026-06-12 14:23:02.614] > sc query zapret (capture)
+[2026-06-12 14:23:02.635]   ok
+[2026-06-12 14:23:02.635] Final sc query zapret:
+
+���_�㦡�: zapret 
+        ���                : 10  WIN32_OWN_PROCESS  
+        ����ﭨ�          : 4  RUNNING 
+                                (STOPPABLE, NOT_PAUSABLE, ACCEPTS_SHUTDOWN)
+        ���_��室�_Win32   : 0  (0x0)
+        ���_��室�_�㦡�  : 0  (0x0)
+        ����஫쭠�_�窠  : 0x0
+        ��������           : 0x0
+
+[2026-06-12 14:23:16.614] > reg query HKLM\System\CurrentControlSet\Services\zapret /v zapret-discord-youtube (capture)
+[2026-06-12 14:23:16.632]   ok
+[2026-06-12 14:23:16.632] Current strategy from reg: (ALT)
+[2026-06-12 14:23:42.860] User selected: Change Strategy
+[2026-06-12 14:23:42.860] --- Changing strategy ---
+[2026-06-12 14:23:42.860] > sc query zapret
+[2026-06-12 14:23:42.879]   ok
+[2026-06-12 14:23:42.879]   stdout/stderr:
+���_�㦡�: zapret 
+        ���                : 10  WIN32_OWN_PROCESS  
+        ����ﭨ�          : 4  RUNNING 
+                                (STOPPABLE, NOT_PAUSABLE, ACCEPTS_SHUTDOWN)
+        ���_��室�_Win32   : 0  (0x0)
+        ���_��室�_�㦡�  : 0  (0x0)
+        ����஫쭠�_�窠  : 0x0
+        ��������           : 0x0
+[2026-06-12 14:23:42.879]   service zapret exists: true
+[2026-06-12 14:23:42.879] zapret service exists, removing first
+[2026-06-12 14:23:42.879] --- Removing services ---
+[2026-06-12 14:23:42.879] > sc query zapret (capture)
+[2026-06-12 14:23:42.896]   ok
+[2026-06-12 14:23:42.896] Before removal - sc query zapret: ���_�㦡�: zapret 
+        ���                : 10  WIN32_OWN_PROCESS  
+        ����ﭨ�          : 4  RUNNING 
+                                (STOPPABLE, NOT_PAUSABLE, ACCEPTS_SHUTDOWN)
+        ���_��室�_Win32   : 0  (0x0)
+        ���_��室�_�㦡�  : 0  (0x0)
+        ����஫쭠�_�窠  : 0x0
+        ��������           : 0x0
+[2026-06-12 14:23:42.896]   stop service zapret
+[2026-06-12 14:23:42.896] > net stop zapret
+[2026-06-12 14:23:45.436]   ok
+[2026-06-12 14:23:45.436]   stdout/stderr:
+��㦡� "zapret" ��⠭����������..
+��㦡� "zapret" �ᯥ譮 ��⠭������.
+[2026-06-12 14:23:45.436]   delete service zapret
+[2026-06-12 14:23:45.436] > sc delete zapret
+[2026-06-12 14:23:45.455]   ok
+[2026-06-12 14:23:45.455]   stdout/stderr:
+[SC] DeleteService: �ᯥ�
+[2026-06-12 14:23:45.455] > tasklist /FI IMAGENAME eq winws.exe
+[2026-06-12 14:23:45.556]   ok
+[2026-06-12 14:23:45.556]   stdout/stderr:
+���ଠ��: �����, �⢥��騥 ������� �����, ����������.
+[2026-06-12 14:23:45.556] tasklist winws.exe: ���ଠ��: �����, �⢥��騥 ������� �����, ����������.
+[2026-06-12 14:23:45.556] > sc query zapret (capture)
+[2026-06-12 14:23:45.574]   exit: exit status 1060
+[2026-06-12 14:23:45.574] After removal - sc query zapret: 
+[2026-06-12 14:23:45.574] > sc query WinDivert
+[2026-06-12 14:23:45.593]   ok
+[2026-06-12 14:23:45.593]   stdout/stderr:
+���_�㦡�: WinDivert 
+        ���                : 1  KERNEL_DRIVER  
+        ����ﭨ�          : 4  RUNNING 
+                                (STOPPABLE, NOT_PAUSABLE, IGNORES_SHUTDOWN)
+        ���_��室�_Win32   : 0  (0x0)
+        ���_��室�_�㦡�  : 0  (0x0)
+        ����஫쭠�_�窠  : 0x0
+        ��������           : 0x0
+[2026-06-12 14:23:45.593]   service WinDivert exists: true
+[2026-06-12 14:23:45.593] WinDivert service exists, removing...
+[2026-06-12 14:23:45.593]   stop service WinDivert
+[2026-06-12 14:23:45.593] > net stop WinDivert
+[2026-06-12 14:23:45.654]   ok
+[2026-06-12 14:23:45.654]   stdout/stderr:
+��㦡� "WinDivert" �ᯥ譮 ��⠭������.
+[2026-06-12 14:23:45.654]   delete service WinDivert
+[2026-06-12 14:23:45.654] > sc delete WinDivert
+[2026-06-12 14:23:45.672]   exit: exit status 1060
+[2026-06-12 14:23:45.672]   stdout/stderr:
+[SC] OpenService: �訡��: 1060:
+
+��������� �㦡� �� ��⠭������.
+[2026-06-12 14:23:45.672] > sc query WinDivert14
+[2026-06-12 14:23:45.690]   exit: exit status 1060
+[2026-06-12 14:23:45.690]   stdout/stderr:
+[SC] EnumQueryServicesStatus:OpenService: �訡��: 1060:
+
+��������� �㦡� �� ��⠭������.
+[2026-06-12 14:23:45.690]   service WinDivert14 exists: false
+[2026-06-12 14:23:45.690] Remove completed
+[2026-06-12 14:23:45.690] listStrategies from C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2: [general (ALT).bat general (ALT10).bat general (ALT11).bat general (ALT12).bat general (ALT2).bat general (ALT3).bat general (ALT4).bat general (ALT5).bat general (ALT6).bat general (ALT7).bat general (ALT8).bat general (ALT9).bat general (FAKE TLS AUTO ALT).bat general (FAKE TLS AUTO ALT2).bat general (FAKE TLS AUTO ALT3).bat general (FAKE TLS AUTO).bat general (SIMPLE FAKE ALT).bat general (SIMPLE FAKE ALT2).bat general (SIMPLE FAKE).bat general.bat]
+[2026-06-12 14:23:45.690] Found 20 strategy files
+[2026-06-12 14:24:00.218] Selected strategy: general (ALT7).bat (index 10)
+[2026-06-12 14:24:00.218] Reading bat file: C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\general (ALT7).bat
+[2026-06-12 14:24:00.218] Bat file raw content:
+@echo off
+chcp 65001 > nul
+:: 65001 - UTF-8
+
+cd /d "%~dp0"
+call service.bat status_zapret
+call service.bat check_updates
+call service.bat load_game_filter
+call service.bat load_user_lists
+echo:
+
+set "BIN=%~dp0bin\"
+set "LISTS=%~dp0lists\"
+cd /d %BIN%
+
+start "zapret: %~n0" /min "%BIN%winws.exe" --wf-tcp=80,443,2053,2083,2087,2096,8443,%GameFilterTCP% --wf-udp=443,19294-19344,50000-50100,%GameFilterUDP% ^
+--filter-udp=443 --hostlist="%LISTS%list-general.txt" --hostlist="%LISTS%list-general-user.txt" --hostlist-exclude="%LISTS%list-exclude.txt" --hostlist-exclude="%LISTS%list-exclude-user.txt" --ipset-exclude="%LISTS%ipset-exclude.txt" --ipset-exclude="%LISTS%ipset-exclude-user.txt" --dpi-desync=fake --dpi-desync-repeats=6 --dpi-desync-fake-quic="%BIN%quic_initial_www_google_com.bin" --new ^
+--filter-udp=19294-19344,50000-50100 --filter-l7=discord,stun --dpi-desync=fake --dpi-desync-fake-discord="%BIN%quic_initial_dbankcloud_ru.bin" --dpi-desync-fake-stun="%BIN%quic_initial_dbankcloud_ru.bin" --dpi-desync-repeats=6 --new ^
+--filter-tcp=2053,2083,2087,2096,8443 --hostlist-domains=discord.media --dpi-desync=multisplit --dpi-desync-split-pos=2,sniext+1 --dpi-desync-split-seqovl=679 --dpi-desync-split-seqovl-pattern="%BIN%tls_clienthello_www_google_com.bin" --new ^
+--filter-tcp=443 --hostlist="%LISTS%list-google.txt" --ip-id=zero --dpi-desync=multisplit --dpi-desync-split-pos=2,sniext+1 --dpi-desync-split-seqovl=679 --dpi-desync-split-seqovl-pattern="%BIN%tls_clienthello_www_google_com.bin" --new ^
+--filter-tcp=80,443 --hostlist="%LISTS%list-general.txt" --hostlist="%LISTS%list-general-user.txt" --hostlist-exclude="%LISTS%list-exclude.txt" --hostlist-exclude="%LISTS%list-exclude-user.txt" --ipset-exclude="%LISTS%ipset-exclude.txt" --ipset-exclude="%LISTS%ipset-exclude-user.txt" --dpi-desync=multisplit --dpi-desync-split-pos=2,sniext+1 --dpi-desync-split-seqovl=679 --dpi-desync-split-seqovl-pattern="%BIN%tls_clienthello_www_google_com.bin" --new ^
+--filter-udp=443 --ipset="%LISTS%ipset-all.txt" --hostlist-exclude="%LISTS%list-exclude.txt" --hostlist-exclude="%LISTS%list-exclude-user.txt" --ipset-exclude="%LISTS%ipset-exclude.txt" --ipset-exclude="%LISTS%ipset-exclude-user.txt" --dpi-desync=fake --dpi-desync-repeats=6 --dpi-desync-fake-quic="%BIN%quic_initial_www_google_com.bin" --new ^
+--filter-tcp=80,443,8443 --ipset="%LISTS%ipset-all.txt" --hostlist-exclude="%LISTS%list-exclude.txt" --hostlist-exclude="%LISTS%list-exclude-user.txt" --ipset-exclude="%LISTS%ipset-exclude.txt" --ipset-exclude="%LISTS%ipset-exclude-user.txt" --dpi-desync=syndata --new ^
+--filter-tcp=%GameFilterTCP% --ipset="%LISTS%ipset-all.txt" --ipset-exclude="%LISTS%ipset-exclude.txt" --ipset-exclude="%LISTS%ipset-exclude-user.txt" --dpi-desync=syndata --dpi-desync-any-protocol=1 --dpi-desync-cutoff=n4 --new ^
+--filter-udp=%GameFilterUDP% --ipset="%LISTS%ipset-all.txt" --ipset-exclude="%LISTS%ipset-exclude.txt" --ipset-exclude="%LISTS%ipset-exclude-user.txt" --dpi-desync=fake --dpi-desync-repeats=12 --dpi-desync-any-protocol=1 --dpi-desync-fake-unknown-udp="%BIN%quic_initial_dbankcloud_ru.bin" --dpi-desync-cutoff=n2
+
+[2026-06-12 14:24:00.218]   found winws.exe line, rest: --wf-tcp=80,443,2053,2083,2087,2096,8443,%GameFilterTCP% --wf-udp=443,19294-19344,50000-50100,%GameFilterUDP% ^
+[2026-06-12 14:24:00.218]   full rest: --wf-tcp=80,443,2053,2083,2087,2096,8443,%GameFilterTCP% --wf-udp=443,19294-19344,50000-50100,%GameFilterUDP% ^
+[2026-06-12 14:24:00.218]   continuation line: --filter-udp=443 --hostlist="%LISTS%list-general.txt" --hostlist="%LISTS%list-general-user.txt" --hostlist-exclude="%LIS
+[2026-06-12 14:24:00.218]   continuation line: --filter-udp=19294-19344,50000-50100 --filter-l7=discord,stun --dpi-desync=fake --dpi-desync-fake-discord="%BIN%quic_ini
+[2026-06-12 14:24:00.218]   continuation line: --filter-tcp=2053,2083,2087,2096,8443 --hostlist-domains=discord.media --dpi-desync=multisplit --dpi-desync-split-pos=2,
+[2026-06-12 14:24:00.218]   continuation line: --filter-tcp=443 --hostlist="%LISTS%list-google.txt" --ip-id=zero --dpi-desync=multisplit --dpi-desync-split-pos=2,sniex
+[2026-06-12 14:24:00.218]   continuation line: --filter-tcp=80,443 --hostlist="%LISTS%list-general.txt" --hostlist="%LISTS%list-general-user.txt" --hostlist-exclude="%
+[2026-06-12 14:24:00.218]   continuation line: --filter-udp=443 --ipset="%LISTS%ipset-all.txt" --hostlist-exclude="%LISTS%list-exclude.txt" --hostlist-exclude="%LISTS%
+[2026-06-12 14:24:00.218]   continuation line: --filter-tcp=80,443,8443 --ipset="%LISTS%ipset-all.txt" --hostlist-exclude="%LISTS%list-exclude.txt" --hostlist-exclude=
+[2026-06-12 14:24:00.218]   continuation line: --filter-tcp=%GameFilterTCP% --ipset="%LISTS%ipset-all.txt" --ipset-exclude="%LISTS%ipset-exclude.txt" --ipset-exclude="
+[2026-06-12 14:24:00.218]   continuation line: --filter-udp=%GameFilterUDP% --ipset="%LISTS%ipset-all.txt" --ipset-exclude="%LISTS%ipset-exclude.txt" --ipset-exclude="
+[2026-06-12 14:24:00.218]   args end at line: 
+[2026-06-12 14:24:00.218]   total arg lines: 10
+[2026-06-12 14:24:00.218]   substituting: %BIN% -> C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\, %LISTS% -> C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\
+[2026-06-12 14:24:00.219]   tokenized into 82 tokens
+[2026-06-12 14:24:00.219]   final args: --wf-tcp 80,443,2053,2083,2087,2096,8443,12 --wf-udp 443,19294-19344,50000-50100,12 --filter-udp 443 --hostlist "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-general.txt" --hostlist "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-general-user.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude-user.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync fake --dpi-desync-repeats 6 --dpi-desync-fake-quic "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\quic_initial_www_google_com.bin" --new --filter-udp 19294-19344,50000-50100 --filter-l7 discord,stun --dpi-desync fake --dpi-desync-fake-discord "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\quic_initial_dbankcloud_ru.bin" --dpi-desync-fake-stun "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\quic_initial_dbankcloud_ru.bin" --dpi-desync-repeats 6 --new --filter-tcp 2053,2083,2087,2096,8443 --hostlist-domains discord.media --dpi-desync multisplit --dpi-desync-split-pos 2,sniext+1 --dpi-desync-split-seqovl 679 --dpi-desync-split-seqovl-pattern "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_www_google_com.bin" --new --filter-tcp 443 --hostlist "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-google.txt" --ip-id zero --dpi-desync multisplit --dpi-desync-split-pos 2,sniext+1 --dpi-desync-split-seqovl 679 --dpi-desync-split-seqovl-pattern "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_www_google_com.bin" --new --filter-tcp 80,443 --hostlist "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-general.txt" --hostlist "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-general-user.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude-user.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync multisplit --dpi-desync-split-pos 2,sniext+1 --dpi-desync-split-seqovl 679 --dpi-desync-split-seqovl-pattern "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_www_google_com.bin" --new --filter-udp 443 --ipset "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-all.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude-user.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync fake --dpi-desync-repeats 6 --dpi-desync-fake-quic "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\quic_initial_www_google_com.bin" --new --filter-tcp 80,443,8443 --ipset "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-all.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude-user.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync syndata --new --filter-tcp 12 --ipset "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-all.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync syndata --dpi-desync-any-protocol 1 --dpi-desync-cutoff n4 --new --filter-udp 12 --ipset "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-all.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync fake --dpi-desync-repeats 12 --dpi-desync-any-protocol 1 --dpi-desync-fake-unknown-udp "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\quic_initial_dbankcloud_ru.bin" --dpi-desync-cutoff n2
+[2026-06-12 14:24:00.219] Parsed final args: --wf-tcp 80,443,2053,2083,2087,2096,8443,12 --wf-udp 443,19294-19344,50000-50100,12 --filter-udp 443 --hostlist "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-general.txt" --hostlist "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-general-user.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude-user.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync fake --dpi-desync-repeats 6 --dpi-desync-fake-quic "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\quic_initial_www_google_com.bin" --new --filter-udp 19294-19344,50000-50100 --filter-l7 discord,stun --dpi-desync fake --dpi-desync-fake-discord "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\quic_initial_dbankcloud_ru.bin" --dpi-desync-fake-stun "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\quic_initial_dbankcloud_ru.bin" --dpi-desync-repeats 6 --new --filter-tcp 2053,2083,2087,2096,8443 --hostlist-domains discord.media --dpi-desync multisplit --dpi-desync-split-pos 2,sniext+1 --dpi-desync-split-seqovl 679 --dpi-desync-split-seqovl-pattern "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_www_google_com.bin" --new --filter-tcp 443 --hostlist "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-google.txt" --ip-id zero --dpi-desync multisplit --dpi-desync-split-pos 2,sniext+1 --dpi-desync-split-seqovl 679 --dpi-desync-split-seqovl-pattern "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_www_google_com.bin" --new --filter-tcp 80,443 --hostlist "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-general.txt" --hostlist "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-general-user.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude-user.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync multisplit --dpi-desync-split-pos 2,sniext+1 --dpi-desync-split-seqovl 679 --dpi-desync-split-seqovl-pattern "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_www_google_com.bin" --new --filter-udp 443 --ipset "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-all.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude-user.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync fake --dpi-desync-repeats 6 --dpi-desync-fake-quic "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\quic_initial_www_google_com.bin" --new --filter-tcp 80,443,8443 --ipset "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-all.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude-user.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync syndata --new --filter-tcp 12 --ipset "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-all.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync syndata --dpi-desync-any-protocol 1 --dpi-desync-cutoff n4 --new --filter-udp 12 --ipset "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-all.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync fake --dpi-desync-repeats 12 --dpi-desync-any-protocol 1 --dpi-desync-fake-unknown-udp "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\quic_initial_dbankcloud_ru.bin" --dpi-desync-cutoff n2
+[2026-06-12 14:24:00.221] Stopping/removing existing services...
+[2026-06-12 14:24:00.221]   stop service zapret
+[2026-06-12 14:24:00.221] > net stop zapret
+[2026-06-12 14:24:00.253]   exit: exit status 2
+[2026-06-12 14:24:00.253]   stdout/stderr:
+���ࠢ��쭮� ��� �㦡�.
+
+��� �맮�� �������⥫쭮� �ࠢ�� ������ NET HELPMSG 2185.
+[2026-06-12 14:24:00.253]   delete service zapret
+[2026-06-12 14:24:00.253] > sc delete zapret
+[2026-06-12 14:24:00.270]   exit: exit status 1060
+[2026-06-12 14:24:00.271]   stdout/stderr:
+[SC] OpenService: �訡��: 1060:
+
+��������� �㦡� �� ��⠭������.
+[2026-06-12 14:24:00.271]   stop service WinDivert
+[2026-06-12 14:24:00.271] > net stop WinDivert
+[2026-06-12 14:24:00.301]   exit: exit status 2
+[2026-06-12 14:24:00.301]   stdout/stderr:
+���ࠢ��쭮� ��� �㦡�.
+
+��� �맮�� �������⥫쭮� �ࠢ�� ������ NET HELPMSG 2185.
+[2026-06-12 14:24:00.301]   delete service WinDivert
+[2026-06-12 14:24:00.301] > sc delete WinDivert
+[2026-06-12 14:24:00.318]   exit: exit status 1060
+[2026-06-12 14:24:00.318]   stdout/stderr:
+[SC] OpenService: �訡��: 1060:
+
+��������� �㦡� �� ��⠭������.
+[2026-06-12 14:24:00.318]   stop service WinDivert14
+[2026-06-12 14:24:00.318] > net stop WinDivert14
+[2026-06-12 14:24:00.349]   exit: exit status 2
+[2026-06-12 14:24:00.349]   stdout/stderr:
+���ࠢ��쭮� ��� �㦡�.
+
+��� �맮�� �������⥫쭮� �ࠢ�� ������ NET HELPMSG 2185.
+[2026-06-12 14:24:00.349]   delete service WinDivert14
+[2026-06-12 14:24:00.349] > sc delete WinDivert14
+[2026-06-12 14:24:00.366]   exit: exit status 1060
+[2026-06-12 14:24:00.366]   stdout/stderr:
+[SC] OpenService: �訡��: 1060:
+
+��������� �㦡� �� ��⠭������.
+[2026-06-12 14:24:00.366] Full binPath: "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\winws.exe" --wf-tcp 80,443,2053,2083,2087,2096,8443,12 --wf-udp 443,19294-19344,50000-50100,12 --filter-udp 443 --hostlist "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-general.txt" --hostlist "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-general-user.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude-user.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync fake --dpi-desync-repeats 6 --dpi-desync-fake-quic "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\quic_initial_www_google_com.bin" --new --filter-udp 19294-19344,50000-50100 --filter-l7 discord,stun --dpi-desync fake --dpi-desync-fake-discord "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\quic_initial_dbankcloud_ru.bin" --dpi-desync-fake-stun "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\quic_initial_dbankcloud_ru.bin" --dpi-desync-repeats 6 --new --filter-tcp 2053,2083,2087,2096,8443 --hostlist-domains discord.media --dpi-desync multisplit --dpi-desync-split-pos 2,sniext+1 --dpi-desync-split-seqovl 679 --dpi-desync-split-seqovl-pattern "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_www_google_com.bin" --new --filter-tcp 443 --hostlist "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-google.txt" --ip-id zero --dpi-desync multisplit --dpi-desync-split-pos 2,sniext+1 --dpi-desync-split-seqovl 679 --dpi-desync-split-seqovl-pattern "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_www_google_com.bin" --new --filter-tcp 80,443 --hostlist "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-general.txt" --hostlist "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-general-user.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude-user.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync multisplit --dpi-desync-split-pos 2,sniext+1 --dpi-desync-split-seqovl 679 --dpi-desync-split-seqovl-pattern "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_www_google_com.bin" --new --filter-udp 443 --ipset "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-all.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude-user.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync fake --dpi-desync-repeats 6 --dpi-desync-fake-quic "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\quic_initial_www_google_com.bin" --new --filter-tcp 80,443,8443 --ipset "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-all.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude-user.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync syndata --new --filter-tcp 12 --ipset "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-all.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync syndata --dpi-desync-any-protocol 1 --dpi-desync-cutoff n4 --new --filter-udp 12 --ipset "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-all.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync fake --dpi-desync-repeats 12 --dpi-desync-any-protocol 1 --dpi-desync-fake-unknown-udp "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\quic_initial_dbankcloud_ru.bin" --dpi-desync-cutoff n2
+[2026-06-12 14:24:00.366] > sc create zapret binPath= "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\winws.exe" --wf-tcp 80,443,2053,2083,2087,2096,8443,12 --wf-udp 443,19294-19344,50000-50100,12 --filter-udp 443 --hostlist "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-general.txt" --hostlist "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-general-user.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude-user.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync fake --dpi-desync-repeats 6 --dpi-desync-fake-quic "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\quic_initial_www_google_com.bin" --new --filter-udp 19294-19344,50000-50100 --filter-l7 discord,stun --dpi-desync fake --dpi-desync-fake-discord "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\quic_initial_dbankcloud_ru.bin" --dpi-desync-fake-stun "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\quic_initial_dbankcloud_ru.bin" --dpi-desync-repeats 6 --new --filter-tcp 2053,2083,2087,2096,8443 --hostlist-domains discord.media --dpi-desync multisplit --dpi-desync-split-pos 2,sniext+1 --dpi-desync-split-seqovl 679 --dpi-desync-split-seqovl-pattern "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_www_google_com.bin" --new --filter-tcp 443 --hostlist "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-google.txt" --ip-id zero --dpi-desync multisplit --dpi-desync-split-pos 2,sniext+1 --dpi-desync-split-seqovl 679 --dpi-desync-split-seqovl-pattern "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_www_google_com.bin" --new --filter-tcp 80,443 --hostlist "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-general.txt" --hostlist "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-general-user.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude-user.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync multisplit --dpi-desync-split-pos 2,sniext+1 --dpi-desync-split-seqovl 679 --dpi-desync-split-seqovl-pattern "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_www_google_com.bin" --new --filter-udp 443 --ipset "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-all.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude-user.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync fake --dpi-desync-repeats 6 --dpi-desync-fake-quic "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\quic_initial_www_google_com.bin" --new --filter-tcp 80,443,8443 --ipset "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-all.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude-user.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync syndata --new --filter-tcp 12 --ipset "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-all.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync syndata --dpi-desync-any-protocol 1 --dpi-desync-cutoff n4 --new --filter-udp 12 --ipset "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-all.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync fake --dpi-desync-repeats 12 --dpi-desync-any-protocol 1 --dpi-desync-fake-unknown-udp "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\quic_initial_dbankcloud_ru.bin" --dpi-desync-cutoff n2 DisplayName= zapret start= auto
+[2026-06-12 14:24:00.386]   ok
+[2026-06-12 14:24:00.386]   stdout/stderr:
+[SC] CreateService: �ᯥ�
+[2026-06-12 14:24:00.386] sc create SUCCESS
+[2026-06-12 14:24:00.386] > sc description zapret Zapret DPI bypass software
+[2026-06-12 14:24:00.405]   ok
+[2026-06-12 14:24:00.405]   stdout/stderr:
+[SC] ChangeServiceConfig2: �ᯥ�
+[2026-06-12 14:24:00.405] > reg add HKLM\System\CurrentControlSet\Services\zapret /v zapret-discord-youtube /t REG_SZ /d general (ALT7) /f
+[2026-06-12 14:24:00.425]   ok
+[2026-06-12 14:24:00.425]   stdout/stderr:
+������ �ᯥ譮 �����襭�.
+[2026-06-12 14:24:00.425] > sc start zapret
+[2026-06-12 14:24:00.468]   ok
+[2026-06-12 14:24:00.468]   stdout/stderr:
+���_�㦡�: zapret 
+        ���                : 10  WIN32_OWN_PROCESS  
+        ����ﭨ�          : 4  RUNNING 
+                                (STOPPABLE, NOT_PAUSABLE, ACCEPTS_SHUTDOWN)
+        ���_��室�_Win32   : 0  (0x0)
+        ���_��室�_�㦡�  : 0  (0x0)
+        ����஫쭠�_�窠  : 0x0
+        ��������           : 0x0
+        ID_�����        : 24896
+        �����              :
+[2026-06-12 14:24:00.468] > sc query zapret
+[2026-06-12 14:24:00.486]   ok
+[2026-06-12 14:24:00.486]   stdout/stderr:
+���_�㦡�: zapret 
+        ���                : 10  WIN32_OWN_PROCESS  
+        ����ﭨ�          : 4  RUNNING 
+                                (STOPPABLE, NOT_PAUSABLE, ACCEPTS_SHUTDOWN)
+        ���_��室�_Win32   : 0  (0x0)
+        ���_��室�_�㦡�  : 0  (0x0)
+        ����஫쭠�_�窠  : 0x0
+        ��������           : 0x0
+[2026-06-12 14:24:00.486]   service zapret exists: true
+[2026-06-12 14:24:00.486] > sc query zapret
+[2026-06-12 14:24:00.505]   ok
+[2026-06-12 14:24:00.505]   stdout/stderr:
+���_�㦡�: zapret 
+        ���                : 10  WIN32_OWN_PROCESS  
+        ����ﭨ�          : 4  RUNNING 
+                                (STOPPABLE, NOT_PAUSABLE, ACCEPTS_SHUTDOWN)
+        ���_��室�_Win32   : 0  (0x0)
+        ���_��室�_�㦡�  : 0  (0x0)
+        ����஫쭠�_�窠  : 0x0
+        ��������           : 0x0
+[2026-06-12 14:24:00.505] Service status: RUNNING
+[2026-06-12 14:24:00.505] > sc query zapret (capture)
+[2026-06-12 14:24:00.525]   ok
+[2026-06-12 14:24:00.525] Final sc query zapret:
+
+���_�㦡�: zapret 
+        ���                : 10  WIN32_OWN_PROCESS  
+        ����ﭨ�          : 4  RUNNING 
+                                (STOPPABLE, NOT_PAUSABLE, ACCEPTS_SHUTDOWN)
+        ���_��室�_Win32   : 0  (0x0)
+        ���_��室�_�㦡�  : 0  (0x0)
+        ����஫쭠�_�窠  : 0x0
+        ��������           : 0x0
+
+[2026-06-12 14:24:36.986] > reg query HKLM\System\CurrentControlSet\Services\zapret /v zapret-discord-youtube (capture)
+[2026-06-12 14:24:37.002]   ok
+[2026-06-12 14:24:37.003] Current strategy from reg: (ALT7)
+[2026-06-12 14:24:39.116] User selected: Change Strategy
+[2026-06-12 14:24:39.117] --- Changing strategy ---
+[2026-06-12 14:24:39.117] > sc query zapret
+[2026-06-12 14:24:39.134]   ok
+[2026-06-12 14:24:39.134]   stdout/stderr:
+���_�㦡�: zapret 
+        ���                : 10  WIN32_OWN_PROCESS  
+        ����ﭨ�          : 4  RUNNING 
+                                (STOPPABLE, NOT_PAUSABLE, ACCEPTS_SHUTDOWN)
+        ���_��室�_Win32   : 0  (0x0)
+        ���_��室�_�㦡�  : 0  (0x0)
+        ����஫쭠�_�窠  : 0x0
+        ��������           : 0x0
+[2026-06-12 14:24:39.134]   service zapret exists: true
+[2026-06-12 14:24:39.134] zapret service exists, removing first
+[2026-06-12 14:24:39.134] --- Removing services ---
+[2026-06-12 14:24:39.134] > sc query zapret (capture)
+[2026-06-12 14:24:39.151]   ok
+[2026-06-12 14:24:39.152] Before removal - sc query zapret: ���_�㦡�: zapret 
+        ���                : 10  WIN32_OWN_PROCESS  
+        ����ﭨ�          : 4  RUNNING 
+                                (STOPPABLE, NOT_PAUSABLE, ACCEPTS_SHUTDOWN)
+        ���_��室�_Win32   : 0  (0x0)
+        ���_��室�_�㦡�  : 0  (0x0)
+        ����஫쭠�_�窠  : 0x0
+        ��������           : 0x0
+[2026-06-12 14:24:39.152]   stop service zapret
+[2026-06-12 14:24:39.152] > net stop zapret
+[2026-06-12 14:24:41.698]   ok
+[2026-06-12 14:24:41.698]   stdout/stderr:
+��㦡� "zapret" ��⠭����������..
+��㦡� "zapret" �ᯥ譮 ��⠭������.
+[2026-06-12 14:24:41.698]   delete service zapret
+[2026-06-12 14:24:41.698] > sc delete zapret
+[2026-06-12 14:24:41.718]   ok
+[2026-06-12 14:24:41.718]   stdout/stderr:
+[SC] DeleteService: �ᯥ�
+[2026-06-12 14:24:41.718] > tasklist /FI IMAGENAME eq winws.exe
+[2026-06-12 14:24:41.817]   ok
+[2026-06-12 14:24:41.817]   stdout/stderr:
+���ଠ��: �����, �⢥��騥 ������� �����, ����������.
+[2026-06-12 14:24:41.817] tasklist winws.exe: ���ଠ��: �����, �⢥��騥 ������� �����, ����������.
+[2026-06-12 14:24:41.817] > sc query zapret (capture)
+[2026-06-12 14:24:41.836]   exit: exit status 1060
+[2026-06-12 14:24:41.836] After removal - sc query zapret: 
+[2026-06-12 14:24:41.836] > sc query WinDivert
+[2026-06-12 14:24:41.854]   ok
+[2026-06-12 14:24:41.854]   stdout/stderr:
+���_�㦡�: WinDivert 
+        ���                : 1  KERNEL_DRIVER  
+        ����ﭨ�          : 4  RUNNING 
+                                (STOPPABLE, NOT_PAUSABLE, IGNORES_SHUTDOWN)
+        ���_��室�_Win32   : 0  (0x0)
+        ���_��室�_�㦡�  : 0  (0x0)
+        ����஫쭠�_�窠  : 0x0
+        ��������           : 0x0
+[2026-06-12 14:24:41.854]   service WinDivert exists: true
+[2026-06-12 14:24:41.854] WinDivert service exists, removing...
+[2026-06-12 14:24:41.854]   stop service WinDivert
+[2026-06-12 14:24:41.854] > net stop WinDivert
+[2026-06-12 14:24:41.919]   ok
+[2026-06-12 14:24:41.919]   stdout/stderr:
+��㦡� "WinDivert" �ᯥ譮 ��⠭������.
+[2026-06-12 14:24:41.919]   delete service WinDivert
+[2026-06-12 14:24:41.919] > sc delete WinDivert
+[2026-06-12 14:24:41.937]   exit: exit status 1060
+[2026-06-12 14:24:41.937]   stdout/stderr:
+[SC] OpenService: �訡��: 1060:
+
+��������� �㦡� �� ��⠭������.
+[2026-06-12 14:24:41.937] > sc query WinDivert14
+[2026-06-12 14:24:41.955]   exit: exit status 1060
+[2026-06-12 14:24:41.955]   stdout/stderr:
+[SC] EnumQueryServicesStatus:OpenService: �訡��: 1060:
+
+��������� �㦡� �� ��⠭������.
+[2026-06-12 14:24:41.955]   service WinDivert14 exists: false
+[2026-06-12 14:24:41.955] Remove completed
+[2026-06-12 14:24:41.955] listStrategies from C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2: [general (ALT).bat general (ALT10).bat general (ALT11).bat general (ALT12).bat general (ALT2).bat general (ALT3).bat general (ALT4).bat general (ALT5).bat general (ALT6).bat general (ALT7).bat general (ALT8).bat general (ALT9).bat general (FAKE TLS AUTO ALT).bat general (FAKE TLS AUTO ALT2).bat general (FAKE TLS AUTO ALT3).bat general (FAKE TLS AUTO).bat general (SIMPLE FAKE ALT).bat general (SIMPLE FAKE ALT2).bat general (SIMPLE FAKE).bat general.bat]
+[2026-06-12 14:24:41.955] Found 20 strategy files
+[2026-06-12 14:24:46.700] Selected strategy: general (ALT10).bat (index 2)
+[2026-06-12 14:24:46.700] Reading bat file: C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\general (ALT10).bat
+[2026-06-12 14:24:46.718] Bat file raw content:
+@echo off
+chcp 65001 > nul
+:: 65001 - UTF-8
+
+cd /d "%~dp0"
+call service.bat status_zapret
+call service.bat check_updates
+call service.bat load_game_filter
+call service.bat load_user_lists
+echo:
+
+set "BIN=%~dp0bin\"
+set "LISTS=%~dp0lists\"
+cd /d %BIN%
+
+start "zapret: %~n0" /min "%BIN%winws.exe" --wf-tcp=80,443,2053,2083,2087,2096,8443,%GameFilterTCP% --wf-udp=443,19294-19344,50000-50100,%GameFilterUDP% ^
+--filter-udp=443 --hostlist="%LISTS%list-general.txt" --hostlist="%LISTS%list-general-user.txt" --hostlist-exclude="%LISTS%list-exclude.txt" --hostlist-exclude="%LISTS%list-exclude-user.txt" --ipset-exclude="%LISTS%ipset-exclude.txt" --ipset-exclude="%LISTS%ipset-exclude-user.txt" --dpi-desync=fake --dpi-desync-repeats=6 --dpi-desync-fake-quic="%BIN%quic_initial_www_google_com.bin" --new ^
+--filter-udp=19294-19344,50000-50100 --filter-l7=discord,stun --dpi-desync=fake --dpi-desync-fake-discord="%BIN%quic_initial_dbankcloud_ru.bin" --dpi-desync-fake-stun="%BIN%quic_initial_dbankcloud_ru.bin" --dpi-desync-repeats=6 --new ^
+--filter-tcp=2053,2083,2087,2096,8443 --hostlist-domains=discord.media --dpi-desync=fake --dpi-desync-repeats=6 --dpi-desync-fooling=ts --dpi-desync-fake-tls="%BIN%tls_clienthello_www_google_com.bin" --dpi-desync-fake-tls-mod=none --new ^
+--filter-tcp=443 --hostlist="%LISTS%list-google.txt" --ip-id=zero --dpi-desync=fake --dpi-desync-repeats=6 --dpi-desync-fooling=ts --dpi-desync-fake-tls="%BIN%tls_clienthello_www_google_com.bin" --new ^
+--filter-tcp=80,443 --hostlist="%LISTS%list-general.txt" --hostlist="%LISTS%list-general-user.txt" --hostlist-exclude="%LISTS%list-exclude.txt" --hostlist-exclude="%LISTS%list-exclude-user.txt" --ipset-exclude="%LISTS%ipset-exclude.txt" --ipset-exclude="%LISTS%ipset-exclude-user.txt" --dpi-desync=fake --dpi-desync-repeats=6 --dpi-desync-fooling=ts --dpi-desync-fake-tls="%BIN%stun.bin" --dpi-desync-fake-tls="%BIN%tls_clienthello_4pda_to.bin" --dpi-desync-fake-http="%BIN%tls_clienthello_max_ru.bin" --new ^
+--filter-udp=443 --ipset="%LISTS%ipset-all.txt" --hostlist-exclude="%LISTS%list-exclude.txt" --hostlist-exclude="%LISTS%list-exclude-user.txt" --ipset-exclude="%LISTS%ipset-exclude.txt" --ipset-exclude="%LISTS%ipset-exclude-user.txt" --dpi-desync=fake --dpi-desync-repeats=6 --dpi-desync-fake-quic="%BIN%quic_initial_www_google_com.bin" --new ^
+--filter-tcp=80,443,8443 --ipset="%LISTS%ipset-all.txt" --hostlist-exclude="%LISTS%list-exclude.txt" --hostlist-exclude="%LISTS%list-exclude-user.txt" --ipset-exclude="%LISTS%ipset-exclude.txt" --ipset-exclude="%LISTS%ipset-exclude-user.txt" --dpi-desync=fake --dpi-desync-repeats=6 --dpi-desync-fooling=ts --dpi-desync-fake-tls="%BIN%stun.bin" --dpi-desync-fake-tls="%BIN%tls_clienthello_4pda_to.bin" --dpi-desync-fake-http="%BIN%tls_clienthello_max_ru.bin" --new ^
+--filter-tcp=%GameFilterTCP% --ipset="%LISTS%ipset-all.txt" --ipset-exclude="%LISTS%ipset-exclude.txt" --ipset-exclude="%LISTS%ipset-exclude-user.txt" --dpi-desync=fake --dpi-desync-repeats=6 --dpi-desync-any-protocol=1 --dpi-desync-cutoff=n3 --dpi-desync-fooling=ts --dpi-desync-fake-tls="%BIN%stun.bin" --dpi-desync-fake-tls="%BIN%tls_clienthello_4pda_to.bin" --dpi-desync-fake-http="%BIN%tls_clienthello_max_ru.bin" --new ^
+--filter-udp=%GameFilterUDP% --ipset="%LISTS%ipset-all.txt" --ipset-exclude="%LISTS%ipset-exclude.txt" --ipset-exclude="%LISTS%ipset-exclude-user.txt" --dpi-desync=fake --dpi-desync-repeats=12 --dpi-desync-any-protocol=1 --dpi-desync-fake-unknown-udp="%BIN%quic_initial_dbankcloud_ru.bin" --dpi-desync-cutoff=n2
+
+[2026-06-12 14:24:46.718]   found winws.exe line, rest: --wf-tcp=80,443,2053,2083,2087,2096,8443,%GameFilterTCP% --wf-udp=443,19294-19344,50000-50100,%GameFilterUDP% ^
+[2026-06-12 14:24:46.718]   full rest: --wf-tcp=80,443,2053,2083,2087,2096,8443,%GameFilterTCP% --wf-udp=443,19294-19344,50000-50100,%GameFilterUDP% ^
+[2026-06-12 14:24:46.718]   continuation line: --filter-udp=443 --hostlist="%LISTS%list-general.txt" --hostlist="%LISTS%list-general-user.txt" --hostlist-exclude="%LIS
+[2026-06-12 14:24:46.718]   continuation line: --filter-udp=19294-19344,50000-50100 --filter-l7=discord,stun --dpi-desync=fake --dpi-desync-fake-discord="%BIN%quic_ini
+[2026-06-12 14:24:46.718]   continuation line: --filter-tcp=2053,2083,2087,2096,8443 --hostlist-domains=discord.media --dpi-desync=fake --dpi-desync-repeats=6 --dpi-de
+[2026-06-12 14:24:46.718]   continuation line: --filter-tcp=443 --hostlist="%LISTS%list-google.txt" --ip-id=zero --dpi-desync=fake --dpi-desync-repeats=6 --dpi-desync-
+[2026-06-12 14:24:46.718]   continuation line: --filter-tcp=80,443 --hostlist="%LISTS%list-general.txt" --hostlist="%LISTS%list-general-user.txt" --hostlist-exclude="%
+[2026-06-12 14:24:46.718]   continuation line: --filter-udp=443 --ipset="%LISTS%ipset-all.txt" --hostlist-exclude="%LISTS%list-exclude.txt" --hostlist-exclude="%LISTS%
+[2026-06-12 14:24:46.718]   continuation line: --filter-tcp=80,443,8443 --ipset="%LISTS%ipset-all.txt" --hostlist-exclude="%LISTS%list-exclude.txt" --hostlist-exclude=
+[2026-06-12 14:24:46.718]   continuation line: --filter-tcp=%GameFilterTCP% --ipset="%LISTS%ipset-all.txt" --ipset-exclude="%LISTS%ipset-exclude.txt" --ipset-exclude="
+[2026-06-12 14:24:46.718]   continuation line: --filter-udp=%GameFilterUDP% --ipset="%LISTS%ipset-all.txt" --ipset-exclude="%LISTS%ipset-exclude.txt" --ipset-exclude="
+[2026-06-12 14:24:46.718]   args end at line: 
+[2026-06-12 14:24:46.718]   total arg lines: 10
+[2026-06-12 14:24:46.718]   substituting: %BIN% -> C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\, %LISTS% -> C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\
+[2026-06-12 14:24:46.718]   tokenized into 95 tokens
+[2026-06-12 14:24:46.718]   final args: --wf-tcp 80,443,2053,2083,2087,2096,8443,12 --wf-udp 443,19294-19344,50000-50100,12 --filter-udp 443 --hostlist "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-general.txt" --hostlist "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-general-user.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude-user.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync fake --dpi-desync-repeats 6 --dpi-desync-fake-quic "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\quic_initial_www_google_com.bin" --new --filter-udp 19294-19344,50000-50100 --filter-l7 discord,stun --dpi-desync fake --dpi-desync-fake-discord "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\quic_initial_dbankcloud_ru.bin" --dpi-desync-fake-stun "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\quic_initial_dbankcloud_ru.bin" --dpi-desync-repeats 6 --new --filter-tcp 2053,2083,2087,2096,8443 --hostlist-domains discord.media --dpi-desync fake --dpi-desync-repeats 6 --dpi-desync-fooling ts --dpi-desync-fake-tls "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_www_google_com.bin" --dpi-desync-fake-tls-mod none --new --filter-tcp 443 --hostlist "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-google.txt" --ip-id zero --dpi-desync fake --dpi-desync-repeats 6 --dpi-desync-fooling ts --dpi-desync-fake-tls "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_www_google_com.bin" --new --filter-tcp 80,443 --hostlist "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-general.txt" --hostlist "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-general-user.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude-user.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync fake --dpi-desync-repeats 6 --dpi-desync-fooling ts --dpi-desync-fake-tls "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\stun.bin" --dpi-desync-fake-tls "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_4pda_to.bin" --dpi-desync-fake-http "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_max_ru.bin" --new --filter-udp 443 --ipset "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-all.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude-user.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync fake --dpi-desync-repeats 6 --dpi-desync-fake-quic "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\quic_initial_www_google_com.bin" --new --filter-tcp 80,443,8443 --ipset "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-all.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude-user.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync fake --dpi-desync-repeats 6 --dpi-desync-fooling ts --dpi-desync-fake-tls "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\stun.bin" --dpi-desync-fake-tls "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_4pda_to.bin" --dpi-desync-fake-http "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_max_ru.bin" --new --filter-tcp 12 --ipset "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-all.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync fake --dpi-desync-repeats 6 --dpi-desync-any-protocol 1 --dpi-desync-cutoff n3 --dpi-desync-fooling ts --dpi-desync-fake-tls "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\stun.bin" --dpi-desync-fake-tls "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_4pda_to.bin" --dpi-desync-fake-http "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_max_ru.bin" --new --filter-udp 12 --ipset "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-all.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync fake --dpi-desync-repeats 12 --dpi-desync-any-protocol 1 --dpi-desync-fake-unknown-udp "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\quic_initial_dbankcloud_ru.bin" --dpi-desync-cutoff n2
+[2026-06-12 14:24:46.718] Parsed final args: --wf-tcp 80,443,2053,2083,2087,2096,8443,12 --wf-udp 443,19294-19344,50000-50100,12 --filter-udp 443 --hostlist "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-general.txt" --hostlist "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-general-user.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude-user.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync fake --dpi-desync-repeats 6 --dpi-desync-fake-quic "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\quic_initial_www_google_com.bin" --new --filter-udp 19294-19344,50000-50100 --filter-l7 discord,stun --dpi-desync fake --dpi-desync-fake-discord "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\quic_initial_dbankcloud_ru.bin" --dpi-desync-fake-stun "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\quic_initial_dbankcloud_ru.bin" --dpi-desync-repeats 6 --new --filter-tcp 2053,2083,2087,2096,8443 --hostlist-domains discord.media --dpi-desync fake --dpi-desync-repeats 6 --dpi-desync-fooling ts --dpi-desync-fake-tls "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_www_google_com.bin" --dpi-desync-fake-tls-mod none --new --filter-tcp 443 --hostlist "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-google.txt" --ip-id zero --dpi-desync fake --dpi-desync-repeats 6 --dpi-desync-fooling ts --dpi-desync-fake-tls "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_www_google_com.bin" --new --filter-tcp 80,443 --hostlist "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-general.txt" --hostlist "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-general-user.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude-user.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync fake --dpi-desync-repeats 6 --dpi-desync-fooling ts --dpi-desync-fake-tls "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\stun.bin" --dpi-desync-fake-tls "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_4pda_to.bin" --dpi-desync-fake-http "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_max_ru.bin" --new --filter-udp 443 --ipset "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-all.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude-user.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync fake --dpi-desync-repeats 6 --dpi-desync-fake-quic "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\quic_initial_www_google_com.bin" --new --filter-tcp 80,443,8443 --ipset "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-all.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude-user.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync fake --dpi-desync-repeats 6 --dpi-desync-fooling ts --dpi-desync-fake-tls "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\stun.bin" --dpi-desync-fake-tls "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_4pda_to.bin" --dpi-desync-fake-http "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_max_ru.bin" --new --filter-tcp 12 --ipset "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-all.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync fake --dpi-desync-repeats 6 --dpi-desync-any-protocol 1 --dpi-desync-cutoff n3 --dpi-desync-fooling ts --dpi-desync-fake-tls "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\stun.bin" --dpi-desync-fake-tls "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_4pda_to.bin" --dpi-desync-fake-http "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_max_ru.bin" --new --filter-udp 12 --ipset "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-all.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync fake --dpi-desync-repeats 12 --dpi-desync-any-protocol 1 --dpi-desync-fake-unknown-udp "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\quic_initial_dbankcloud_ru.bin" --dpi-desync-cutoff n2
+[2026-06-12 14:24:46.719] Stopping/removing existing services...
+[2026-06-12 14:24:46.723]   stop service zapret
+[2026-06-12 14:24:46.723] > net stop zapret
+[2026-06-12 14:24:46.757]   exit: exit status 2
+[2026-06-12 14:24:46.757]   stdout/stderr:
+���ࠢ��쭮� ��� �㦡�.
+
+��� �맮�� �������⥫쭮� �ࠢ�� ������ NET HELPMSG 2185.
+[2026-06-12 14:24:46.757]   delete service zapret
+[2026-06-12 14:24:46.757] > sc delete zapret
+[2026-06-12 14:24:46.774]   exit: exit status 1060
+[2026-06-12 14:24:46.774]   stdout/stderr:
+[SC] OpenService: �訡��: 1060:
+
+��������� �㦡� �� ��⠭������.
+[2026-06-12 14:24:46.774]   stop service WinDivert
+[2026-06-12 14:24:46.774] > net stop WinDivert
+[2026-06-12 14:24:46.806]   exit: exit status 2
+[2026-06-12 14:24:46.806]   stdout/stderr:
+���ࠢ��쭮� ��� �㦡�.
+
+��� �맮�� �������⥫쭮� �ࠢ�� ������ NET HELPMSG 2185.
+[2026-06-12 14:24:46.806]   delete service WinDivert
+[2026-06-12 14:24:46.806] > sc delete WinDivert
+[2026-06-12 14:24:46.823]   exit: exit status 1060
+[2026-06-12 14:24:46.823]   stdout/stderr:
+[SC] OpenService: �訡��: 1060:
+
+��������� �㦡� �� ��⠭������.
+[2026-06-12 14:24:46.823]   stop service WinDivert14
+[2026-06-12 14:24:46.824] > net stop WinDivert14
+[2026-06-12 14:24:46.855]   exit: exit status 2
+[2026-06-12 14:24:46.855]   stdout/stderr:
+���ࠢ��쭮� ��� �㦡�.
+
+��� �맮�� �������⥫쭮� �ࠢ�� ������ NET HELPMSG 2185.
+[2026-06-12 14:24:46.855]   delete service WinDivert14
+[2026-06-12 14:24:46.855] > sc delete WinDivert14
+[2026-06-12 14:24:46.871]   exit: exit status 1060
+[2026-06-12 14:24:46.871]   stdout/stderr:
+[SC] OpenService: �訡��: 1060:
+
+��������� �㦡� �� ��⠭������.
+[2026-06-12 14:24:46.871] Full binPath: "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\winws.exe" --wf-tcp 80,443,2053,2083,2087,2096,8443,12 --wf-udp 443,19294-19344,50000-50100,12 --filter-udp 443 --hostlist "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-general.txt" --hostlist "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-general-user.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude-user.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync fake --dpi-desync-repeats 6 --dpi-desync-fake-quic "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\quic_initial_www_google_com.bin" --new --filter-udp 19294-19344,50000-50100 --filter-l7 discord,stun --dpi-desync fake --dpi-desync-fake-discord "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\quic_initial_dbankcloud_ru.bin" --dpi-desync-fake-stun "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\quic_initial_dbankcloud_ru.bin" --dpi-desync-repeats 6 --new --filter-tcp 2053,2083,2087,2096,8443 --hostlist-domains discord.media --dpi-desync fake --dpi-desync-repeats 6 --dpi-desync-fooling ts --dpi-desync-fake-tls "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_www_google_com.bin" --dpi-desync-fake-tls-mod none --new --filter-tcp 443 --hostlist "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-google.txt" --ip-id zero --dpi-desync fake --dpi-desync-repeats 6 --dpi-desync-fooling ts --dpi-desync-fake-tls "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_www_google_com.bin" --new --filter-tcp 80,443 --hostlist "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-general.txt" --hostlist "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-general-user.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude-user.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync fake --dpi-desync-repeats 6 --dpi-desync-fooling ts --dpi-desync-fake-tls "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\stun.bin" --dpi-desync-fake-tls "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_4pda_to.bin" --dpi-desync-fake-http "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_max_ru.bin" --new --filter-udp 443 --ipset "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-all.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude-user.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync fake --dpi-desync-repeats 6 --dpi-desync-fake-quic "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\quic_initial_www_google_com.bin" --new --filter-tcp 80,443,8443 --ipset "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-all.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude-user.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync fake --dpi-desync-repeats 6 --dpi-desync-fooling ts --dpi-desync-fake-tls "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\stun.bin" --dpi-desync-fake-tls "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_4pda_to.bin" --dpi-desync-fake-http "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_max_ru.bin" --new --filter-tcp 12 --ipset "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-all.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync fake --dpi-desync-repeats 6 --dpi-desync-any-protocol 1 --dpi-desync-cutoff n3 --dpi-desync-fooling ts --dpi-desync-fake-tls "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\stun.bin" --dpi-desync-fake-tls "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_4pda_to.bin" --dpi-desync-fake-http "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_max_ru.bin" --new --filter-udp 12 --ipset "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-all.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync fake --dpi-desync-repeats 12 --dpi-desync-any-protocol 1 --dpi-desync-fake-unknown-udp "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\quic_initial_dbankcloud_ru.bin" --dpi-desync-cutoff n2
+[2026-06-12 14:24:46.871] > sc create zapret binPath= "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\winws.exe" --wf-tcp 80,443,2053,2083,2087,2096,8443,12 --wf-udp 443,19294-19344,50000-50100,12 --filter-udp 443 --hostlist "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-general.txt" --hostlist "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-general-user.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude-user.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync fake --dpi-desync-repeats 6 --dpi-desync-fake-quic "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\quic_initial_www_google_com.bin" --new --filter-udp 19294-19344,50000-50100 --filter-l7 discord,stun --dpi-desync fake --dpi-desync-fake-discord "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\quic_initial_dbankcloud_ru.bin" --dpi-desync-fake-stun "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\quic_initial_dbankcloud_ru.bin" --dpi-desync-repeats 6 --new --filter-tcp 2053,2083,2087,2096,8443 --hostlist-domains discord.media --dpi-desync fake --dpi-desync-repeats 6 --dpi-desync-fooling ts --dpi-desync-fake-tls "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_www_google_com.bin" --dpi-desync-fake-tls-mod none --new --filter-tcp 443 --hostlist "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-google.txt" --ip-id zero --dpi-desync fake --dpi-desync-repeats 6 --dpi-desync-fooling ts --dpi-desync-fake-tls "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_www_google_com.bin" --new --filter-tcp 80,443 --hostlist "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-general.txt" --hostlist "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-general-user.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude-user.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync fake --dpi-desync-repeats 6 --dpi-desync-fooling ts --dpi-desync-fake-tls "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\stun.bin" --dpi-desync-fake-tls "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_4pda_to.bin" --dpi-desync-fake-http "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_max_ru.bin" --new --filter-udp 443 --ipset "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-all.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude-user.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync fake --dpi-desync-repeats 6 --dpi-desync-fake-quic "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\quic_initial_www_google_com.bin" --new --filter-tcp 80,443,8443 --ipset "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-all.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude.txt" --hostlist-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\list-exclude-user.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync fake --dpi-desync-repeats 6 --dpi-desync-fooling ts --dpi-desync-fake-tls "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\stun.bin" --dpi-desync-fake-tls "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_4pda_to.bin" --dpi-desync-fake-http "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_max_ru.bin" --new --filter-tcp 12 --ipset "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-all.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync fake --dpi-desync-repeats 6 --dpi-desync-any-protocol 1 --dpi-desync-cutoff n3 --dpi-desync-fooling ts --dpi-desync-fake-tls "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\stun.bin" --dpi-desync-fake-tls "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_4pda_to.bin" --dpi-desync-fake-http "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\tls_clienthello_max_ru.bin" --new --filter-udp 12 --ipset "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-all.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude.txt" --ipset-exclude "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\lists\ipset-exclude-user.txt" --dpi-desync fake --dpi-desync-repeats 12 --dpi-desync-any-protocol 1 --dpi-desync-fake-unknown-udp "C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\bin\quic_initial_dbankcloud_ru.bin" --dpi-desync-cutoff n2 DisplayName= zapret start= auto
+[2026-06-12 14:24:46.894]   ok
+[2026-06-12 14:24:46.894]   stdout/stderr:
+[SC] CreateService: �ᯥ�
+[2026-06-12 14:24:46.894] sc create SUCCESS
+[2026-06-12 14:24:46.894] > sc description zapret Zapret DPI bypass software
+[2026-06-12 14:24:46.913]   ok
+[2026-06-12 14:24:46.913]   stdout/stderr:
+[SC] ChangeServiceConfig2: �ᯥ�
+[2026-06-12 14:24:46.913] > reg add HKLM\System\CurrentControlSet\Services\zapret /v zapret-discord-youtube /t REG_SZ /d general (ALT10) /f
+[2026-06-12 14:24:46.933]   ok
+[2026-06-12 14:24:46.933]   stdout/stderr:
+������ �ᯥ譮 �����襭�.
+[2026-06-12 14:24:46.933] > sc start zapret
+[2026-06-12 14:24:46.985]   ok
+[2026-06-12 14:24:46.985]   stdout/stderr:
+���_�㦡�: zapret 
+        ���                : 10  WIN32_OWN_PROCESS  
+        ����ﭨ�          : 4  RUNNING 
+                                (STOPPABLE, NOT_PAUSABLE, ACCEPTS_SHUTDOWN)
+        ���_��室�_Win32   : 0  (0x0)
+        ���_��室�_�㦡�  : 0  (0x0)
+        ����஫쭠�_�窠  : 0x0
+        ��������           : 0x0
+        ID_�����        : 20792
+        �����              :
+[2026-06-12 14:24:46.985] > sc query zapret
+[2026-06-12 14:24:47.004]   ok
+[2026-06-12 14:24:47.004]   stdout/stderr:
+���_�㦡�: zapret 
+        ���                : 10  WIN32_OWN_PROCESS  
+        ����ﭨ�          : 4  RUNNING 
+                                (STOPPABLE, NOT_PAUSABLE, ACCEPTS_SHUTDOWN)
+        ���_��室�_Win32   : 0  (0x0)
+        ���_��室�_�㦡�  : 0  (0x0)
+        ����஫쭠�_�窠  : 0x0
+        ��������           : 0x0
+[2026-06-12 14:24:47.004]   service zapret exists: true
+[2026-06-12 14:24:47.004] > sc query zapret
+[2026-06-12 14:24:47.023]   ok
+[2026-06-12 14:24:47.023]   stdout/stderr:
+���_�㦡�: zapret 
+        ���                : 10  WIN32_OWN_PROCESS  
+        ����ﭨ�          : 4  RUNNING 
+                                (STOPPABLE, NOT_PAUSABLE, ACCEPTS_SHUTDOWN)
+        ���_��室�_Win32   : 0  (0x0)
+        ���_��室�_�㦡�  : 0  (0x0)
+        ����஫쭠�_�窠  : 0x0
+        ��������           : 0x0
+[2026-06-12 14:24:47.023] Service status: RUNNING
+[2026-06-12 14:24:47.023] > sc query zapret (capture)
+[2026-06-12 14:24:47.044]   ok
+[2026-06-12 14:24:47.044] Final sc query zapret:
+
+���_�㦡�: zapret 
+        ���                : 10  WIN32_OWN_PROCESS  
+        ����ﭨ�          : 4  RUNNING 
+                                (STOPPABLE, NOT_PAUSABLE, ACCEPTS_SHUTDOWN)
+        ���_��室�_Win32   : 0  (0x0)
+        ���_��室�_�㦡�  : 0  (0x0)
+        ����஫쭠�_�窠  : 0x0
+        ��������           : 0x0
+
