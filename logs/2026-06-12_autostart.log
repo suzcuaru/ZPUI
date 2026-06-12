@@ -1,0 +1,4 @@
+[2026-06-12 02:47:25] [INFO] [autostart] POST /api/autostart/disable received
+[2026-06-12 02:47:25] [INFO] [autostart] Autostart disabled, config saved
+[2026-06-12 02:52:14] [INFO] [autostart] POST /api/autostart/disable received
+[2026-06-12 02:52:14] [INFO] [autostart] Autostart disabled, config saved
