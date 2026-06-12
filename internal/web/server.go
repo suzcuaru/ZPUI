@@ -6,7 +6,7 @@ import (
 	"io/fs"
 	"net"
 	"net/http"
-	"os/exec"
+	"zpui/internal/executil"
 	"strings"
 	"time"
 
@@ -219,7 +219,7 @@ func getMACAddress() string {
 }
 
 func getHostname() string {
-	cmd := exec.Command("hostname")
+	cmd := executil.HiddenCmd("hostname")
 	output, err := cmd.Output()
 	if err != nil {
 		return "unknown"
@@ -229,7 +229,7 @@ func getHostname() string {
 
 func getARPTable() map[string]string {
 	arp := make(map[string]string)
-	cmd := exec.Command("arp", "-a")
+	cmd := executil.HiddenCmd("arp", "-a")
 	output, err := cmd.Output()
 	if err != nil {
 		return arp

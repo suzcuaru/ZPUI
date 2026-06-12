@@ -2,13 +2,13 @@ package monitor
 
 import (
 	"fmt"
-	"os/exec"
 	"regexp"
 	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"zpui/internal/executil"
 	"zpui/internal/logger"
 )
 
@@ -88,7 +88,7 @@ func (m *TrafficMonitor) readNetworkStats() *TrafficStats {
 		Timestamp: time.Now(),
 	}
 
-	cmd := exec.Command("powershell", "-NoProfile", "-Command",
+	cmd := executil.HiddenCmd("powershell", "-NoProfile", "-Command",
 		`$bytes = Get-NetAdapterStatistics | Where-Object { $_.ReceivedBytes -gt 0 -or $_.SentBytes -gt 0 } | Measure-Object -Property ReceivedBytes,SentBytes -Sum; $bytes.Sum[0]; $bytes.Sum[1]`)
 
 	output, err := cmd.Output()

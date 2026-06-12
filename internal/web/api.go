@@ -8,13 +8,13 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	"zpui/internal/executil"
 	"zpui/internal/monitor"
 	"zpui/internal/zapret"
 )
@@ -457,8 +457,8 @@ func (s *Server) handleAutostartEnable(w http.ResponseWriter, r *http.Request) {
 	go func() {
 		exePath := getExePath()
 		s.log.Info("autostart", "Creating scheduled task...")
-		exec.Command("schtasks", "/delete", "/tn", "ZPUI", "/f").Run()
-		cmd := exec.Command("schtasks", "/create",
+		executil.HiddenCmd("schtasks", "/delete", "/tn", "ZPUI", "/f").Run()
+		cmd := executil.HiddenCmd("schtasks", "/create",
 			"/tn", "ZPUI",
 			"/tr", fmt.Sprintf(`"%s"`, exePath),
 			"/sc", "onlogon",
@@ -467,7 +467,7 @@ func (s *Server) handleAutostartEnable(w http.ResponseWriter, r *http.Request) {
 		output, err := cmd.CombinedOutput()
 		if err != nil {
 			s.log.Error("autostart", fmt.Sprintf("Task Scheduler error: %v: %s", err, string(output)))
-			exec.Command("reg", "add",
+			executil.HiddenCmd("reg", "add",
 				`HKCU\Software\Microsoft\Windows\CurrentVersion\Run`,
 				"/v", "ZPUI", "/t", "REG_SZ", "/d",
 				fmt.Sprintf(`"%s"`, exePath), "/f").Run()
@@ -493,8 +493,8 @@ func (s *Server) handleAutostartDisable(w http.ResponseWriter, r *http.Request) 
 	writeJSON(w, map[string]interface{}{"status": "disabled"})
 
 	go func() {
-		exec.Command("schtasks", "/delete", "/tn", "ZPUI", "/f").Run()
-		exec.Command("reg", "delete",
+		executil.HiddenCmd("schtasks", "/delete", "/tn", "ZPUI", "/f").Run()
+		executil.HiddenCmd("reg", "delete",
 			`HKCU\Software\Microsoft\Windows\CurrentVersion\Run`,
 			"/v", "ZPUI", "/f").Run()
 	}()
@@ -637,7 +637,7 @@ type diagResult struct {
 }
 
 func checkService(name, label string) diagResult {
-	cmd := exec.Command("sc", "query", name)
+	cmd := executil.HiddenCmd("sc", "query", name)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return diagResult{Status: "warn", Label: label, Detail: "Не удалось проверить"}
@@ -673,7 +673,7 @@ func checkWinDivert(zapretDir string) diagResult {
 }
 
 func checkTCPTimestamps() diagResult {
-	cmd := exec.Command("netsh", "interface", "tcp", "show", "global")
+	cmd := executil.HiddenCmd("netsh", "interface", "tcp", "show", "global")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return diagResult{Status: "warn", Label: "TCP Timestamps", Detail: "Не удалось проверить"}
@@ -686,7 +686,7 @@ func checkTCPTimestamps() diagResult {
 }
 
 func checkFirewallRule() diagResult {
-	cmd := exec.Command("netsh", "advfirewall", "firewall", "show", "rule", "name=ZPUI_SOCKS5")
+	cmd := executil.HiddenCmd("netsh", "advfirewall", "firewall", "show", "rule", "name=ZPUI_SOCKS5")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return diagResult{Status: "warn", Label: "Firewall (SOCKS5)", Detail: "Правило не найдено"}
@@ -708,7 +708,7 @@ func checkConflictingServices() diagResult {
 		"ksvlasst":          "Kaspersky",
 	}
 	for svc, name := range services {
-		cmd := exec.Command("sc", "query", svc)
+		cmd := executil.HiddenCmd("sc", "query", svc)
 		output, _ := cmd.CombinedOutput()
 		if strings.Contains(string(output), "RUNNING") {
 			conflicts = append(conflicts, name)
@@ -721,7 +721,7 @@ func checkConflictingServices() diagResult {
 }
 
 func checkDNS() diagResult {
-	cmd := exec.Command("powershell", "-Command", "Get-DnsClientServerAddress -AddressFamily IPv4 | Select-Object -First 10")
+	cmd := executil.HiddenCmd("powershell", "-Command", "Get-DnsClientServerAddress -AddressFamily IPv4 | Select-Object -First 10")
 	output, _ := cmd.CombinedOutput()
 	out := string(output)
 	if strings.Contains(out, "127.0.0.1") || strings.Contains(out, "localhost") {
@@ -738,7 +738,7 @@ func checkProxy(s *Server) diagResult {
 }
 
 func checkProcess(name, label string) diagResult {
-	cmd := exec.Command("tasklist", "/FI", "IMAGENAME eq "+name)
+	cmd := executil.HiddenCmd("tasklist", "/FI", "IMAGENAME eq "+name)
 	output, _ := cmd.CombinedOutput()
 	if strings.Contains(string(output), name) {
 		return diagResult{Status: "ok", Label: label, Detail: "Запущен"}
@@ -747,11 +747,11 @@ func checkProcess(name, label string) diagResult {
 }
 
 func checkSystemProxy() diagResult {
-	cmd := exec.Command("reg", "query", `HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings`, "/v", "ProxyEnable")
+	cmd := executil.HiddenCmd("reg", "query", `HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings`, "/v", "ProxyEnable")
 	output, _ := cmd.CombinedOutput()
 	out := string(output)
 	if strings.Contains(out, "0x1") {
-		cmd2 := exec.Command("reg", "query", `HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings`, "/v", "ProxyServer")
+		cmd2 := executil.HiddenCmd("reg", "query", `HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings`, "/v", "ProxyServer")
 		output2, _ := cmd2.CombinedOutput()
 		proxy := strings.TrimSpace(strings.ReplaceAll(string(output2), "ProxyServer", ""))
 		proxy = strings.TrimSpace(strings.ReplaceAll(proxy, "REG_SZ", ""))
@@ -761,7 +761,7 @@ func checkSystemProxy() diagResult {
 }
 
 func checkServiceList(keyword, label string) diagResult {
-	cmd := exec.Command("sc", "query", "state=", "all")
+	cmd := executil.HiddenCmd("sc", "query", "state=", "all")
 	output, _ := cmd.CombinedOutput()
 	if strings.Contains(string(output), keyword) {
 		return diagResult{Status: "warn", Label: label, Detail: "Обнаружен — может конфликтовать"}
@@ -770,7 +770,7 @@ func checkServiceList(keyword, label string) diagResult {
 }
 
 func checkIntelConnectivity() diagResult {
-	cmd := exec.Command("sc", "query", "state=", "all")
+	cmd := executil.HiddenCmd("sc", "query", "state=", "all")
 	output, _ := cmd.CombinedOutput()
 	out := string(output)
 	if strings.Contains(out, "Intel") && strings.Contains(out, "Connectivity") && strings.Contains(out, "Network") {
@@ -780,7 +780,7 @@ func checkIntelConnectivity() diagResult {
 }
 
 func checkCheckPoint() diagResult {
-	cmd := exec.Command("sc", "query", "state=", "all")
+	cmd := executil.HiddenCmd("sc", "query", "state=", "all")
 	output, _ := cmd.CombinedOutput()
 	out := string(output)
 	if strings.Contains(out, "TracSrvWrapper") || strings.Contains(out, "EPWD") {
@@ -790,7 +790,7 @@ func checkCheckPoint() diagResult {
 }
 
 func checkVPN() diagResult {
-	cmd := exec.Command("sc", "query", "state=", "all")
+	cmd := executil.HiddenCmd("sc", "query", "state=", "all")
 	output, _ := cmd.CombinedOutput()
 	out := string(output)
 	var found []string
@@ -852,11 +852,11 @@ func (s *Server) handleCacheClear(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if target == "network" || target == "all" {
-		cmd := exec.Command("ipconfig", "/flushdns")
+		cmd := executil.HiddenCmd("ipconfig", "/flushdns")
 		cmd.Run()
-		cmd2 := exec.Command("netsh", "winsock", "reset")
+		cmd2 := executil.HiddenCmd("netsh", "winsock", "reset")
 		cmd2.Run()
-		cmd3 := exec.Command("netsh", "int", "ip", "reset")
+		cmd3 := executil.HiddenCmd("netsh", "int", "ip", "reset")
 		cmd3.Run()
 		cleared = append(cleared, "DNS cache", "Winsock", "IP stack")
 	}
@@ -1196,7 +1196,7 @@ func (s *Server) handleOpenExternal(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, map[string]interface{}{"error": "only http/https URLs allowed"})
 		return
 	}
-	cmd := exec.Command("cmd", "/c", "start", "", url)
+	cmd := executil.HiddenCmd("cmd", "/c", "start", "", url)
 	cmd.Start()
 	writeJSON(w, map[string]interface{}{"status": "ok"})
 }

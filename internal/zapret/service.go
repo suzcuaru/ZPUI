@@ -3,7 +3,7 @@ package zapret
 import (
 	"fmt"
 	"os"
-	"os/exec"
+	"zpui/internal/executil"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -19,7 +19,7 @@ type ServiceStatus struct {
 func (m *Manager) GetServiceStatus() ServiceStatus {
 	s := ServiceStatus{}
 
-	cmd := exec.Command("sc", "query", "zapret")
+	cmd := executil.HiddenCmd("sc", "query", "zapret")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return s
@@ -38,7 +38,7 @@ func (m *Manager) GetServiceStatus() ServiceStatus {
 			s.Strategy = m.cfg.GetCurrentStrategy()
 		}
 
-		taskOut, _ := exec.Command("tasklist", "/FI", "IMAGENAME eq winws.exe", "/FO", "CSV", "/NH").CombinedOutput()
+		taskOut, _ := executil.HiddenCmd("tasklist", "/FI", "IMAGENAME eq winws.exe", "/FO", "CSV", "/NH").CombinedOutput()
 		for _, line := range strings.Split(string(taskOut), "\n") {
 			line = strings.TrimSpace(line)
 			if strings.Contains(line, "winws.exe") {
@@ -60,7 +60,7 @@ func (m *Manager) GetServiceStatus() ServiceStatus {
 }
 
 func (m *Manager) GetInstalledServiceStrategy() string {
-	cmd := exec.Command("reg", "query",
+	cmd := executil.HiddenCmd("reg", "query",
 		`HKLM\System\CurrentControlSet\Services\zapret`,
 		"/v", "zapret-discord-youtube")
 	output, err := cmd.Output()

@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"zpui/internal/executil"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -338,7 +339,7 @@ func (m *Manager) startWinws(strategyFile string) (*exec.Cmd, error) {
 		argTokens[i] = strings.Trim(argTokens[i], `"`)
 	}
 
-	cmd := exec.Command(winws, argTokens...)
+	cmd := executil.HiddenCmd(winws, argTokens...)
 	cmd.Dir = binDir
 
 	if err := cmd.Start(); err != nil {

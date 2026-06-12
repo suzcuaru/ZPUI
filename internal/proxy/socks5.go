@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"os/exec"
+	"zpui/internal/executil"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -452,9 +452,9 @@ func parseAddr(addr string) (string, int) {
 
 func (s *SOCKS5Server) addFirewallRule(port int) {
 	portStr := fmt.Sprintf("%d", port)
-	exec.Command("netsh", "advfirewall", "firewall", "delete", "rule",
+	executil.HiddenCmd("netsh", "advfirewall", "firewall", "delete", "rule",
 		"name=ZPUI SOCKS5 Proxy").Run()
-	exec.Command("netsh", "advfirewall", "firewall", "add", "rule",
+	executil.HiddenCmd("netsh", "advfirewall", "firewall", "add", "rule",
 		"name=ZPUI SOCKS5 Proxy",
 		"dir=in", "action=allow", "protocol=TCP",
 		"localport="+portStr).Run()
@@ -462,7 +462,7 @@ func (s *SOCKS5Server) addFirewallRule(port int) {
 }
 
 func (s *SOCKS5Server) removeFirewallRule() {
-	exec.Command("netsh", "advfirewall", "firewall", "delete", "rule",
+	executil.HiddenCmd("netsh", "advfirewall", "firewall", "delete", "rule",
 		"name=ZPUI SOCKS5 Proxy").Run()
 	s.log.Info("proxy", "Firewall rule removed")
 }

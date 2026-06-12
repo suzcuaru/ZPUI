@@ -5,14 +5,66 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
+	"sync"
+
+	"github.com/webview/webview_go"
 )
 
-var browserCmd *exec.Cmd
+var (
+	mu sync.Mutex
+	w  webview.WebView
+)
 
 func Open(port int) {
 	url := fmt.Sprintf("http://localhost:%d", port)
 
+	mu.Lock()
+	if w != nil {
+		mu.Unlock()
+		return
+	}
+	mu.Unlock()
+
+	go func() {
+		runtime.LockOSThread()
+		defer runtime.UnlockOSThread()
+
+		wv := webview.New(false)
+		if wv == nil {
+			openInBrowser(url)
+			return
+		}
+
+		mu.Lock()
+		w = wv
+		mu.Unlock()
+
+		wv.SetTitle("ZPUI")
+		wv.SetSize(1100, 850, webview.HintNone)
+		wv.Navigate(url)
+		wv.Run()
+
+		mu.Lock()
+		w = nil
+		mu.Unlock()
+
+		wv.Destroy()
+	}()
+}
+
+func Close() {
+	mu.Lock()
+	wv := w
+	mu.Unlock()
+
+	if wv != nil {
+		wv.Terminate()
+	}
+}
+
+func openInBrowser(url string) {
 	profileDir := filepath.Join(os.TempDir(), "zpui-app-profile")
 	_ = os.MkdirAll(profileDir, 0755)
 
@@ -47,22 +99,12 @@ func Open(port int) {
 				`--window-size=1100,850`,
 			}
 			cmd := exec.Command(p, args...)
-			if err := cmd.Start(); err == nil {
-				browserCmd = cmd
-				go cmd.Wait()
-			}
+			cmd.Start()
 			return
 		}
 	}
 
 	exec.Command("cmd", "/c", "start", "", url).Start()
-}
-
-func Close() {
-	if browserCmd != nil && browserCmd.Process != nil {
-		browserCmd.Process.Kill()
-		browserCmd = nil
-	}
 }
 
 func IsWindowsDarkTheme() bool {

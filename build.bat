@@ -50,7 +50,10 @@ if %errorlevel% neq 0 (
 )
 
 echo [4/5] Building ZPUI...
-go build -ldflags="-s -w -X main.version=1.0.0" -o zpui.exe .
+set PATH=C:\msys64\mingw32\bin;%PATH%
+set CGO_ENABLED=1
+set CC=gcc
+go build -ldflags="-s -w -H windowsgui -X main.version=1.0.0" -o zpui.exe .
 if %errorlevel% neq 0 (
     echo [ERROR] Build failed
     pause

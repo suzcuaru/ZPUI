@@ -2,7 +2,7 @@ package zapret
 
 import (
 	"fmt"
-	"os/exec"
+	"zpui/internal/executil"
 	"path/filepath"
 	"strings"
 )
@@ -92,7 +92,7 @@ func (m *Manager) serviceChangeStrategy(strategyFile string) error {
 }
 
 func runSc(args ...string) error {
-	cmd := exec.Command("sc", args...)
+	cmd := executil.HiddenCmd("sc", args...)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("sc %s: %v: %s", strings.Join(args, " "), err, strings.TrimSpace(string(out)))
@@ -101,26 +101,26 @@ func runSc(args ...string) error {
 }
 
 func runCmd(name string, args ...string) string {
-	cmd := exec.Command(name, args...)
+	cmd := executil.HiddenCmd(name, args...)
 	out, _ := cmd.CombinedOutput()
 	return string(out)
 }
 
 func runRegAdd(keyPath string, args ...string) {
 	allArgs := append([]string{"add", keyPath}, args...)
-	exec.Command("reg", allArgs...).Run()
+	executil.HiddenCmd("reg", allArgs...).Run()
 }
 
 func stopService(name string) {
-	exec.Command("net", "stop", name).Run()
+	executil.HiddenCmd("net", "stop", name).Run()
 }
 
 func deleteService(name string) {
-	exec.Command("sc", "delete", name).Run()
+	executil.HiddenCmd("sc", "delete", name).Run()
 }
 
 func serviceExists(name string) bool {
-	return exec.Command("sc", "query", name).Run() == nil
+	return executil.HiddenCmd("sc", "query", name).Run() == nil
 }
 
 

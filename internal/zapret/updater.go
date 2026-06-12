@@ -6,7 +6,7 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"os/exec"
+	"zpui/internal/executil"
 	"path/filepath"
 	"strings"
 	"time"
@@ -302,14 +302,14 @@ func (m *Manager) InstallZapret(sourceDir string, progress chan<- UpdateProgress
 	}
 
 	sendProgress(progress, "Removing old zapret service", 20)
-	exec.Command("net", "stop", "zapret").Run()
-	exec.Command("sc", "delete", "zapret").Run()
+	executil.HiddenCmd("net", "stop", "zapret").Run()
+	executil.HiddenCmd("sc", "delete", "zapret").Run()
 	killWinws()
 
 	sendProgress(progress, "Copying zapret files", 30)
 	zapretDir := m.cfg.GetZapretPath()
 
-	copyDir := exec.Command("xcopy", sourceDir, zapretDir, "/E", "/Y", "/I")
+	copyDir := executil.HiddenCmd("xcopy", sourceDir, zapretDir, "/E", "/Y", "/I")
 	if output, err := copyDir.CombinedOutput(); err != nil {
 		return fmt.Errorf("copy files: %v: %s", err, string(output))
 	}

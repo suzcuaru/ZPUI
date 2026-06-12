@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"zpui/internal/executil"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -85,7 +86,7 @@ func (m *Manager) Start() error {
 
 	if serviceExists("zapret") {
 		m.log.Info("zapret", "Starting service...")
-		startCmd := exec.Command("net", "start", "zapret")
+		startCmd := executil.HiddenCmd("net", "start", "zapret")
 		out, err := startCmd.CombinedOutput()
 		if err != nil {
 			return fmt.Errorf("net start zapret: %w: %s", err, strings.TrimSpace(string(out)))
@@ -128,7 +129,7 @@ func (m *Manager) StartWithStrategy(strategyFile string) error {
 	for i := range argTokens {
 		argTokens[i] = strings.Trim(argTokens[i], `"`)
 	}
-	m.cmd = exec.Command(winws, argTokens...)
+	m.cmd = executil.HiddenCmd(winws, argTokens...)
 	m.cmd.Dir = binDir
 
 	var err2 error
@@ -220,7 +221,7 @@ func (m *Manager) streamOutput(r io.Reader) {
 }
 
 func (m *Manager) isServiceRunning() bool {
-	cmd := exec.Command("sc", "query", "zapret")
+	cmd := executil.HiddenCmd("sc", "query", "zapret")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return false
@@ -250,7 +251,7 @@ func detectZapretVersion(cfg *config.Config) string {
 }
 
 func killWinws() {
-	kill := exec.Command("taskkill", "/IM", "winws.exe", "/F")
+	kill := executil.HiddenCmd("taskkill", "/IM", "winws.exe", "/F")
 	kill.Run()
 }
 
