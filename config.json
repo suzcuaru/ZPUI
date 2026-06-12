@@ -4,7 +4,7 @@
   "mod_version": "1.0.0",
   "proxy": {
     "enabled": false,
-    "auto_start": true,
+    "auto_start": false,
     "port": 1080,
     "username": "",
     "password": ""

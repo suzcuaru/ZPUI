@@ -966,24 +966,29 @@ func (s *Server) handleResourceStatus(w http.ResponseWriter, r *http.Request) {
 		url  string
 	}
 
-	defaultResources := []check{
-		{"Cloudflare ECH", "https://cloudflare-ech.com"},
-		{"Cloudflare Access", "https://cloudflareaccess.com"},
-		{"Cloudflare Client", "https://cloudflareclient.com"},
-		{"Cloudflare Status", "https://cloudflarestatus.com"},
-		{"Cloudflare Stream", "https://cloudflarestream.com"},
-		{"Discord", "https://discord.com"},
-		{"Discord CDN", "https://discordcdn.com"},
-		{"Discord App", "https://discordapp.com"},
-		{"Google", "https://www.google.com"},
-		{"YouTube", "https://www.youtube.com"},
-		{"Google Ads", "https://googleads.g.doubleclick.net"},
-		{"Google Video", "https://rr1---sn-jvhnu5g-n8ve7.googlevideo.com"},
-		{"7TV", "https://7tv.app"},
-		{"BetterTTV", "https://betterttv.net"},
-		{"FrankerFaceZ", "https://frankerfacez.com"},
-		{"FFZap", "https://ffzap.com"},
-		{"CloudFront", "https://d1.awsstatic.com"},
+	defaultResources := []check{}
+	targetsPath := filepath.Join(s.cfg.GetZapretPath(), "utils", "targets.txt")
+	if body, err := os.ReadFile(targetsPath); err == nil {
+		for _, line := range strings.Split(string(body), "\n") {
+			line = strings.TrimSpace(line)
+			if line == "" || strings.HasPrefix(line, "#") {
+				continue
+			}
+			parts := strings.SplitN(line, "=", 2)
+			if len(parts) != 2 {
+				continue
+			}
+			key := strings.TrimSpace(parts[0])
+			val := strings.TrimSpace(parts[1])
+			val = strings.Trim(val, `"`)
+			if strings.HasPrefix(val, "PING:") {
+				continue
+			}
+			if !strings.HasPrefix(val, "http://") && !strings.HasPrefix(val, "https://") {
+				continue
+			}
+			defaultResources = append(defaultResources, check{host: key, url: val})
+		}
 	}
 
 	userHosts := []string{}

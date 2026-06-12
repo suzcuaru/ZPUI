@@ -43,7 +43,7 @@ func NewManager(cfg *config.Config, log *logger.Logger) *Manager {
 		version: detectZapretVersion(cfg),
 	}
 
-	if m.isServiceInstalled() {
+	if m.isServiceRunning() {
 		m.status = StatusRunning
 		m.log.Info("zapret", "Zapret service is installed and running")
 	}
@@ -55,17 +55,20 @@ func (m *Manager) GetStatus() Status {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	if m.isServiceInstalled() {
+	if m.isProcessRunning() {
 		return StatusRunning
 	}
 
-	if m.cmd != nil && m.cmd.Process != nil {
-		if m.cmd.ProcessState == nil || !m.cmd.ProcessState.Exited() {
-			return StatusRunning
-		}
+	if m.isServiceRunning() {
+		return StatusRunning
 	}
 
 	return StatusStopped
+}
+
+func (m *Manager) isProcessRunning() bool {
+	return m.cmd != nil && m.cmd.Process != nil &&
+		(m.cmd.ProcessState == nil || !m.cmd.ProcessState.Exited())
 }
 
 func (m *Manager) GetVersion() string {
@@ -75,6 +78,21 @@ func (m *Manager) GetVersion() string {
 }
 
 func (m *Manager) Start() error {
+	if m.isServiceRunning() {
+		m.log.Info("zapret", "Service already running")
+		return nil
+	}
+
+	if serviceExists("zapret") {
+		m.log.Info("zapret", "Starting service...")
+		startCmd := exec.Command("net", "start", "zapret")
+		out, err := startCmd.CombinedOutput()
+		if err != nil {
+			return fmt.Errorf("net start zapret: %w: %s", err, strings.TrimSpace(string(out)))
+		}
+		return nil
+	}
+
 	return m.StartWithStrategy(m.cfg.GetCurrentStrategy())
 }
 
@@ -82,7 +100,7 @@ func (m *Manager) StartWithStrategy(strategyFile string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	if m.GetStatus() == StatusRunning {
+	if m.isProcessRunning() {
 		m.stopLocked()
 	}
 
@@ -93,23 +111,40 @@ func (m *Manager) StartWithStrategy(strategyFile string) error {
 
 	m.log.Info("zapret", fmt.Sprintf("Starting zapret with strategy: %s", strategyFile))
 
-	m.cmd = exec.Command("cmd.exe", "/c", strategyPath)
-	m.cmd.Dir = m.cfg.GetZapretPath()
-
-	var err error
-	m.stdout, err = m.cmd.StdoutPipe()
+	args, err := parseStrategyArgs(strategyPath, m.cfg.BinDir(), m.cfg.ListsDir())
 	if err != nil {
-		return fmt.Errorf("stdout pipe: %w", err)
+		return fmt.Errorf("parse strategy args: %w", err)
 	}
-	m.stderr, err = m.cmd.StderrPipe()
-	if err != nil {
-		return fmt.Errorf("stderr pipe: %w", err)
+
+	binDir := strings.TrimSuffix(m.cfg.BinDir(), `\`)
+	winws := filepath.Join(binDir, "winws.exe")
+	if _, err := os.Stat(winws); os.IsNotExist(err) {
+		return fmt.Errorf("winws.exe not found: %s", winws)
+	}
+
+	m.log.Info("zapret", fmt.Sprintf("winws.exe args: %s", args))
+
+	argTokens := splitArgs(args)
+	for i := range argTokens {
+		argTokens[i] = strings.Trim(argTokens[i], `"`)
+	}
+	m.cmd = exec.Command(winws, argTokens...)
+	m.cmd.Dir = binDir
+
+	var err2 error
+	m.stdout, err2 = m.cmd.StdoutPipe()
+	if err2 != nil {
+		return fmt.Errorf("stdout pipe: %w", err2)
+	}
+	m.stderr, err2 = m.cmd.StderrPipe()
+	if err2 != nil {
+		return fmt.Errorf("stderr pipe: %w", err2)
 	}
 
 	m.stopCh = make(chan struct{})
 
-	if err := m.cmd.Start(); err != nil {
-		return fmt.Errorf("start process: %w", err)
+	if err2 := m.cmd.Start(); err2 != nil {
+		return fmt.Errorf("start process: %w", err2)
 	}
 
 	m.status = StatusRunning
@@ -135,6 +170,12 @@ func (m *Manager) StartWithStrategy(strategyFile string) error {
 }
 
 func (m *Manager) Stop() error {
+	if m.isServiceRunning() {
+		m.log.Info("zapret", "Stopping service...")
+		stopService("zapret")
+		return nil
+	}
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	return m.stopLocked()
@@ -178,7 +219,7 @@ func (m *Manager) streamOutput(r io.Reader) {
 	}
 }
 
-func (m *Manager) isServiceInstalled() bool {
+func (m *Manager) isServiceRunning() bool {
 	cmd := exec.Command("sc", "query", "zapret")
 	output, err := cmd.CombinedOutput()
 	if err != nil {

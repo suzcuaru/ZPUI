@@ -3,19 +3,27 @@ import Sidebar from './components/Sidebar';
 import Toast from './components/Toast';
 import LogDrawer from './components/LogDrawer';
 import OfflineScreen from './components/OfflineScreen';
-import OverviewPage from './pages/OverviewPage';
 import MonitorPage from './pages/MonitorPage';
-import ProxyPage from './pages/ProxyPage';
-import SettingsPage from './pages/SettingsPage';
+import StrategyPage from './pages/StrategyPage';
+import ListsPage from './pages/ListsPage';
+import DiagnosticsPage from './pages/DiagnosticsPage';
+import GeneralPage from './pages/GeneralPage';
+import AboutPage from './pages/AboutPage';
 import { api } from './api';
 import { logSnapshot, cleanOld } from './db';
 import './App.css';
 
-const PAGES = { overview: OverviewPage, monitor: MonitorPage, proxy: ProxyPage, settings: SettingsPage };
+const PAGES = {
+  monitor: MonitorPage,
+  strategy: StrategyPage,
+  lists: ListsPage,
+  diagnostics: DiagnosticsPage,
+  general: GeneralPage,
+  about: AboutPage,
+};
 
 export default function App() {
-  const [activePage, setActivePage] = useState('overview');
-  const [settingsTab, setSettingsTab] = useState('general');
+  const [activePage, setActivePage] = useState('monitor');
   const [status, setStatus] = useState(null);
   const [toasts, setToasts] = useState([]);
   const [logsOpen, setLogsOpen] = useState(false);
@@ -74,11 +82,6 @@ export default function App() {
     return () => { alive = false; clearInterval(iv); clearInterval(cleanIv); };
   }, []);
 
-  const handleNavigate = useCallback((page) => {
-    console.log(`[App] Navigate: ${page}`);
-    setActivePage(page);
-  }, []);
-
   const PageComponent = PAGES[activePage];
 
   if (!backendOnline) {
@@ -86,9 +89,7 @@ export default function App() {
       <div className="app">
         <Sidebar
           activePage={activePage}
-          onNavigate={handleNavigate}
-          settingsTab={settingsTab}
-          onSettingsTab={setSettingsTab}
+          onNavigate={setActivePage}
           status={status}
           showToast={showToast}
           onOpenLogs={() => setLogsOpen(true)}
@@ -113,16 +114,14 @@ export default function App() {
     <div className="app">
       <Sidebar
         activePage={activePage}
-        onNavigate={handleNavigate}
-        settingsTab={settingsTab}
-        onSettingsTab={setSettingsTab}
+        onNavigate={setActivePage}
         status={status}
         showToast={showToast}
         onOpenLogs={() => setLogsOpen(true)}
       />
       <main className="main-content">
         <div className="content-inner page-fade" key={activePage}>
-          {PageComponent && <PageComponent status={status} showToast={showToast} settingsTab={settingsTab} onSettingsTab={setSettingsTab} />}
+          {PageComponent && <PageComponent status={status} showToast={showToast} />}
         </div>
       </main>
       <button className="fab-logs" onClick={() => setLogsOpen(true)} title="Логи">

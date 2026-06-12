@@ -3,10 +3,12 @@ package zapret
 import (
 	"context"
 	"crypto/tls"
+	"encoding/json"
 	"fmt"
 	"net"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -61,27 +63,46 @@ func (m *Manager) SetStrategy(filename string) error {
 	if _, err := os.Stat(m.cfg.StrategyPath(filename)); os.IsNotExist(err) {
 		return err
 	}
-	return m.cfg.SetCurrentStrategy(filename)
+
+	if m.isServiceRunning() {
+		if err := m.InstallService(filename); err != nil {
+			return fmt.Errorf("service reinstall: %w", err)
+		}
+		return nil
+	}
+
+	if err := m.StartWithStrategy(filename); err != nil {
+		return fmt.Errorf("start with strategy: %w", err)
+	}
+	return nil
 }
 
 func (m *Manager) GetCurrentStrategy() string {
 	return m.cfg.GetCurrentStrategy()
 }
 
+type ResourceResult struct {
+	Name  string `json:"name"`
+	URL   string `json:"url"`
+	OK    bool   `json:"ok"`
+	Ms    int64  `json:"ms"`
+}
+
 type AutoTestResult struct {
-	Type        string   `json:"type"`
-	Strategy    string   `json:"strategy,omitempty"`
-	Current     int      `json:"current,omitempty"`
-	Total       int      `json:"total,omitempty"`
-	Phase       string   `json:"phase,omitempty"`
-	Message     string   `json:"message,omitempty"`
-	DiscordOK   bool     `json:"discord_ok,omitempty"`
-	YouTubeOK   bool     `json:"youtube_ok,omitempty"`
-	ResourcesOK int      `json:"resources_ok,omitempty"`
-	ResourcesN  int      `json:"resources_n,omitempty"`
-	ResponseMs  int64    `json:"response_ms,omitempty"`
-	Resources   []string `json:"resources,omitempty"`
-	Error       string   `json:"error,omitempty"`
+	Type        string           `json:"type"`
+	Strategy    string           `json:"strategy,omitempty"`
+	Current     int              `json:"current,omitempty"`
+	Total       int              `json:"total,omitempty"`
+	Phase       string           `json:"phase,omitempty"`
+	Message     string           `json:"message,omitempty"`
+	DiscordOK   bool             `json:"discord_ok,omitempty"`
+	YouTubeOK   bool             `json:"youtube_ok,omitempty"`
+	ResourcesOK int              `json:"resources_ok,omitempty"`
+	ResourcesN  int              `json:"resources_n,omitempty"`
+	ResponseMs  int64            `json:"response_ms,omitempty"`
+	Resources   []string         `json:"resources,omitempty"`
+	ResourcesDetail []ResourceResult `json:"resources_detail,omitempty"`
+	Error       string           `json:"error,omitempty"`
 }
 
 var (
@@ -104,6 +125,14 @@ func (m *Manager) CancelAutoTest() {
 		autoTestCancel = nil
 	}
 	autoTestActive = false
+}
+
+type testResultData struct {
+	Strategy  string           `json:"strategy"`
+	Resources []ResourceResult `json:"resources"`
+	Ok        int              `json:"ok"`
+	Total     int              `json:"total"`
+	AvgMs     int64            `json:"avg_ms"`
 }
 
 func (m *Manager) RunAutoTest(ctx context.Context, results chan<- AutoTestResult, done chan<- struct{}) {
@@ -129,7 +158,7 @@ func (m *Manager) RunAutoTest(ctx context.Context, results chan<- AutoTestResult
 
 	strategies := m.ListStrategies()
 	originalStrategy := m.cfg.GetCurrentStrategy()
-	resources := m.loadTestResources()
+	resources := m.loadTestTargets()
 
 	m.log.Info("strategy", fmt.Sprintf("Auto-test started: %d strategies, %d resources", len(strategies), len(resources)))
 
@@ -149,6 +178,9 @@ func (m *Manager) RunAutoTest(ctx context.Context, results chan<- AutoTestResult
 		},
 	}
 
+	var allResults []testResultData
+	jsonPath := filepath.Join(m.cfg.LogsDir(), "auto_test_results.json")
+
 	for i, s := range strategies {
 		select {
 		case <-testCtx.Done():
@@ -157,19 +189,7 @@ func (m *Manager) RunAutoTest(ctx context.Context, results chan<- AutoTestResult
 		default:
 		}
 
-		results <- AutoTestResult{
-			Type:     "progress",
-			Current:  i + 1,
-			Total:    len(strategies),
-			Strategy: s.Filename,
-			Phase:    "stop",
-			Message:  fmt.Sprintf("[%d/%d] %s — остановка Zapret...", i+1, len(strategies), s.Name),
-		}
-
-		m.Stop()
-		if !sleepCtx(testCtx, 2*time.Second) {
-			goto restore
-		}
+		m.log.Info("strategy", fmt.Sprintf("[%d/%d] Testing %s", i+1, len(strategies), s.Name))
 
 		results <- AutoTestResult{
 			Type:     "progress",
@@ -177,36 +197,23 @@ func (m *Manager) RunAutoTest(ctx context.Context, results chan<- AutoTestResult
 			Total:    len(strategies),
 			Strategy: s.Filename,
 			Phase:    "start",
-			Message:  fmt.Sprintf("[%d/%d] %s — запуск стратегии...", i+1, len(strategies), s.Name),
+			Message:  fmt.Sprintf("[%d/%d] %s", i+1, len(strategies), s.Name),
 		}
 
-		if err := m.StartWithStrategy(s.Filename); err != nil {
-			results <- AutoTestResult{
-				Type:     "result",
-				Strategy: s.Filename,
-				Error:    fmt.Sprintf("Не удалось запустить: %v", err),
-			}
+		proc, err := m.startWinws(s.Filename)
+		if err != nil {
+			results <- AutoTestResult{Type: "result", Strategy: s.Filename, Error: err.Error()}
 			continue
 		}
 
-		results <- AutoTestResult{
-			Type:     "progress",
-			Current:  i + 1,
-			Total:    len(strategies),
-			Strategy: s.Filename,
-			Phase:    "wait",
-			Message:  fmt.Sprintf("[%d/%d] %s — ожидание активации (5с)...", i+1, len(strategies), s.Name),
-		}
-		if !sleepCtx(testCtx, 5*time.Second) {
-			goto restore
-		}
-
-		if m.GetStatus() != StatusRunning {
-			results <- AutoTestResult{
-				Type:     "result",
-				Strategy: s.Filename,
-				Error:    "Стратегия не запустилась",
+		if !sleepCtx(testCtx, 3*time.Second) {
+				proc.Process.Kill()
+				proc.Wait()
+				goto restore
 			}
+
+		if proc.ProcessState != nil && proc.ProcessState.Exited() {
+			results <- AutoTestResult{Type: "result", Strategy: s.Filename, Error: "winws exited immediately"}
 			continue
 		}
 
@@ -216,64 +223,129 @@ func (m *Manager) RunAutoTest(ctx context.Context, results chan<- AutoTestResult
 			Total:    len(strategies),
 			Strategy: s.Filename,
 			Phase:    "test",
-			Message:  fmt.Sprintf("[%d/%d] %s — тестирование доменов...", i+1, len(strategies), s.Name),
+			Message:  fmt.Sprintf("[%d/%d] %s — тестирование ресурсов", i+1, len(strategies), s.Name),
 		}
 
-		result := AutoTestResult{Type: "result", Strategy: s.Filename}
-
-		discordOK, discordMs := testURL(httpClient, "https://discord.com/api/v10/gateway")
-		youtubeOK, _ := testURL(httpClient, "https://www.youtube.com")
-		result.DiscordOK = discordOK
-		result.YouTubeOK = youtubeOK
-		result.ResponseMs = discordMs
-
+		var detail []ResourceResult
+		var totalMs int64
 		okCount := 0
-		var okResources []string
 		for _, res := range resources {
 			select {
 			case <-testCtx.Done():
+				proc.Process.Kill()
+				proc.Wait()
 				goto restore
 			default:
 			}
-			ok, _ := testURL(httpClient, "https://"+res)
+			ok, ms := testURL(httpClient, res.URL)
+			detail = append(detail, ResourceResult{Name: res.Name, URL: res.URL, OK: ok, Ms: ms})
 			if ok {
 				okCount++
-				okResources = append(okResources, res)
+				totalMs += ms
 			}
 		}
-		result.ResourcesOK = okCount
-		result.ResourcesN = len(resources)
-		result.Resources = okResources
 
-		results <- AutoTestResult{
-			Type:     "progress",
-			Current:  i + 1,
-			Total:    len(strategies),
-			Strategy: s.Filename,
-			Phase:    "save",
-			Message:  fmt.Sprintf("[%d/%d] %s — результаты сохранены (доменов: %d/%d)", i+1, len(strategies), s.Name, okCount, len(resources)),
+		avgMs := int64(0)
+		if okCount > 0 {
+			avgMs = totalMs / int64(okCount)
 		}
 
-		results <- result
+		proc.Process.Kill()
+		proc.Wait()
 
-		m.Stop()
-		if !sleepCtx(testCtx, 2*time.Second) {
+		d := testResultData{
+			Strategy:  s.Filename,
+			Resources: detail,
+			Ok:        okCount,
+			Total:     len(resources),
+			AvgMs:     avgMs,
+		}
+		allResults = append(allResults, d)
+
+		results <- AutoTestResult{
+			Type:        "result",
+			Strategy:    s.Filename,
+			ResourcesOK: okCount,
+			ResourcesN:  len(resources),
+			ResponseMs:  avgMs,
+			ResourcesDetail: detail,
+		}
+
+		if !sleepCtx(testCtx, 1*time.Second) {
 			goto restore
 		}
 	}
 
-restore:
-	results <- AutoTestResult{
-		Type:    "info",
-		Message: "Восстановление исходной стратегии...",
+	sort.Slice(allResults, func(i, j int) bool {
+		scoreI := float64(allResults[i].Ok) / float64(allResults[i].Total)
+		scoreJ := float64(allResults[j].Ok) / float64(allResults[j].Total)
+		if scoreI != scoreJ {
+			return scoreI > scoreJ
+		}
+		return allResults[i].AvgMs < allResults[j].AvgMs
+	})
+
+	if data, err := json.MarshalIndent(allResults, "", "  "); err == nil {
+		os.WriteFile(jsonPath, data, 0644)
+		m.log.Info("strategy", fmt.Sprintf("Results written to %s", jsonPath))
 	}
-	m.Stop()
-	time.Sleep(1 * time.Second)
+
+	results <- AutoTestResult{Type: "info", Message: "Автотест завершён"}
+	if len(allResults) > 0 {
+		best := allResults[0]
+		results <- AutoTestResult{
+			Type:        "result",
+			Strategy:    best.Strategy,
+			ResourcesOK: best.Ok,
+			ResourcesN:  best.Total,
+			ResponseMs:  best.AvgMs,
+			ResourcesDetail: best.Resources,
+		}
+		results <- AutoTestResult{
+			Type:    "info",
+			Message: fmt.Sprintf("Лучшая: %s (%d/%d ресурсов, %d мс)", best.Strategy, best.Ok, best.Total, best.AvgMs),
+		}
+	}
+
+restore:
+	results <- AutoTestResult{Type: "info", Message: "Восстановление исходной стратегии..."}
 	if originalStrategy != "" {
 		m.StartWithStrategy(originalStrategy)
 	}
 	m.log.Info("strategy", "Auto-test complete")
 	results <- AutoTestResult{Type: "done"}
+}
+
+func (m *Manager) startWinws(strategyFile string) (*exec.Cmd, error) {
+	strategyPath := m.cfg.StrategyPath(strategyFile)
+	if _, err := os.Stat(strategyPath); os.IsNotExist(err) {
+		return nil, fmt.Errorf("strategy file not found: %s", strategyPath)
+	}
+
+	args, err := parseStrategyArgs(strategyPath, m.cfg.BinDir(), m.cfg.ListsDir())
+	if err != nil {
+		return nil, fmt.Errorf("parse strategy: %w", err)
+	}
+
+	binDir := strings.TrimSuffix(m.cfg.BinDir(), `\`)
+	winws := filepath.Join(binDir, "winws.exe")
+	if _, err := os.Stat(winws); os.IsNotExist(err) {
+		return nil, fmt.Errorf("winws.exe not found: %s", winws)
+	}
+
+	argTokens := splitArgs(args)
+	for i := range argTokens {
+		argTokens[i] = strings.Trim(argTokens[i], `"`)
+	}
+
+	cmd := exec.Command(winws, argTokens...)
+	cmd.Dir = binDir
+
+	if err := cmd.Start(); err != nil {
+		return nil, fmt.Errorf("start winws: %w", err)
+	}
+
+	return cmd, nil
 }
 
 func sleepCtx(ctx context.Context, d time.Duration) bool {
@@ -296,29 +368,55 @@ func testURL(client *http.Client, url string) (bool, int64) {
 	return resp.StatusCode >= 200 && resp.StatusCode < 500, elapsed
 }
 
-func (m *Manager) loadTestResources() []string {
-	var resources []string
-	seen := map[string]bool{}
+type testTarget struct {
+	Name string
+	URL  string
+}
 
-	for _, file := range []string{"list-general.txt", "list-general-user.txt"} {
-		data, err := os.ReadFile(filepath.Join(m.cfg.ListsDir(), file))
-		if err != nil {
+func (m *Manager) loadTestTargets() []testTarget {
+	path := filepath.Join(m.cfg.GetZapretPath(), "utils", "targets.txt")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		m.log.Warn("strategy", fmt.Sprintf("Cannot read targets.txt (%s), fallback to defaults", path))
+		return []testTarget{
+			{Name: "DiscordMain", URL: "https://discord.com"},
+			{Name: "YouTubeWeb", URL: "https://www.youtube.com"},
+			{Name: "GoogleMain", URL: "https://www.google.com"},
+			{Name: "CloudflareWeb", URL: "https://www.cloudflare.com"},
+		}
+	}
+
+	var targets []testTarget
+	for _, line := range strings.Split(string(data), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") || strings.HasPrefix(line, "//") || strings.HasPrefix(line, ";") {
 			continue
 		}
-		for _, line := range strings.Split(string(data), "\n") {
-			line = strings.TrimSpace(line)
-			if line != "" && !strings.HasPrefix(line, "#") && !seen[line] {
-				seen[line] = true
-				resources = append(resources, line)
-			}
+		if !strings.Contains(line, "=") {
+			continue
 		}
+		parts := strings.SplitN(line, "=", 2)
+		name := strings.TrimSpace(parts[0])
+		val := strings.TrimSpace(parts[1])
+		val = strings.Trim(val, `" `)
+		if name == "" || val == "" {
+			continue
+		}
+		if strings.HasPrefix(val, "PING:") {
+			continue
+		}
+		if !strings.HasPrefix(val, "http://") && !strings.HasPrefix(val, "https://") {
+			continue
+		}
+		targets = append(targets, testTarget{Name: name, URL: val})
 	}
 
-	if len(resources) > 20 {
-		resources = resources[:20]
+	if len(targets) == 0 {
+		targets = append(targets, testTarget{Name: "DiscordMain", URL: "https://discord.com"})
+		targets = append(targets, testTarget{Name: "YouTubeWeb", URL: "https://www.youtube.com"})
 	}
 
-	return resources
+	return targets
 }
 
 func (m *Manager) LoadGameFilter() (mode string, tcp, udp string) {

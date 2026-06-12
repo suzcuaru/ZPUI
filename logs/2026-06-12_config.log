@@ -1,6 +1,0 @@
-[2026-06-12 02:47:25] [INFO] [config] POST /api/config received
-[2026-06-12 02:47:25] [INFO] [config] Data: map[zapret_path:C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2]
-[2026-06-12 02:47:25] [INFO] [config] Config saved to JSON
-[2026-06-12 02:52:14] [INFO] [config] POST /api/config received
-[2026-06-12 02:52:14] [INFO] [config] Data: map[zapret_path:C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2]
-[2026-06-12 02:52:14] [INFO] [config] Config saved to JSON

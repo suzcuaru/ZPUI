@@ -2,96 +2,125 @@ package zapret
 
 import (
 	"fmt"
-	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 )
 
-func elevatedSCRemove() error {
-	resultFile := filepath.Join(os.TempDir(), "zpui_svc_result.txt")
-	bat := fmt.Sprintf(`@echo off
-net stop zapret >nul 2>&1
-sc delete zapret >nul 2>&1
-taskkill /IM winws.exe /F >nul 2>&1
-net stop WinDivert >nul 2>&1
-sc delete WinDivert >nul 2>&1
-net stop WinDivert14 >nul 2>&1
-sc delete WinDivert14 >nul 2>&1
-echo REMOVED > "%s"
-`, resultFile)
+func (m *Manager) serviceCreate(strategyFile string) error {
+	binPath := m.cfg.BinDir()
+	listsPath := m.cfg.ListsDir()
+	strategyPath := m.cfg.StrategyPath(strategyFile)
 
-	tmpBat := filepath.Join(os.TempDir(), "zpui_svc_remove.bat")
-	if err := os.WriteFile(tmpBat, []byte(bat), 0644); err != nil {
-		return fmt.Errorf("write temp bat: %w", err)
-	}
-	defer os.Remove(tmpBat)
-
-	os.Remove(resultFile)
-
-	psCmd := fmt.Sprintf(`Start-Process cmd.exe -ArgumentList '/c "%s"' -Verb RunAs -Wait`, tmpBat)
-	psOut, psErr := exec.Command("powershell", "-NoProfile", "-Command", psCmd).CombinedOutput()
-
-	resultData, _ := os.ReadFile(resultFile)
-	os.Remove(resultFile)
-	result := string(resultData)
-
-	if psErr != nil {
-		return fmt.Errorf("elevation failed: %v: %s: %s", psErr, string(psOut), result)
+	args, err := parseStrategyArgs(strategyPath, binPath, listsPath)
+	if err != nil {
+		return fmt.Errorf("parse strategy: %w", err)
 	}
 
-	if result == "REMOVED" {
-		return nil
+	winws := filepath.Join(strings.TrimSuffix(binPath, `\`), "winws.exe")
+	fullCmd := fmt.Sprintf(`"%s" %s`, winws, args)
+	m.log.Info("service", fmt.Sprintf("sc create binPath: %s", fullCmd))
+
+	stopService("zapret")
+	deleteService("zapret")
+	stopService("WinDivert")
+	deleteService("WinDivert")
+	stopService("WinDivert14")
+	deleteService("WinDivert14")
+
+	if err := runSc("create", "zapret",
+		"binPath=", fullCmd,
+		"DisplayName=", "zapret",
+		"start=", "auto"); err != nil {
+		return fmt.Errorf("sc create: %w", err)
 	}
-	return fmt.Errorf("service remove failed or cancelled (result: %q)", result)
+
+	runSc("description", "zapret", "Zapret DPI bypass software")
+
+	name := strings.TrimSuffix(strategyFile, ".bat")
+	runRegAdd("HKLM\\System\\CurrentControlSet\\Services\\zapret",
+		"/v", "zapret-discord-youtube",
+		"/t", "REG_SZ",
+		"/d", name,
+		"/f")
+
+	m.log.Info("service", fmt.Sprintf("Strategy saved to registry: %s", name))
+
+	if err := runSc("start", "zapret"); err != nil {
+		m.cfg.SetCurrentStrategy(strategyFile)
+		return fmt.Errorf("sc start: %w", err)
+	}
+
+	m.log.Info("service", "Service started successfully")
+	return nil
 }
 
-func elevatedSCCreate(exePath, args, strategyName string) error {
-	resultFile := filepath.Join(os.TempDir(), "zpui_svc_result.txt")
-	bat := fmt.Sprintf(`@echo off
-sc create zapret binPath= "\"%s\" %s" DisplayName= zapret start= auto
-if %%errorlevel%% neq 0 (
-    echo SC_CREATE_FAILED > "%s"
-    exit /b 1
-)
-sc description zapret "Zapret DPI bypass software" >nul 2>&1
-reg add "HKLM\System\CurrentControlSet\Services\zapret" /v zapret-discord-youtube /t REG_SZ /d "%s" /f >nul 2>&1
-sc start zapret
-if %%errorlevel%% neq 0 (
-    echo SC_START_FAILED > "%s"
-    exit /b 1
-)
-echo SERVICE_OK > "%s"
-`, exePath, args, resultFile, strategyName, resultFile, resultFile)
+func (m *Manager) serviceRemove() {
+	stopService("zapret")
+	deleteService("zapret")
 
-	tmpBat := filepath.Join(os.TempDir(), "zpui_svc_install.bat")
-	if err := os.WriteFile(tmpBat, []byte(bat), 0644); err != nil {
-		return fmt.Errorf("write temp bat: %w", err)
-	}
-	defer os.Remove(tmpBat)
-
-	os.Remove(resultFile)
-
-	psCmd := fmt.Sprintf(`Start-Process cmd.exe -ArgumentList '/c "%s"' -Verb RunAs -Wait`, tmpBat)
-	psOut, psErr := exec.Command("powershell", "-NoProfile", "-Command", psCmd).CombinedOutput()
-
-	resultData, _ := os.ReadFile(resultFile)
-	os.Remove(resultFile)
-	result := string(resultData)
-
-	if psErr != nil {
-		return fmt.Errorf("elevation failed: %v: %s: %s", psErr, string(psOut), result)
+	out := runCmd("tasklist", "/FI", "IMAGENAME eq winws.exe")
+	if strings.Contains(out, "winws.exe") {
+		m.log.Info("service", "winws.exe still running, killing")
+		runCmd("taskkill", "/IM", "winws.exe", "/F")
 	}
 
-	switch {
-	case result == "SERVICE_OK":
-		return nil
-	case result == "SC_CREATE_FAILED":
-		return fmt.Errorf("sc create failed (binPath or args invalid)")
-	case result == "SC_START_FAILED":
-		return fmt.Errorf("service created but sc start failed")
-	case len(result) == 0:
-		return fmt.Errorf("elevation completed but no result file — user may have cancelled UAC or bat exited early")
-	default:
-		return fmt.Errorf("unexpected result: %s", result)
+	if serviceExists("WinDivert") {
+		stopService("WinDivert")
+		deleteService("WinDivert")
+	}
+	if serviceExists("WinDivert14") {
+		stopService("WinDivert14")
+		deleteService("WinDivert14")
 	}
 }
+
+func (m *Manager) serviceChangeStrategy(strategyFile string) error {
+	m.log.Info("service", fmt.Sprintf("Changing strategy to: %s", strategyFile))
+
+	if serviceExists("zapret") {
+		m.log.Info("service", "Existing service found, removing first")
+		stopService("zapret")
+		deleteService("zapret")
+		stopService("WinDivert")
+		deleteService("WinDivert")
+		stopService("WinDivert14")
+		deleteService("WinDivert14")
+	}
+
+	return m.serviceCreate(strategyFile)
+}
+
+func runSc(args ...string) error {
+	cmd := exec.Command("sc", args...)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("sc %s: %v: %s", strings.Join(args, " "), err, strings.TrimSpace(string(out)))
+	}
+	return nil
+}
+
+func runCmd(name string, args ...string) string {
+	cmd := exec.Command(name, args...)
+	out, _ := cmd.CombinedOutput()
+	return string(out)
+}
+
+func runRegAdd(keyPath string, args ...string) {
+	allArgs := append([]string{"add", keyPath}, args...)
+	exec.Command("reg", allArgs...).Run()
+}
+
+func stopService(name string) {
+	exec.Command("net", "stop", name).Run()
+}
+
+func deleteService(name string) {
+	exec.Command("sc", "delete", name).Run()
+}
+
+func serviceExists(name string) bool {
+	return exec.Command("sc", "query", name).Run() == nil
+}
+
+

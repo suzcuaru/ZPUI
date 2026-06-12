@@ -280,6 +280,8 @@ function StrategyTab({ status, showToast }) {
     });
   };
 
+  const [expandedResult, setExpandedResult] = useState(null);
+
   const getDesc = () => '';
 
   return (
@@ -321,7 +323,7 @@ function StrategyTab({ status, showToast }) {
                   <div className="at-progress-fill" style={{ width: ((testProgress.current / Math.max(testProgress.total, 1)) * 100) + '%' }}></div>
                 </div>
                 <div className="at-progress-info">
-                  <span>{testProgress.current} / {testProgress.total}</span>
+                  <span className="at-progress-count">{testProgress.current} / {testProgress.total}</span>
                   <span className="at-current-str">{testProgress.strategy}</span>
                 </div>
               </div>
@@ -332,36 +334,57 @@ function StrategyTab({ status, showToast }) {
                 <span className="at-phase-text">{testProgress.message}</span>
               </div>
             )}
+            {testResults.filter(r => r.type === 'result').map((r, i) => (
+              <div key={i} className="at-live-result" style={{ animationDelay: (i * 0.05) + 's' }}>
+                <span className="at-lr-name">{r.strategy}</span>
+                {r.error ? (
+                  <span className="at-lr-err">{r.error}</span>
+                ) : (
+                  <>
+                    <span className="at-lr-score">{r.resources_ok}/{r.resources_n}</span>
+                    <span className="at-lr-ms">{r.response_ms}мс</span>
+                    {r.resources_detail && r.resources_detail.every(x => x.ok) ? (
+                      <span className="at-lr-star">⭐</span>
+                    ) : r.resources_ok > 0 ? (
+                      <span className="at-lr-star">👍</span>
+                    ) : (
+                      <span className="at-lr-star">👎</span>
+                    )}
+                  </>
+                )}
+              </div>
+            ))}
             <button className="btn btn-danger btn-sm" onClick={cancelTest} style={{ marginTop: 10, width: '100%' }}>
               Отменить
             </button>
           </div>
         )}
 
-        {testInfo && testing && (
-          <div className="at-info">{testInfo.message}</div>
-        )}
-
         {!testing && bestStrategy && (
           <div className="at-best">
-            <div className="at-best-title">Лучшая стратегия</div>
+            <div className="at-best-header">
+              <span className="at-best-icon">🏆</span>
+              <span className="at-best-title">Лучшая стратегия</span>
+            </div>
             <div className="at-best-card">
               <div className="at-best-left">
                 <DonutChart
                   percent={(bestStrategy.resources_ok / Math.max(bestStrategy.resources_n, 1)) * 100}
                   color="var(--success)"
+                  size={90}
+                  stroke={8}
                 />
               </div>
               <div className="at-best-right">
                 <span className="at-best-name">{bestStrategy.strategy}</span>
-                <div className="at-best-stats">
-                  <span className={'at-stat ' + (bestStrategy.discord_ok ? 'ok' : '')}>Discord {bestStrategy.discord_ok ? 'OK' : '—'}</span>
-                  <span className={'at-stat ' + (bestStrategy.youtube_ok ? 'ok' : '')}>YouTube {bestStrategy.youtube_ok ? 'OK' : '—'}</span>
-                  <span className="at-stat">{bestStrategy.resources_ok}/{bestStrategy.resources_n} доменов</span>
-                  <span className="at-stat">{bestStrategy.response_ms}мс</span>
+                <div className="at-best-score">
+                  <span className="at-best-score-num">{bestStrategy.resources_ok}</span>
+                  <span className="at-best-score-den">/{bestStrategy.resources_n} ресурсов</span>
                 </div>
-                <button className="btn btn-accent btn-sm" onClick={() => { handleSet(bestStrategy.strategy); setTestModal(false); }}>
-                  Применить
+                <div className="at-best-ms">{bestStrategy.response_ms} мс средняя задержка</div>
+                <button className="btn btn-accent btn-sm" onClick={() => { handleSet(bestStrategy.strategy); setTestModal(false); }}
+                  style={{ marginTop: 4 }}>
+                  Применить эту стратегию
                 </button>
               </div>
             </div>
@@ -373,18 +396,42 @@ function StrategyTab({ status, showToast }) {
             <div className="at-results-title">Результаты ({testResults.filter(r => r.type === 'result').length})</div>
             <div className="at-results-list">
               {testResults.filter(r => r.type === 'result').map((r, i) => (
-                <div key={i} className={'at-result-row' + (r.error ? ' error' : '')}
-                  onClick={() => !testing && handleSet(r.strategy)}>
-                  <span className="at-r-name">{r.strategy}</span>
-                  {r.error ? (
-                    <span className="at-r-err">{r.error}</span>
-                  ) : (
-                    <>
-                      <span className={'at-r-badge ' + (r.discord_ok ? 'ok' : 'fail')}>DC</span>
-                      <span className={'at-r-badge ' + (r.youtube_ok ? 'ok' : 'fail')}>YT</span>
-                      <span className="at-r-res">{r.resources_ok}/{r.resources_n}</span>
-                      <span className="at-r-ms">{r.response_ms}мс</span>
-                    </>
+                <div key={i} className="at-result-item" style={{ animationDelay: (i * 0.04) + 's' }}>
+                  <div className={'at-result-row' + (r.error ? ' error' : '')}
+                    onClick={() => {
+                      if (testing) return;
+                      if (expandedResult === r.strategy) {
+                        setExpandedResult(null);
+                      } else {
+                        setExpandedResult(r.strategy);
+                      }
+                    }}>
+                    <span className="at-r-name">{r.strategy}</span>
+                    {r.error ? (
+                      <span className="at-r-err">{r.error}</span>
+                    ) : (
+                      <>
+                        <div className="at-r-score-bar">
+                          <div className="at-r-score-fill" style={{ width: ((r.resources_ok / Math.max(r.resources_n, 1)) * 100) + '%' }}></div>
+                        </div>
+                        <span className="at-r-res">{r.resources_ok}/{r.resources_n}</span>
+                        <span className="at-r-ms">{r.response_ms}мс</span>
+                        <span className="at-r-expand">{expandedResult === r.strategy ? '▲' : '▼'}</span>
+                      </>
+                    )}
+                  </div>
+                  {expandedResult === r.strategy && r.resources_detail && (
+                    <div className="at-resources-detail">
+                      <div className="at-rd-grid">
+                        {r.resources_detail.map((rd, j) => (
+                          <div key={j} className={'at-rd-card ' + (rd.ok ? 'ok' : 'fail')}>
+                            <div className="at-rd-card-name">{rd.name}</div>
+                            <div className="at-rd-card-status">{rd.ok ? '✓' : '✗'}</div>
+                            <div className="at-rd-card-ms">{rd.ms}мс</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   )}
                 </div>
               ))}
@@ -393,7 +440,7 @@ function StrategyTab({ status, showToast }) {
         )}
 
         {!testing && testResults.length > 0 && (
-          <button className="btn" onClick={() => setTestModal(false)} style={{ marginTop: 16, width: '100%' }}>
+          <button className="btn btn-accent" onClick={() => setTestModal(false)} style={{ marginTop: 16, width: '100%' }}>
             Закрыть
           </button>
         )}

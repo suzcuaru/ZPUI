@@ -1,14 +1,16 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import Card from '../components/Card';
+import CopyBtn from '../components/CopyBtn';
 import Skeleton from '../components/Skeleton';
 import { api } from '../api';
+import { LANG } from '../lang';
 import { formatBytes } from '../utils';
 import { getSnapshots, cacheGet, cacheSet } from '../db';
 
-function MiniChart({ data, color, label }) {
+function MiniChart({ data, color, maxVal }) {
   if (!data || data.length < 2) return null;
-  const w = 200, h = 28;
-  const mx = Math.max(...data, 1);
+  const w = 200, h = 36;
+  const mx = maxVal || Math.max(...data, 1);
   const pts = data.map((v, i) => {
     const x = (i / (data.length - 1)) * w;
     const y = h - (v / mx) * (h - 4);
@@ -16,45 +18,68 @@ function MiniChart({ data, color, label }) {
   });
   const fill = `M0,${h} L${pts.join(' L')} L${w},${h} Z`;
   return (
-    <div className="mn-chart-wrap">
-      <span className="mn-chart-label">{label}</span>
-      <svg width="100%" height={h} viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" style={{ display: 'block' }}>
-        <defs>
-          <linearGradient id={`mc-${color}`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={color} stopOpacity="0.25" />
-            <stop offset="100%" stopColor={color} stopOpacity="0" />
-          </linearGradient>
-        </defs>
-        <path d={fill} fill={`url(#mc-${color})`} />
-        <polyline points={pts.join(' ')} fill="none" stroke={color} strokeWidth="1.5" strokeLinejoin="round" />
-      </svg>
-    </div>
+    <svg width="100%" height={h} viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" style={{ display: 'block' }}>
+      <defs>
+        <linearGradient id={`mg-${color}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.3" />
+          <stop offset="100%" stopColor={color} stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <path d={fill} fill={`url(#mg-${color})`} />
+      <polyline points={pts.join(' ')} fill="none" stroke={color} strokeWidth="1.5" strokeLinejoin="round" />
+    </svg>
   );
 }
 
+const ROW_HEIGHT = 44;
+
 export default function MonitorPage({ status, showToast }) {
   const [connections, setConnections] = useState([]);
+  const [devices, setDevices] = useState([]);
+  const [deviceInfo, setDeviceInfo] = useState({});
+  const [history, setHistory] = useState({ dl: [], ul: [] });
   const [visibleCount, setVisibleCount] = useState(20);
   const [defaultRes, setDefaultRes] = useState(null);
   const [userRes, setUserRes] = useState(null);
   const [resLoading, setResLoading] = useState(true);
-  const [history, setHistory] = useState({ dl: [], ul: [] });
+  const [showAllConns, setShowAllConns] = useState(false);
   const connsCardRef = useRef(null);
   const resGridRef = useRef(null);
   const [resCols, setResCols] = useState(4);
-  const ROW_HEIGHT = 44;
 
-  const monitor = status?.monitor || {};
+  const m = status?.monitor || {};
+  const p = status?.proxy || {};
+  const net = status?.network || {};
+  const pRun = p.running === true;
+  const zRun = status?.zapret?.status === 'running';
 
   useEffect(() => {
-    let alive = true;
+    if (!pRun) { setConnections([]); setDevices([]); setDeviceInfo({}); return; }
     const load = async () => {
-      const c = await api('GET', '/api/proxy/connections');
-      if (alive && c) setConnections(c.connections || []);
+      const [c, d] = await Promise.all([
+        api('GET', '/api/proxy/connections'),
+        api('GET', '/api/monitor/devices'),
+      ]);
+      if (c) { setConnections(c.connections || []); setDeviceInfo(c.device_info || {}); }
+      if (d) setDevices(d.devices || []);
     };
     load();
     const iv = setInterval(load, 3000);
-    return () => { alive = false; clearInterval(iv); };
+    return () => clearInterval(iv);
+  }, [pRun]);
+
+  useEffect(() => {
+    const loadHistory = async () => {
+      try {
+        const snaps = await getSnapshots(Date.now() - 30 * 60 * 1000);
+        const dl = snaps.map(s => s.dl || 0);
+        const ul = snaps.map(s => s.ul || 0);
+        setHistory({ dl, ul });
+      } catch {}
+    };
+    loadHistory();
+    const iv = setInterval(loadHistory, 5000);
+    return () => clearInterval(iv);
   }, []);
 
   useEffect(() => {
@@ -79,18 +104,6 @@ export default function MonitorPage({ status, showToast }) {
     load(true);
     const iv = setInterval(() => load(false), 30000);
     return () => { active = false; clearInterval(iv); };
-  }, []);
-
-  useEffect(() => {
-    const loadHistory = async () => {
-      try {
-        const snaps = await getSnapshots(Date.now() - 30 * 60 * 1000);
-        setHistory({ dl: snaps.map(s => s.dl || 0), ul: snaps.map(s => s.ul || 0) });
-      } catch {}
-    };
-    loadHistory();
-    const iv = setInterval(loadHistory, 5000);
-    return () => clearInterval(iv);
   }, []);
 
   useEffect(() => {
@@ -128,14 +141,19 @@ export default function MonitorPage({ status, showToast }) {
     targetByHost[h].conns++;
   });
 
-  const entries = Object.entries(targetByHost).map(([host, s]) => ({
-    host, hostShort: host.replace(/:\d+$/, '').split('.').slice(-2).join('.'), ...s,
-  })).sort((a, b) => b.bytes - a.bytes);
+  const entries = Object.entries(targetByHost)
+    .map(([host, s]) => ({
+      host, hostShort: host.replace(/:\d+$/, '').split('.').slice(-2).join('.'), ...s,
+    }))
+    .sort((a, b) => b.bytes - a.bytes);
 
   const maxBytes = entries.length > 0 ? entries[0].bytes : 1;
   const totalConns = connections.length;
   const totalDown = connections.reduce((s, c) => s + (c.bytes_recv || 0), 0);
   const totalUp = connections.reduce((s, c) => s + (c.bytes_sent || 0), 0);
+
+  const lanIP = net.ips?.[0] || '127.0.0.1';
+  const proxyUrl = pRun ? 'socks5://' + lanIP + ':' + (p.port || 1080) : null;
 
   if (!status) {
     return (
@@ -154,24 +172,24 @@ export default function MonitorPage({ status, showToast }) {
       <div className="page-title">Мониторинг</div>
       <div className="ov-grid">
 
-        {/* ── Speed + History Charts ──────── */}
+        {/* ── Speed + Status ──────────────── */}
         <div className="ov-speed-card">
           <div className="ov-speed-item">
             <div className="ov-speed-head">
-              <span className="ov-speed-label">↓ Скачивание</span>
-              <span className="ov-speed-value">{monitor.dl_speed_fmt || '0 B/s'}</span>
+              <span className="ov-speed-label">↓ Загрузка</span>
+              <span className="ov-speed-value">{m.dl_speed_fmt || '0 B/s'}</span>
             </div>
-            <MiniChart data={history.dl} color="var(--accent)" label="30 мин" />
-            <span className="ov-speed-total">Всего {monitor.download_fmt || '0'}</span>
+            <MiniChart data={history.dl} color="var(--accent)" />
+            <span className="ov-speed-total">Всего {m.download_fmt || '0 B'}</span>
           </div>
           <div className="ov-speed-divider"></div>
           <div className="ov-speed-item">
             <div className="ov-speed-head">
-              <span className="ov-speed-label">↑ Отправка</span>
-              <span className="ov-speed-value">{monitor.ul_speed_fmt || '0 B/s'}</span>
+              <span className="ov-speed-label">↑ Отдача</span>
+              <span className="ov-speed-value">{m.ul_speed_fmt || '0 B/s'}</span>
             </div>
-            <MiniChart data={history.ul} color="var(--success)" label="30 мин" />
-            <span className="ov-speed-total">Всего {monitor.upload_fmt || '0'}</span>
+            <MiniChart data={history.ul} color="var(--success)" />
+            <span className="ov-speed-total">Всего {m.upload_fmt || '0 B'}</span>
           </div>
           <div className="ov-speed-divider"></div>
           <div className="ov-speed-item">
@@ -179,11 +197,53 @@ export default function MonitorPage({ status, showToast }) {
               <span className="ov-speed-label">Подключения</span>
               <span className="ov-speed-value">{totalConns}</span>
             </div>
-            <div className="ov-speed-bar-wrap">
-              <div className="ov-speed-bar" style={{ width: Math.min(totalConns * 2, 100) + '%', background: 'var(--warning)' }}></div>
+            <div className="ov-speed-bar-wrap" style={{ marginTop: 8 }}>
+              <div className="ov-speed-bar" style={{ width: Math.min(totalConns * 3, 100) + '%', background: 'var(--warning)' }}></div>
             </div>
-            <span className="ov-speed-total">↓{formatBytes(totalDown)} ↑{formatBytes(totalUp)}</span>
+            <span className="ov-speed-total">↓{formatBytes(totalDown)} · ↑{formatBytes(totalUp)}</span>
           </div>
+        </div>
+
+        {/* ── Proxy Status + Devices ───────────────── */}
+        <div className="ov-conns-card">
+          <div className="ov-conns-header">
+            <span className="ov-conns-title">Прокси (SOCKS5)</span>
+            <span className={'ov-status-badge' + (pRun ? ' ok' : ' off')}>{pRun ? 'Работает' : 'Остановлен'}</span>
+          </div>
+          {pRun ? (
+            <div className="proxy-devices">
+              {proxyUrl && (
+                <div className="proxy-url-bar">
+                  <span className="proxy-url-label">URL</span>
+                  <span className="proxy-url-value mono">{proxyUrl}</span>
+                  <CopyBtn text={proxyUrl} onCopied={() => showToast(LANG.copied, 'success')} />
+                </div>
+              )}
+              {devices.length > 0 && (
+                <div className="proxy-device-grid">
+                  {devices.map(dev => {
+                    const host = dev.hostname || deviceInfo[dev.ip]?.hostname || '';
+                    const mac = deviceInfo[dev.ip]?.mac || '';
+                    return (
+                      <div key={dev.ip} className="proxy-device-card">
+                        <span className="proxy-device-icon">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                        </span>
+                        <div className="proxy-device-info">
+                          <span className="proxy-device-ip mono">{dev.ip}</span>
+                          <span className="proxy-device-host">{host || mac || '—'}</span>
+                        </div>
+                        <span className="proxy-device-conns">{dev.connections} соед.</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              {devices.length === 0 && <div className="ov-empty">Нет подключённых устройств</div>}
+            </div>
+          ) : (
+            <div className="ov-empty">Запустите прокси в боковой панели</div>
+          )}
         </div>
 
         {/* ── Resource Status ─────────────── */}
@@ -238,13 +298,16 @@ export default function MonitorPage({ status, showToast }) {
 
         {/* ── Connections List ──────────────── */}
         <div className="ov-conns-card" ref={connsCardRef}>
-          <div className="ov-conns-header">
-            <span className="ov-conns-title">Соединения</span>
-            {entries.length > visibleCount && <span className="ov-conns-count">{visibleCount} из {entries.length}</span>}
+          <div className="ov-conns-header" onClick={() => setShowAllConns(!showAllConns)} style={{ cursor: 'pointer' }}>
+            <div className="ov-conns-title-row">
+              <span className="ov-conns-title">Соединения</span>
+              <svg className={'ov-conns-chevron' + (showAllConns ? ' open' : '')} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+            {entries.length > 0 && <span className="ov-conns-count">{entries.length} ресурсов</span>}
           </div>
           {entries.length > 0 ? (
-            <div className="ov-conns-list" style={{ maxHeight: visibleCount * ROW_HEIGHT, overflowY: 'auto' }}>
-              {entries.slice(0, visibleCount).map((e, i) => (
+            <div className="ov-conns-list" style={{ maxHeight: (showAllConns ? entries.length : visibleCount) * ROW_HEIGHT, overflowY: 'auto' }}>
+              {(showAllConns ? entries : entries.slice(0, visibleCount)).map((e, i) => (
                 <div key={e.host} className="ov-conn-row">
                   <span className="ov-conn-rank">{i + 1}</span>
                   <div className="ov-conn-info">
@@ -263,9 +326,26 @@ export default function MonitorPage({ status, showToast }) {
               ))}
             </div>
           ) : (
-            <div className="ov-empty">Нет активных соединений</div>
+            <div className="ov-empty">{pRun ? 'Нет активных соединений' : 'Запустите прокси для просмотра'}</div>
           )}
         </div>
+
+        {/* ── Network Info Bar ─────────────── */}
+        <div className="ov-net-bar">
+          <span className="ov-net-item-inline">{net.hostname || '—'}</span>
+          <span className="ov-net-sep">·</span>
+          <span className="ov-net-item-inline mono">{(net.ips || [])[0] || '—'}</span>
+          {proxyUrl && <>
+            <span className="ov-net-sep">·</span>
+            <span className="ov-net-item-inline mono">{proxyUrl.replace('socks5://', '')}</span>
+            <CopyBtn text={proxyUrl.replace('socks5://', '')} onCopied={() => showToast(LANG.copied, 'success')} />
+          </>}
+          <span className="ov-net-sep">·</span>
+          <span className="ov-net-item-inline" style={{ color: zRun ? 'var(--success)' : 'var(--danger)' }}>
+            Zapret: {zRun ? 'Работает' : 'Остановлен'}
+          </span>
+        </div>
+
       </div>
     </>
   );
