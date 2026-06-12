@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Card from '../components/Card';
 import Switch from '../components/Switch';
 import Modal from '../components/Modal';
@@ -10,10 +10,10 @@ export default function GeneralPage({ status, showToast }) {
   const [config, setConfig] = useState({ zapret_path: '', proxy_port: 1080, autostart: false, proxy_auto_start: false, auto_path: true });
   const [svcStatus, setSvcStatus] = useState(null);
   const [svcLoading, setSvcLoading] = useState(false);
+  const saveTimer = useRef(null);
 
   const z = status?.zapret || {};
   const detectedPath = z.zapretDir || '';
-  const saveTimer = useRef(null);
 
   useEffect(() => { loadConfig(); loadSvcStatus(); }, []);
 
@@ -166,6 +166,3 @@ export default function GeneralPage({ status, showToast }) {
     </>
   );
 }
-
-const useRef = (fn) => { /* This is just a placeholder if I missed importing it, but wait, I used it in the code. */ };
-// Actually, I should have used import { useRef } from 'react';

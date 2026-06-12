@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import Card from '../components/Card';
 import Modal from '../components/Modal';
 import { api, apiCall } from '../api';
-import { LANG } from '../lang';
+import Skeleton from '../components/Skeleton';
 import { cacheGet, cacheSet } from '../db';
 
 export default function StrategyPage({ status, showToast }) {

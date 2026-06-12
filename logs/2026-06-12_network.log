@@ -932,3 +932,184 @@
 [2026-06-12 15:38:34] [INFO] [network] Connection #463 closed (sent: 0, recv: 1725 bytes)
 [2026-06-12 15:38:40] [INFO] [proxy] Firewall rule removed
 [2026-06-12 15:38:40] [INFO] [proxy] SOCKS5 proxy stopped
+[2026-06-12 16:16:37] [INFO] [proxy] Firewall rule added for port 1080
+[2026-06-12 16:16:37] [INFO] [proxy] SOCKS5 proxy started on :1080
+[2026-06-12 16:16:37] [INFO] [network] SOCKS5 proxy listening on port 1080
+[2026-06-12 16:16:37] [INFO] [network] Connection #1: 192.168.3.35 -> internal.api.vk.ru:443
+[2026-06-12 16:16:37] [INFO] [network] Connection #2: 192.168.3.35 -> play-fe.googleapis.com:443
+[2026-06-12 16:16:37] [INFO] [network] Connection #3: 192.168.3.35 -> api.vkvideo.ru:443
+[2026-06-12 16:16:37] [INFO] [network] Connection #4: 192.168.3.35 -> api.vkvideo.ru:443
+[2026-06-12 16:16:37] [INFO] [network] Connection #5: 192.168.3.35 -> api.ad.intl.xiaomi.com:443
+[2026-06-12 16:16:37] [INFO] [network] Connection #6: 192.168.3.35 -> api.vkvideo.ru:443
+[2026-06-12 16:16:37] [INFO] [network] Connection #7: 192.168.3.35 -> api.vkvideo.ru:443
+[2026-06-12 16:16:37] [INFO] [network] Connection #8: 192.168.3.35 -> api.vkvideo.ru:443
+[2026-06-12 16:16:37] [INFO] [network] Connection #9: 192.168.3.35 -> api.vkvideo.ru:443
+[2026-06-12 16:16:37] [INFO] [network] Connection #10: 192.168.3.35 -> android.googleapis.com:443
+[2026-06-12 16:16:37] [INFO] [network] Connection #11: 192.168.3.35 -> ip4.tracker-api.vk-analytics.ru:443
+[2026-06-12 16:16:37] [INFO] [network] Connection #12: 192.168.3.35 -> ip4.tracker-api.vk-analytics.ru:443
+[2026-06-12 16:16:37] [INFO] [network] Connection #13: 192.168.3.35 -> ts.tracker-api.vk-analytics.ru:443
+[2026-06-12 16:16:37] [INFO] [network] Connection #14: 192.168.3.35 -> eh.vk.com:443
+[2026-06-12 16:16:37] [INFO] [network] Connection #15: 192.168.3.35 -> play.googleapis.com:443
+[2026-06-12 16:16:37] [INFO] [network] Connection #9 closed (sent: 4625, recv: 723 bytes)
+[2026-06-12 16:16:37] [INFO] [network] Connection #3 closed (sent: 4625, recv: 723 bytes)
+[2026-06-12 16:16:37] [INFO] [network] Connection #8 closed (sent: 4625, recv: 723 bytes)
+[2026-06-12 16:16:37] [INFO] [network] Connection #4 closed (sent: 4625, recv: 723 bytes)
+[2026-06-12 16:16:37] [INFO] [network] Connection #6 closed (sent: 4625, recv: 723 bytes)
+[2026-06-12 16:16:37] [INFO] [network] Connection #16: 192.168.3.35 -> rebus.rustore.ru:443
+[2026-06-12 16:16:37] [INFO] [network] Connection #17: 192.168.3.35 -> stats.rustore.ru:443
+[2026-06-12 16:16:37] [INFO] [network] Connection #18: 192.168.3.35 -> vkpns.rustore.ru:443
+[2026-06-12 16:16:37] [INFO] [network] Connection #13 closed (sent: 3795, recv: 1312 bytes)
+[2026-06-12 16:16:37] [INFO] [network] Connection #19: 192.168.3.35 -> app-measurement.com:443
+[2026-06-12 16:16:38] [INFO] [network] Connection #20: 192.168.3.35 -> stats.rustore.ru:443
+[2026-06-12 16:16:38] [INFO] [network] Connection #21: 192.168.3.35 -> ts.tracker-api.vk-analytics.ru:443
+[2026-06-12 16:16:38] [INFO] [network] Connection #22: 192.168.3.35 -> internal.api.vk.ru:443
+[2026-06-12 16:16:38] [INFO] [network] Connection #23: 192.168.3.35 -> 23111.ms.vk.com:443
+[2026-06-12 16:16:38] [INFO] [network] Connection #24: 192.168.3.35 -> tracker-api.vk-analytics.ru:443
+[2026-06-12 16:16:38] [INFO] [network] Connection #25: 192.168.3.35 -> weatherapi.intl.xiaomi.com:443
+[2026-06-12 16:16:38] [INFO] [network] Connection #21 closed (sent: 3795, recv: 1313 bytes)
+[2026-06-12 16:16:38] [INFO] [network] Connection #25 closed (sent: 303, recv: 517 bytes)
+[2026-06-12 16:16:38] [INFO] [network] Connection #26: 192.168.3.35 -> internal.api.vk.ru:443
+[2026-06-12 16:16:38] [INFO] [network] Connection #27: 192.168.3.35 -> api.vk.com:443
+[2026-06-12 16:16:38] [INFO] [network] Connection #28: 192.168.3.35 -> internal.api.vk.ru:443
+[2026-06-12 16:16:38] [INFO] [network] Connection #29: 192.168.3.35 -> internal.api.vk.ru:443
+[2026-06-12 16:16:39] [INFO] [network] Connection #24 closed (sent: 3742, recv: 1569 bytes)
+[2026-06-12 16:16:39] [INFO] [network] Connection #30: 192.168.3.35 -> mtalk.google.com:5228
+[2026-06-12 16:16:39] [INFO] [network] Connection #31: 192.168.3.35 -> weatherapi.intl.xiaomi.com:443
+[2026-06-12 16:16:40] [INFO] [network] Connection #31 closed (sent: 303, recv: 517 bytes)
+[2026-06-12 16:16:41] [INFO] [network] Connection #32: 192.168.3.35 -> report.appmetrica.yandex.net:443
+[2026-06-12 16:16:45] [INFO] [network] Connection #33: 192.168.3.35 -> reef.vk-cdn.net:443
+[2026-06-12 16:16:45] [INFO] [network] Connection #34: 192.168.3.35 -> 24111.ms.vk.com:443
+[2026-06-12 16:16:47] [INFO] [network] Connection #2 closed (sent: 4467, recv: 1796 bytes)
+[2026-06-12 16:16:47] [INFO] [network] Connection #16 closed (sent: 5056, recv: 4017 bytes)
+[2026-06-12 16:16:49] [INFO] [network] Connection #30 closed (sent: 203, recv: 532 bytes)
+[2026-06-12 16:16:49] [INFO] [network] Connection #35: 192.168.3.35 -> 107.155.53.220:5222
+[2026-06-12 16:16:50] [INFO] [network] Connection #36: 192.168.3.35 -> ad.mail.ru:443
+[2026-06-12 16:16:50] [INFO] [network] Connection #37: 192.168.3.35 -> flash.sec.intl.miui.com:443
+[2026-06-12 16:16:50] [INFO] [network] Connection #38: 192.168.3.35 -> api.sec.intl.miui.com:443
+[2026-06-12 16:16:50] [INFO] [network] Connection #37 closed (sent: 303, recv: 517 bytes)
+[2026-06-12 16:16:50] [INFO] [network] Connection #38 closed (sent: 303, recv: 517 bytes)
+[2026-06-12 16:16:50] [INFO] [network] Connection #36 closed (sent: 379, recv: 1432 bytes)
+[2026-06-12 16:16:51] [INFO] [network] Connection #39: 192.168.3.35 -> ad.mail.ru:443
+[2026-06-12 16:16:51] [INFO] [network] Connection #39 closed (sent: 379, recv: 3984 bytes)
+[2026-06-12 16:16:51] [INFO] [network] Connection #40: 192.168.3.35 -> ad.mail.ru:443
+[2026-06-12 16:16:52] [INFO] [network] Connection #40 closed (sent: 379, recv: 1432 bytes)
+[2026-06-12 16:16:52] [INFO] [network] Connection #41: 192.168.3.35 -> ad.mail.ru:443
+[2026-06-12 16:16:52] [INFO] [network] Connection #41 closed (sent: 379, recv: 1873 bytes)
+[2026-06-12 16:16:52] [INFO] [network] Connection #42: 192.168.3.35 -> ad.mail.ru:443
+[2026-06-12 16:16:53] [INFO] [network] Connection #42 closed (sent: 379, recv: 1432 bytes)
+[2026-06-12 16:16:53] [INFO] [network] Connection #11 closed (sent: 3778, recv: 793 bytes)
+[2026-06-12 16:16:53] [INFO] [network] Connection #43: 192.168.3.35 -> ad.mail.ru:443
+[2026-06-12 16:16:54] [INFO] [network] Connection #43 closed (sent: 379, recv: 1873 bytes)
+[2026-06-12 16:16:54] [INFO] [network] Connection #44: 192.168.3.35 -> ad.mail.ru:443
+[2026-06-12 16:16:54] [INFO] [network] Connection #44 closed (sent: 379, recv: 1432 bytes)
+[2026-06-12 16:16:55] [INFO] [network] Connection #45: 192.168.3.35 -> ad.mail.ru:443
+[2026-06-12 16:16:55] [INFO] [network] Connection #46: 192.168.3.35 -> 24111.ms.vk.com:443
+[2026-06-12 16:16:55] [INFO] [network] Connection #45 closed (sent: 379, recv: 1873 bytes)
+[2026-06-12 16:16:55] [INFO] [network] Connection #47: 192.168.3.35 -> ad.mail.ru:443
+[2026-06-12 16:16:56] [INFO] [network] Connection #10 closed (sent: 0, recv: 2290 bytes)
+[2026-06-12 16:16:56] [INFO] [network] Connection #47 closed (sent: 379, recv: 1432 bytes)
+[2026-06-12 16:16:56] [INFO] [network] Connection #48: 192.168.3.35 -> ad.mail.ru:443
+[2026-06-12 16:16:57] [INFO] [network] Connection #48 closed (sent: 379, recv: 1873 bytes)
+[2026-06-12 16:16:59] [INFO] [network] Connection #49: 192.168.3.35 -> mobileproxy.passport.yandex.net:443
+[2026-06-12 16:16:59] [INFO] [network] Connection #50: 192.168.3.35 -> mobileproxy.passport.yandex.net:443
+[2026-06-12 16:16:59] [INFO] [network] Connection #51: 192.168.3.35 -> mobileproxy.passport.yandex.net:443
+[2026-06-12 16:17:00] [INFO] [network] Connection #52: 192.168.3.35 -> 23111.ms.vk.com:443
+[2026-06-12 16:17:01] [INFO] [network] Connection #53: 192.168.3.35 -> api.account.xiaomi.com:443
+[2026-06-12 16:17:01] [INFO] [network] Connection #53 closed (sent: 703, recv: 517 bytes)
+[2026-06-12 16:17:05] [INFO] [network] Connection #23 closed (sent: 0, recv: 1757 bytes)
+[2026-06-12 16:17:05] [INFO] [network] Connection #54: 192.168.3.35 -> 24111.ms.vk.com:443
+[2026-06-12 16:17:05] [INFO] [network] Connection #55: 192.168.3.35 -> api.sec.intl.miui.com:443
+[2026-06-12 16:17:05] [INFO] [network] Connection #56: 192.168.3.35 -> i.ytimg.com:443
+[2026-06-12 16:17:05] [INFO] [network] Connection #57: 192.168.3.35 -> taskassist-pa.googleapis.com:443
+[2026-06-12 16:17:05] [INFO] [network] Connection #58: 192.168.3.35 -> youtubei.googleapis.com:443
+[2026-06-12 16:17:05] [INFO] [network] Connection #59: 192.168.3.35 -> appsgrowthpromo-pa.googleapis.com:443
+[2026-06-12 16:17:05] [INFO] [network] Connection #60: 192.168.3.35 -> adv.sec.intl.miui.com:443
+[2026-06-12 16:17:05] [INFO] [network] Connection #61: 192.168.3.35 -> ruac.account.xiaomi.com:443
+[2026-06-12 16:17:06] [INFO] [network] Connection #55 closed (sent: 303, recv: 517 bytes)
+[2026-06-12 16:17:06] [INFO] [network] Connection #61 closed (sent: 703, recv: 517 bytes)
+[2026-06-12 16:17:06] [INFO] [network] Connection #62: 192.168.3.35 -> pubsub.googleapis.com:443
+[2026-06-12 16:17:07] [INFO] [network] Connection #63: 192.168.3.35 -> adv.sec.intl.miui.com:443
+[2026-06-12 16:17:15] [INFO] [network] Connection #34 closed (sent: 0, recv: 1789 bytes)
+[2026-06-12 16:17:15] [INFO] [network] Connection #64: 192.168.3.35 -> 24111.ms.vk.com:443
+[2026-06-12 16:17:15] [INFO] [network] Connection #65: 192.168.3.35 -> 24111.ms.vk.com:443
+[2026-06-12 16:17:15] [INFO] [network] Connection #56 closed (sent: 5809, recv: 1817 bytes)
+[2026-06-12 16:17:15] [INFO] [network] Connection #59 closed (sent: 0, recv: 1775 bytes)
+[2026-06-12 16:17:15] [INFO] [network] Connection #58 closed (sent: 4467, recv: 1733 bytes)
+[2026-06-12 16:17:17] [INFO] [network] Connection #15 closed (sent: 0, recv: 517 bytes)
+[2026-06-12 16:17:17] [INFO] [network] Connection #66: 192.168.3.35 -> play.googleapis.com:443
+[2026-06-12 16:17:25] [INFO] [network] Connection #57 closed (sent: 0, recv: 1738 bytes)
+[2026-06-12 16:17:25] [INFO] [network] Connection #46 closed (sent: 0, recv: 1725 bytes)
+[2026-06-12 16:17:25] [INFO] [network] Connection #67: 192.168.3.35 -> 24111.ms.vk.com:443
+[2026-06-12 16:17:25] [INFO] [network] Connection #68: 192.168.3.35 -> 24111.ms.vk.com:443
+[2026-06-12 16:17:28] [INFO] [network] Connection #69: 192.168.3.35 -> weatherapi.intl.xiaomi.com:443
+[2026-06-12 16:17:29] [INFO] [network] Connection #69 closed (sent: 303, recv: 517 bytes)
+[2026-06-12 16:17:30] [INFO] [network] Connection #52 closed (sent: 0, recv: 517 bytes)
+[2026-06-12 16:17:30] [INFO] [network] Connection #70: 192.168.3.35 -> firebaselogging.googleapis.com:443
+[2026-06-12 16:17:33] [INFO] [network] Connection #71: 192.168.3.35 -> ruac.account.xiaomi.com:443
+[2026-06-12 16:17:33] [INFO] [network] Connection #71 closed (sent: 715, recv: 517 bytes)
+[2026-06-12 16:17:35] [INFO] [network] Connection #54 closed (sent: 0, recv: 1789 bytes)
+[2026-06-12 16:17:35] [INFO] [network] Connection #72: 192.168.3.35 -> 24111.ms.vk.com:443
+[2026-06-12 16:17:35] [INFO] [network] Connection #73: 192.168.3.35 -> 24111.ms.vk.com:443
+[2026-06-12 16:17:35] [INFO] [network] Connection #74: 192.168.3.35 -> ts.tracker-api.vk-analytics.ru:443
+[2026-06-12 16:17:36] [INFO] [network] Connection #74 closed (sent: 3795, recv: 1439 bytes)
+[2026-06-12 16:17:37] [INFO] [network] Connection #67 closed (sent: 0, recv: 1821 bytes)
+[2026-06-12 16:17:37] [INFO] [network] Connection #68 closed (sent: 0, recv: 517 bytes)
+[2026-06-12 16:17:37] [INFO] [network] Connection #73 closed (sent: 0, recv: 517 bytes)
+[2026-06-12 16:17:37] [INFO] [network] Connection #72 closed (sent: 0, recv: 1821 bytes)
+[2026-06-12 16:17:37] [INFO] [network] Connection #64 closed (sent: 0, recv: 1725 bytes)
+[2026-06-12 16:17:37] [INFO] [network] Connection #65 closed (sent: 0, recv: 517 bytes)
+[2026-06-12 16:17:38] [INFO] [network] Connection #22 closed (sent: 4467, recv: 1760 bytes)
+[2026-06-12 16:17:38] [INFO] [network] Connection #26 closed (sent: 4467, recv: 1760 bytes)
+[2026-06-12 16:17:38] [INFO] [network] Connection #28 closed (sent: 4467, recv: 1824 bytes)
+[2026-06-12 16:17:38] [INFO] [network] Connection #29 closed (sent: 4467, recv: 1728 bytes)
+[2026-06-12 16:17:39] [INFO] [network] Connection #75: 192.168.3.35 -> 85.192.32.50:443
+[2026-06-12 16:17:39] [INFO] [network] Connection #76: 192.168.3.35 -> 85.192.32.50:443
+[2026-06-12 16:17:39] [INFO] [network] Connection #77: 192.168.3.35 -> play.googleapis.com:443
+[2026-06-12 16:17:42] [INFO] [network] Connection #17 closed (sent: 4557, recv: 2627 bytes)
+[2026-06-12 16:17:43] [INFO] [network] Connection #18 closed (sent: 5751, recv: 2321 bytes)
+[2026-06-12 16:17:43] [INFO] [network] Connection #20 closed (sent: 4557, recv: 2355 bytes)
+[2026-06-12 16:17:44] [INFO] [network] Connection #78: 192.168.3.35 -> 85.192.32.50:443
+[2026-06-12 16:17:45] [INFO] [network] Connection #75 closed (sent: 327904, recv: 154493 bytes)
+[2026-06-12 16:17:45] [INFO] [network] Connection #79: 192.168.3.35 -> 85.192.32.50:443
+[2026-06-12 16:17:45] [INFO] [network] Connection #1 closed (sent: 264948, recv: 20017 bytes)
+[2026-06-12 16:17:46] [INFO] [network] Connection #80: 192.168.3.35 -> 85.192.32.50:443
+[2026-06-12 16:17:48] [INFO] [network] Connection #12 closed (sent: 3778, recv: 793 bytes)
+[2026-06-12 16:17:49] [INFO] [network] Connection #76 closed (sent: 1418, recv: 2227 bytes)
+[2026-06-12 16:17:52] [INFO] [network] Connection #81: 192.168.3.35 -> 85.192.32.50:443
+[2026-06-12 16:17:52] [INFO] [network] Connection #82: 192.168.3.35 -> 85.192.32.50:443
+[2026-06-12 16:17:52] [INFO] [network] Connection #80 closed (sent: 0, recv: 58364 bytes)
+[2026-06-12 16:17:54] [ERROR] [proxy] Connect to 85.192.32.50:443 failed: dial tcp 85.192.32.50:443: i/o timeout
+[2026-06-12 16:17:54] [ERROR] [proxy] Connect to 85.192.32.50:443 failed: dial tcp 85.192.32.50:443: i/o timeout
+[2026-06-12 16:17:54] [ERROR] [proxy] Connect to 85.192.32.50:443 failed: dial tcp 85.192.32.50:443: i/o timeout
+[2026-06-12 16:17:57] [INFO] [network] Connection #66 closed (sent: 0, recv: 517 bytes)
+[2026-06-12 16:18:00] [INFO] [network] Connection #82 closed (sent: 0, recv: 19216 bytes)
+[2026-06-12 16:18:00] [INFO] [network] Connection #81 closed (sent: 0, recv: 8264 bytes)
+[2026-06-12 16:18:00] [INFO] [network] Connection #33 closed (sent: 4985, recv: 2552 bytes)
+[2026-06-12 16:18:02] [INFO] [network] Connection #79 closed (sent: 338, recv: 1140 bytes)
+[2026-06-12 16:18:05] [INFO] [network] Connection #83: 192.168.3.35 -> 85.192.32.50:443
+[2026-06-12 16:18:05] [INFO] [network] Connection #60 closed (sent: 4363, recv: 517 bytes)
+[2026-06-12 16:18:07] [INFO] [network] Connection #84: 192.168.3.35 -> 85.192.32.50:443
+[2026-06-12 16:18:07] [INFO] [network] Connection #63 closed (sent: 4363, recv: 517 bytes)
+[2026-06-12 16:18:09] [INFO] [network] Connection #84 closed (sent: 0, recv: 19856 bytes)
+[2026-06-12 16:18:09] [INFO] [network] Connection #77 closed (sent: 0, recv: 2316 bytes)
+[2026-06-12 16:18:12] [INFO] [network] Connection #85: 192.168.3.35 -> 85.192.32.50:443
+[2026-06-12 16:18:12] [INFO] [network] Connection #86: 192.168.3.35 -> 85.192.32.50:443
+[2026-06-12 16:18:15] [ERROR] [proxy] Connect to 85.192.32.50:443 failed: dial tcp 85.192.32.50:443: i/o timeout
+[2026-06-12 16:18:21] [INFO] [network] Connection #87: 192.168.3.35 -> 85.192.32.50:443
+[2026-06-12 16:18:21] [INFO] [network] Connection #83 closed (sent: 178, recv: 1060 bytes)
+[2026-06-12 16:18:21] [INFO] [network] Connection #88: 192.168.3.35 -> 85.192.32.50:443
+[2026-06-12 16:18:31] [INFO] [network] Connection #89: 192.168.3.35 -> internal.api.vk.ru:443
+[2026-06-12 16:18:31] [INFO] [network] Connection #90: 192.168.3.35 -> queuev4.vk.ru:443
+[2026-06-12 16:18:31] [INFO] [network] Connection #91: 192.168.3.35 -> 24111.ms.vk.com:443
+[2026-06-12 16:18:36] [INFO] [network] Connection #92: 192.168.3.35 -> eh.vk.com:443
+[2026-06-12 16:18:36] [INFO] [network] Connection #91 closed (sent: 0, recv: 1725 bytes)
+[2026-06-12 16:18:39] [INFO] [network] Connection #88 closed (sent: 169, recv: 1398 bytes)
+[2026-06-12 16:18:39] [INFO] [network] Connection #93: 192.168.3.35 -> weatherapi.intl.xiaomi.com:443
+[2026-06-12 16:18:39] [INFO] [network] Connection #94: 192.168.3.35 -> 85.192.32.50:443
+[2026-06-12 16:18:39] [INFO] [network] Connection #93 closed (sent: 303, recv: 517 bytes)
+[2026-06-12 16:18:42] [INFO] [network] Connection #14 closed (sent: 5908, recv: 2146 bytes)
+[2026-06-12 16:18:44] [INFO] [network] Connection #87 closed (sent: 684, recv: 626 bytes)
+[2026-06-12 16:18:44] [INFO] [network] Connection #85 closed (sent: 1039419, recv: 19897 bytes)
+[2026-06-12 16:18:44] [INFO] [network] Connection #94 closed (sent: 242, recv: 699 bytes)
+[2026-06-12 16:18:44] [INFO] [network] Connection #78 closed (sent: 258, recv: 891 bytes)
+[2026-06-12 16:18:44] [INFO] [network] Connection #86 closed (sent: 1464637, recv: 32240 bytes)
