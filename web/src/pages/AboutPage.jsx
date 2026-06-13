@@ -181,36 +181,6 @@ export default function AboutPage({ status, showToast }) {
         </div>
       </Card>
 
-      {/* How it works */}
-      <Card className="settings-card" style={{ marginTop: 16 }}>
-        <div className="settings-card-header">
-          <h3>Как это работает</h3>
-        </div>
-        <div className="about-how-grid">
-          <div className="about-how-item">
-            <div className="about-how-num">1</div>
-            <div className="about-how-content">
-              <strong>Zapret</strong>
-              <p>Перехватывает сетевые пакеты через WinDivert и модифицирует их — разбивает TCP-сегменты, добавляет фиктивные пакеты, меняет TTL. Провайдер не может сопоставить трафик с сигнатурами заблокированных сайтов.</p>
-            </div>
-          </div>
-          <div className="about-how-item">
-            <div className="about-how-num">2</div>
-            <div className="about-how-content">
-              <strong>Стратегии</strong>
-              <p>Наборы параметров winws.exe для разных сценариев: YouTube, Discord, игры, общий обход. Можно переключать и тестировать автоматически.</p>
-            </div>
-          </div>
-          <div className="about-how-item">
-            <div className="about-how-num">3</div>
-            <div className="about-how-content">
-              <strong>SOCKS5 прокси</strong>
-              <p>Позволяет делиться обходом с другими устройствами в локальной сети — телефонами, планшетами, другими ПК.</p>
-            </div>
-          </div>
-        </div>
-      </Card>
-
       {/* Links */}
       <Card className="settings-card" style={{ marginTop: 16 }}>
         <div className="settings-card-header">

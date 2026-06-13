@@ -13,7 +13,7 @@ import (
 	"zpui/internal/window"
 	"zpui/internal/zapret"
 
-	"github.com/getlantern/systray"
+	"fyne.io/systray"
 )
 
 type App struct {
@@ -55,11 +55,19 @@ func New(
 func (a *App) Run() error {
 	onReady := func() {
 		systray.SetIcon(createIcon())
-		systray.SetTooltip(fmt.Sprintf("ZPUI v%s", a.version))
+		systray.SetTooltip("ZPUI — Управление Zapret")
 
-		a.mTitle = systray.AddMenuItem(fmt.Sprintf("ZPUI v%s", a.version), "")
+		a.mTitle = systray.AddMenuItem("ZPUI", "")
 		a.mTitle.Disable()
 		systray.AddSeparator()
+
+		// Left-click on tray icon → toggle window
+		systray.SetOnTapped(func() {
+			url := a.web.GetURL()
+			if url != "" {
+				window.Toggle(url)
+			}
+		})
 
 		// Status items (non-clickable)
 		a.mZapret = systray.AddMenuItem("● Запрет: проверка...", "")
@@ -73,7 +81,7 @@ func (a *App) Run() error {
 		systray.AddSeparator()
 
 		// Actions
-		a.mPanel = systray.AddMenuItem("📊 Открыть панель", "")
+		a.mPanel = systray.AddMenuItem("📊 Показать/Скрыть окно", "")
 		a.mRestart = systray.AddMenuItem("🔄 Перезапустить запрет", "")
 		systray.AddSeparator()
 
@@ -176,7 +184,7 @@ func (a *App) handleClicks() {
 		case <-a.mPanel.ClickedCh:
 			url := a.web.GetURL()
 			if url != "" {
-				window.Open(url)
+				window.Toggle(url)
 			}
 		case <-a.mRestart.ClickedCh:
 			if err := a.zapret.Restart(); err != nil {

@@ -5,45 +5,31 @@ import Skeleton from '../components/Skeleton';
 import { api } from '../api';
 import { LANG } from '../lang';
 import { formatBytes } from '../utils';
-import { getSnapshots, cacheGet, cacheSet } from '../db';
 
-function MiniChart({ data, color, maxVal }) {
-  if (!data || data.length < 2) return null;
-  const w = 200, h = 36;
-  const mx = maxVal || Math.max(...data, 1);
-  const pts = data.map((v, i) => {
-    const x = (i / (data.length - 1)) * w;
-    const y = h - (v / mx) * (h - 4);
-    return `${x},${y}`;
-  });
-  const fill = `M0,${h} L${pts.join(' L')} L${w},${h} Z`;
+/* ── Equalizer Chart ── */
+function Equalizer({ data, type }) {
+  if (!data || data.length < 2) return <div className="eq-container" />;
+  const mx = Math.max(...data, 1);
   return (
-    <svg width="100%" height={h} viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" style={{ display: 'block' }}>
-      <defs>
-        <linearGradient id={`mg-${color}`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity="0.3" />
-          <stop offset="100%" stopColor={color} stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <path d={fill} fill={`url(#mg-${color})`} />
-      <polyline points={pts.join(' ')} fill="none" stroke={color} strokeWidth="1.5" strokeLinejoin="round" />
-    </svg>
+    <div className="eq-container">
+      {data.map((v, i) => {
+        const h = Math.max(3, (v / mx) * 100);
+        return (
+          <div className={'eq-bar ' + type} key={i} style={{ height: h + '%' }} />
+        );
+      })}
+    </div>
   );
 }
-
-const ROW_HEIGHT = 44;
 
 export default function MonitorPage({ status, showToast }) {
   const [connections, setConnections] = useState([]);
   const [devices, setDevices] = useState([]);
   const [deviceInfo, setDeviceInfo] = useState({});
   const [history, setHistory] = useState({ dl: [], ul: [] });
-  const [visibleCount, setVisibleCount] = useState(20);
   const [defaultRes, setDefaultRes] = useState(null);
   const [userRes, setUserRes] = useState(null);
   const [resLoading, setResLoading] = useState(true);
-  const [showAllConns, setShowAllConns] = useState(false);
-  const connsCardRef = useRef(null);
   const resGridRef = useRef(null);
   const [resCols, setResCols] = useState(4);
 
@@ -53,6 +39,7 @@ export default function MonitorPage({ status, showToast }) {
   const pRun = p.running === true;
   const zRun = status?.zapret?.status === 'running';
 
+  /* connections + devices */
   useEffect(() => {
     if (!pRun) { setConnections([]); setDevices([]); setDeviceInfo({}); return; }
     const load = async () => {
@@ -68,13 +55,17 @@ export default function MonitorPage({ status, showToast }) {
     return () => clearInterval(iv);
   }, [pRun]);
 
+  /* history from backend API (SQLite) */
   useEffect(() => {
     const loadHistory = async () => {
       try {
-        const snaps = await getSnapshots(Date.now() - 30 * 60 * 1000);
-        const dl = snaps.map(s => s.dl || 0);
-        const ul = snaps.map(s => s.ul || 0);
-        setHistory({ dl, ul });
+        const d = await api('GET', '/api/monitor/history?minutes=30');
+        if (d && d.snapshots) {
+          setHistory({
+            dl: d.snapshots.map(s => s.dl || 0),
+            ul: d.snapshots.map(s => s.ul || 0),
+          });
+        }
       } catch {}
     };
     loadHistory();
@@ -82,44 +73,21 @@ export default function MonitorPage({ status, showToast }) {
     return () => clearInterval(iv);
   }, []);
 
+  /* resource status */
   useEffect(() => {
     let active = true;
-    const load = async (initial) => {
-      if (initial) {
-        const cached = await cacheGet('resource-status');
-        if (cached && active) {
-          setDefaultRes(cached.default || []);
-          setUserRes(cached.user || []);
-          setResLoading(false);
-        }
-      }
+    const load = async () => {
       const d = await api('GET', '/api/resource-status');
       if (d && active) {
         setDefaultRes(d.default || []);
         setUserRes(d.user || []);
-        cacheSet('resource-status', d);
         setResLoading(false);
       }
     };
-    load(true);
-    const iv = setInterval(() => load(false), 30000);
+    load();
+    const iv = setInterval(load, 30000);
     return () => { active = false; clearInterval(iv); };
   }, []);
-
-  useEffect(() => {
-    const el = connsCardRef.current;
-    if (!el) return;
-    const measure = () => {
-      const rect = el.getBoundingClientRect();
-      const available = window.innerHeight - rect.top - 48 - 16;
-      setVisibleCount(Math.max(3, Math.floor(available / ROW_HEIGHT)));
-    };
-    measure();
-    const ro = new ResizeObserver(measure);
-    ro.observe(el);
-    window.addEventListener('resize', measure);
-    return () => { ro.disconnect(); window.removeEventListener('resize', measure); };
-  }, [status]);
 
   useEffect(() => {
     const el = resGridRef.current;
@@ -131,6 +99,7 @@ export default function MonitorPage({ status, showToast }) {
     return () => ro.disconnect();
   }, [status]);
 
+  /* aggregate by host */
   const targetByHost = {};
   connections.forEach(c => {
     const h = c.target_addr || 'unknown';
@@ -151,6 +120,7 @@ export default function MonitorPage({ status, showToast }) {
   const totalConns = connections.length;
   const totalDown = connections.reduce((s, c) => s + (c.bytes_recv || 0), 0);
   const totalUp = connections.reduce((s, c) => s + (c.bytes_sent || 0), 0);
+  const top3 = entries.slice(0, 3);
 
   const lanIP = net.ips?.[0] || '127.0.0.1';
   const proxyUrl = pRun ? 'socks5://' + lanIP + ':' + (p.port || 1080) : null;
@@ -172,14 +142,14 @@ export default function MonitorPage({ status, showToast }) {
       <div className="page-title">Мониторинг</div>
       <div className="ov-grid">
 
-        {/* ── Speed + Status ──────────────── */}
+        {/* ── Speed + Equalizer ─────────────── */}
         <div className="ov-speed-card">
           <div className="ov-speed-item">
             <div className="ov-speed-head">
               <span className="ov-speed-label">↓ Загрузка</span>
               <span className="ov-speed-value">{m.dl_speed_fmt || '0 B/s'}</span>
             </div>
-            <MiniChart data={history.dl} color="var(--accent)" />
+            <Equalizer data={history.dl} type="dl" />
             <span className="ov-speed-total">Всего {m.download_fmt || '0 B'}</span>
           </div>
           <div className="ov-speed-divider"></div>
@@ -188,7 +158,7 @@ export default function MonitorPage({ status, showToast }) {
               <span className="ov-speed-label">↑ Отдача</span>
               <span className="ov-speed-value">{m.ul_speed_fmt || '0 B/s'}</span>
             </div>
-            <MiniChart data={history.ul} color="var(--success)" />
+            <Equalizer data={history.ul} type="ul" />
             <span className="ov-speed-total">Всего {m.upload_fmt || '0 B'}</span>
           </div>
           <div className="ov-speed-divider"></div>
@@ -221,7 +191,7 @@ export default function MonitorPage({ status, showToast }) {
               )}
               {devices.length > 0 && (
                 <div className="proxy-device-grid">
-                  {devices.map(dev => {
+                  {[...devices].sort((a, b) => (b.connections || 0) - (a.connections || 0)).slice(0, 3).map(dev => {
                     const host = dev.hostname || deviceInfo[dev.ip]?.hostname || '';
                     const mac = deviceInfo[dev.ip]?.mac || '';
                     return (
@@ -296,34 +266,33 @@ export default function MonitorPage({ status, showToast }) {
           </div>
         )}
 
-        {/* ── Connections List ──────────────── */}
-        <div className="ov-conns-card" ref={connsCardRef}>
-          <div className="ov-conns-header" onClick={() => setShowAllConns(!showAllConns)} style={{ cursor: 'pointer' }}>
-            <div className="ov-conns-title-row">
-              <span className="ov-conns-title">Соединения</span>
-              <svg className={'ov-conns-chevron' + (showAllConns ? ' open' : '')} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-            </div>
-            {entries.length > 0 && <span className="ov-conns-count">{entries.length} ресурсов</span>}
+        {/* ── Top-3 Connections by Traffic ── */}
+        <div className="ov-conns-card">
+          <div className="ov-conns-header">
+            <span className="ov-conns-title">Топ-3 соединения</span>
+            {entries.length > 0 && <span className="ov-conns-count">{entries.length} всего</span>}
           </div>
-          {entries.length > 0 ? (
-            <div className="ov-conns-list" style={{ maxHeight: (showAllConns ? entries.length : visibleCount) * ROW_HEIGHT, overflowY: 'auto' }}>
-              {(showAllConns ? entries : entries.slice(0, visibleCount)).map((e, i) => (
-                <div key={e.host} className="ov-conn-row">
-                  <span className="ov-conn-rank">{i + 1}</span>
-                  <div className="ov-conn-info">
-                    <span className="ov-conn-name">{e.hostShort}</span>
-                    <span className="ov-conn-addr mono">{e.host}</span>
+          {top3.length > 0 ? (
+            <div style={{ padding: 16 }}>
+              <div className="top3-grid">
+                {top3.map((e, i) => (
+                  <div key={e.host} className="top3-card">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span className="top3-rank">{i + 1}</span>
+                      <span className="top3-name">{e.hostShort}</span>
+                    </div>
+                    <span className="ov-conn-addr mono" style={{ fontSize: 10 }}>{e.host}</span>
+                    <div className="top3-bar-wrap">
+                      <div className="top3-bar-fill" style={{ width: Math.max((e.bytes / maxBytes) * 100, 5) + '%' }} />
+                    </div>
+                    <div className="top3-stats">
+                      <span className="top3-dn">↓{formatBytes(e.down)}</span>
+                      <span className="top3-up">↑{formatBytes(e.up)}</span>
+                      <span style={{ color: 'var(--text-3)' }}>{e.conns} соед.</span>
+                    </div>
                   </div>
-                  <div className="ov-conn-bar-wrap">
-                    <div className="ov-conn-bar" style={{ width: Math.max((e.bytes / maxBytes) * 100, 2) + '%' }}></div>
-                  </div>
-                  <div className="ov-conn-stats">
-                    <span className="ov-conn-dn">↓{formatBytes(e.down)}</span>
-                    <span className="ov-conn-up">↑{formatBytes(e.up)}</span>
-                    <span className="ov-conn-conns">{e.conns}</span>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           ) : (
             <div className="ov-empty">{pRun ? 'Нет активных соединений' : 'Запустите прокси для просмотра'}</div>

@@ -1,8 +1,9 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { api } from '../api';
 
 const CATS = ['all', 'zapret', 'network', 'web', 'config'];
 const CAT_LABELS = { all: 'Все', zapret: 'Zapret', network: 'Сеть', web: 'Веб', config: 'Конфиг' };
+const CAT_TOOLTIPS = { all: 'Все категории', zapret: 'Логи Zapret (DPI bypass)', network: 'Сетевые логи', web: 'Логи веб-сервера', config: 'Логи конфигурации' };
 
 const FE_KEY = '__zpui_fe_logs';
 const MAX_FE = 500;
@@ -31,13 +32,36 @@ if (typeof window !== 'undefined' && !window.__zpui_log_init) {
   window.addEventListener('unhandledrejection', e => addFe('ERROR', `Promise: ${e.reason}`));
 }
 
+/* Tooltip wrapper */
+function Tip({ text, children }) {
+  return (
+    <div className="log-filter-tooltip">
+      {children}
+      <span className="log-filter-tooltip-text">{text}</span>
+    </div>
+  );
+}
+
 export default function LogDrawer({ open, onClose }) {
   const [cat, setCat] = useState('all');
   const [onlyErrors, setOnlyErrors] = useState(false);
   const [search, setSearch] = useState('');
   const [newest, setNewest] = useState(true);
   const [raw, setRaw] = useState([]);
+  const [render, setRender] = useState(false);
   const bodyRef = useRef(null);
+  const userScrolledRef = useRef(false);
+  const prevCountRef = useRef(0);
+
+  /* mount/unmount animation */
+  useEffect(() => {
+    if (open) {
+      setRender(true);
+    } else {
+      const t = setTimeout(() => setRender(false), 250);
+      return () => clearTimeout(t);
+    }
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -76,11 +100,36 @@ export default function LogDrawer({ open, onClose }) {
     return newest ? [...r].reverse() : r;
   }, [raw, onlyErrors, search, newest]);
 
+  /* auto-scroll: only if user hasn't scrolled manually AND new logs arrived */
   useEffect(() => {
-    if (bodyRef.current) bodyRef.current.scrollTop = 0;
-  }, [filtered]);
+    const el = bodyRef.current;
+    if (!el || !open) return;
+    const isNew = filtered.length !== prevCountRef.current;
+    if (isNew && !userScrolledRef.current) {
+      el.scrollTop = newest ? 0 : el.scrollHeight;
+    }
+    prevCountRef.current = filtered.length;
+  }, [filtered, open, newest]);
 
-  if (!open) return null;
+  /* reset user-scroll flag on cat/search/order change */
+  useEffect(() => {
+    userScrolledRef.current = false;
+    prevCountRef.current = 0;
+  }, [cat, search, newest, onlyErrors]);
+
+  const onBodyScroll = useCallback(() => {
+    const el = bodyRef.current;
+    if (!el) return;
+    const atTop = el.scrollTop <= 5;
+    const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 5;
+    if (newest) {
+      userScrolledRef.current = !atTop;
+    } else {
+      userScrolledRef.current = !atBottom;
+    }
+  }, [newest]);
+
+  if (!render) return null;
 
   const copyAll = () => {
     const text = filtered.map(l => `[${l.time}] [${l.level}] ${l.source === 'fe' ? '[FE] ' : ''}${l.message}`).join('\n');
@@ -91,29 +140,39 @@ export default function LogDrawer({ open, onClose }) {
 
   return (
     <>
-      <div className="drawer-overlay open" onClick={onClose}></div>
-      <div className="drawer open">
+      <div className={'drawer-overlay' + (open ? ' open' : '')} onClick={onClose}></div>
+      <div className={'drawer' + (open ? ' open' : '')}>
         <div className="drawer-header">
           <div className="dr-h1">
             <span className="dr-title">Консоль</span>
             <span className="dr-count">{filtered.length}{errCount > 0 && <span className="dr-err">{errCount} err</span>}</span>
             <div className="dr-spacer"></div>
-            <button className="dr-btn" onClick={() => setNewest(!newest)} title="Порядок">{newest ? '↓9' : '↑1'}</button>
-            <button className={'dr-btn' + (onlyErrors ? ' on' : '')} onClick={() => setOnlyErrors(!onlyErrors)} title="Только ошибки">ERR</button>
-            <button className="dr-btn" onClick={copyAll} title="Копировать">⎘</button>
-            <button className="dr-btn" onClick={() => { sessionStorage.removeItem(FE_KEY); setRaw([]); }} title="Очистить FE">⊘</button>
+            <Tip text={newest ? 'Новые сверху' : 'Новые снизу'}>
+              <button className="dr-btn" onClick={() => setNewest(!newest)}>{newest ? '↓9' : '↑1'}</button>
+            </Tip>
+            <Tip text={onlyErrors ? 'Показать все' : 'Только ошибки'}>
+              <button className={'dr-btn' + (onlyErrors ? ' on' : '')} onClick={() => setOnlyErrors(!onlyErrors)}>ERR</button>
+            </Tip>
+            <Tip text="Копировать все">
+              <button className="dr-btn" onClick={copyAll}>⎘</button>
+            </Tip>
+            <Tip text="Очистить логи FE">
+              <button className="dr-btn" onClick={() => { sessionStorage.removeItem(FE_KEY); setRaw([]); }}>⊘</button>
+            </Tip>
             <button className="dr-x" onClick={onClose}>✕</button>
           </div>
           <div className="dr-h2">
             <div className="dr-cats">
               {CATS.map(c => (
-                <button key={c} className={'dr-chip' + (cat === c ? ' on' : '')} onClick={() => setCat(c)}>{CAT_LABELS[c]}</button>
+                <Tip key={c} text={CAT_TOOLTIPS[c]}>
+                  <button className={'dr-chip' + (cat === c ? ' on' : '')} onClick={() => setCat(c)}>{CAT_LABELS[c]}</button>
+                </Tip>
               ))}
             </div>
             <input className="dr-search" type="text" placeholder="Поиск..." value={search} onChange={e => setSearch(e.target.value)} />
           </div>
         </div>
-        <div className="drawer-body" ref={bodyRef}>
+        <div className="drawer-body" ref={bodyRef} onScroll={onBodyScroll}>
           {filtered.length > 0 ? filtered.map((l, i) => {
             const lv = (l.level || 'INFO').toLowerCase();
             return (

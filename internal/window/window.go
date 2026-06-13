@@ -41,8 +41,8 @@ func Open(url string) {
 		mu.Unlock()
 
 		wv.SetTitle("ZPUI")
-		wv.SetSize(1100, 1050, webview.HintNone)
-		wv.SetSize(1000, 1000, webview.HintMin)
+		wv.SetSize(1200, 800, webview.HintNone)
+		wv.SetSize(900, 700, webview.HintMin)
 		wv.Navigate(url)
 		wv.Run()
 
@@ -61,6 +61,26 @@ func Close() {
 
 	if wv != nil {
 		wv.Terminate()
+	}
+}
+
+// IsOpen returns true if the webview window is currently open
+func IsOpen() bool {
+	mu.Lock()
+	defer mu.Unlock()
+	return w != nil
+}
+
+// Toggle shows or hides the window. If open → hide (terminate), if closed → open.
+func Toggle(url string) {
+	mu.Lock()
+	wv := w
+	mu.Unlock()
+
+	if wv != nil {
+		wv.Terminate()
+	} else {
+		Open(url)
 	}
 }
 

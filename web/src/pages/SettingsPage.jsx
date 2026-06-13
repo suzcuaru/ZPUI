@@ -698,17 +698,6 @@ function AboutTab({ status }) {
 
       <Card className="settings-card" style={{ marginTop: 12 }}>
         <div className="settings-card-header">
-          <h3>Как это работает</h3>
-        </div>
-        <div className="about-desc">
-          <p>1. <strong>Zapret</strong> перехватывает сетевые пакеты через WinDivert и модифицирует их — разбивает TCP-сегменты, добавляет фиктивные пакеты, меняет TTL. Это не даёт провайдеру сопоставить трафик с сигнатурами заблокированных сайтов.</p>
-          <p>2. <strong>Стратегии</strong> (.bat файлы) — это наборы параметров winws.exe для разных сценариев: YouTube, Discord, игры, общий обход. Можно переключать и тестировать автоматически.</p>
-          <p>3. <strong>SOCKS5 прокси</strong> — позволяет делиться обходом с другими устройствами в локальной сети (телефоны, планшеты, другие ПК).</p>
-        </div>
-      </Card>
-
-      <Card className="settings-card" style={{ marginTop: 12 }}>
-        <div className="settings-card-header">
           <h3>Ссылки</h3>
         </div>
         <div className="about-links">

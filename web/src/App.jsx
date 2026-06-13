@@ -3,21 +3,19 @@ import Sidebar from './components/Sidebar';
 import Toast from './components/Toast';
 import LogDrawer from './components/LogDrawer';
 import OfflineScreen from './components/OfflineScreen';
-import StatusBar from './components/StatusBar';
 import MonitorPage from './pages/MonitorPage';
-import StrategyPage from './pages/StrategyPage';
-import ListsPage from './pages/ListsPage';
+import DevicesPage from './pages/DevicesPage';
+import FiltersPage from './pages/FiltersPage';
 import DiagnosticsPage from './pages/DiagnosticsPage';
 import GeneralPage from './pages/GeneralPage';
 import AboutPage from './pages/AboutPage';
 import { api } from './api';
-import { logSnapshot, cleanOld } from './db';
 import './App.css';
 
 const PAGES = {
   monitor: MonitorPage,
-  strategy: StrategyPage,
-  lists: ListsPage,
+  devices: DevicesPage,
+  filters: FiltersPage,
   diagnostics: DiagnosticsPage,
   general: GeneralPage,
   about: AboutPage,
@@ -29,6 +27,7 @@ export default function App() {
   const [toasts, setToasts] = useState([]);
   const [logsOpen, setLogsOpen] = useState(false);
   const [backendOnline, setBackendOnline] = useState(true);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const failCountRef = useRef(0);
 
   const showToast = useCallback((msg, type) => {
@@ -53,21 +52,6 @@ export default function App() {
         failCountRef.current = 0;
         setBackendOnline(true);
         setStatus(data);
-        try {
-          const m = data.monitor || {};
-          const p = data.proxy || {};
-          logSnapshot({
-            dl: m.dl_speed || 0,
-            ul: m.ul_speed || 0,
-            dlFmt: m.dl_speed_fmt || '0 B/s',
-            ulFmt: m.ul_speed_fmt || '0 B/s',
-            totalDl: m.download || 0,
-            totalUl: m.upload || 0,
-            conns: p.connections || 0,
-            zRunning: data.zapret?.status === 'running',
-            pRunning: p.running === true,
-          });
-        } catch {}
       } else {
         failCountRef.current++;
         if (failCountRef.current === 3) {
@@ -79,21 +63,22 @@ export default function App() {
     console.log('[App] Initializing ZPUI');
     poll();
     const iv = setInterval(poll, 2000);
-    const cleanIv = setInterval(cleanOld, 60000);
-    return () => { alive = false; clearInterval(iv); clearInterval(cleanIv); };
+    return () => { alive = false; clearInterval(iv); };
   }, []);
 
   const PageComponent = PAGES[activePage];
 
   if (!backendOnline) {
     return (
-      <div className="app">
+      <div className={'app' + (sidebarCollapsed ? ' sidebar-collapsed' : '')}>
         <Sidebar
           activePage={activePage}
           onNavigate={setActivePage}
           status={status}
           showToast={showToast}
           onOpenLogs={() => setLogsOpen(true)}
+          collapsed={sidebarCollapsed}
+          onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
         />
         <main className="main-content">
           <OfflineScreen onRetry={async () => {
@@ -112,23 +97,21 @@ export default function App() {
   }
 
   return (
-    <div className="app">
+    <div className={'app' + (sidebarCollapsed ? ' sidebar-collapsed' : '')}>
       <Sidebar
         activePage={activePage}
         onNavigate={setActivePage}
         status={status}
         showToast={showToast}
         onOpenLogs={() => setLogsOpen(true)}
+        collapsed={sidebarCollapsed}
+        onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
       />
       <main className="main-content">
-        <StatusBar status={status} />
         <div className="content-inner page-fade" key={activePage}>
           {PageComponent && <PageComponent status={status} showToast={showToast} />}
         </div>
       </main>
-      <button className="fab-logs" onClick={() => setLogsOpen(true)} title="Логи">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-      </button>
       <LogDrawer open={logsOpen} onClose={() => setLogsOpen(false)} />
       <Toast toasts={toasts} onRemove={removeToast} />
     </div>

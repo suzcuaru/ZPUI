@@ -182,7 +182,7 @@ func (s *SOCKS5Server) handleConnection(clientConn net.Conn) {
 
 	clientConn.SetDeadline(time.Time{})
 
-	target := fmt.Sprintf("%s:%d", targetAddr, targetPort)
+	target := net.JoinHostPort(targetAddr, strconv.Itoa(targetPort))
 	targetConn, err := net.DialTimeout("tcp", target, 15*time.Second)
 	if err != nil {
 		s.socks5Response(clientConn, 0x05, nil, 0)

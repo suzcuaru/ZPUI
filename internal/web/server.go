@@ -123,6 +123,7 @@ func (s *Server) Start(addr string) error {
 
 	mux.HandleFunc("/api/monitor/traffic", s.cors(s.handleTraffic))
 	mux.HandleFunc("/api/monitor/devices", s.cors(s.handleDevices))
+	mux.HandleFunc("/api/monitor/snapshots", s.cors(s.handleGetTrafficSnapshots))
 
 	mux.HandleFunc("/api/update/check", s.cors(s.handleUpdateCheck))
 	mux.HandleFunc("/api/update/apply", s.cors(s.handleUpdateApply))
@@ -138,6 +139,12 @@ func (s *Server) Start(addr string) error {
 
 	mux.HandleFunc("/api/logs", s.cors(s.handleLogs))
 	mux.HandleFunc("/api/logs/files", s.cors(s.handleLogFiles))
+	mux.HandleFunc("/api/logs/actions", s.cors(s.handleGetActionLogs))
+	mux.HandleFunc("/api/logs/frontend", s.cors(s.handleFrontendLogs))
+
+	// Device API — catch-all для /api/devices/*
+	mux.HandleFunc("/api/devices/", s.cors(s.handleDevicesAPI))
+	mux.HandleFunc("/api/devices", s.cors(s.handleDevicesAPI))
 	mux.HandleFunc("/api/config", s.cors(s.handleConfig))
 	mux.HandleFunc("/api/zapret/install", s.cors(s.handleZapretInstall))
 

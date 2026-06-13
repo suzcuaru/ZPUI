@@ -1,0 +1,65 @@
+[2026-06-12 14:50:51.062] === Zapret Service Manager started ===
+[2026-06-12 14:50:51.117] ERROR: no subcommand
+[2026-06-12 14:50:53.594] === Zapret Service Manager started ===
+[2026-06-12 14:50:53.654] ERROR: no subcommand
+[2026-06-12 14:50:55.915] === Zapret Service Manager started ===
+[2026-06-12 14:50:55.976] ERROR: no subcommand
+[2026-06-12 14:51:00.398] === Zapret Service Manager started ===
+[2026-06-12 14:51:00.458] ERROR: no subcommand
+[2026-06-12 14:51:17.149] === Zapret Service Manager started ===
+[2026-06-12 14:51:17.196] findZapretDir: C:\Users\Suzuc\Documents\VS_code\╨Я╤А╨╛╤Н╨║╤В╤Л\DPIF2\mod\bin\winws.exe not found
+[2026-06-12 14:51:17.196] findZapretDir: found winws.exe in C:\Users\Suzuc\Documents\VS_code\╨Я╤А╨╛╤Н╨║╤В╤Л\DPIF2
+[2026-06-12 14:51:17.196] exeDir: C:\Users\Suzuc\Documents\VS_code\╨Я╤А╨╛╤Н╨║╤В╤Л\DPIF2\mod
+[2026-06-12 14:51:17.196] zapretDir: C:\Users\Suzuc\Documents\VS_code\╨Я╤А╨╛╤Н╨║╤В╤Л\DPIF2
+[2026-06-12 14:51:17.196] winws.exe found at C:\Users\Suzuc\Documents\VS_code\╨Я╤А╨╛╤Н╨║╤В╤Л\DPIF2\bin\winws.exe
+[2026-06-12 14:51:17.256] > reg query HKLM\System\CurrentControlSet\Services\zapret /v zapret-discord-youtube (capture)
+[2026-06-12 14:51:17.281]   ok
+[2026-06-12 14:51:17.281] Current strategy from reg: (ALT10)
+[2026-06-12 14:51:22.410] User selected: Remove Service
+[2026-06-12 14:51:22.410] --- Removing services ---
+[2026-06-12 14:51:22.410] > sc query zapret (capture)
+[2026-06-12 14:51:22.433]   ok
+[2026-06-12 14:51:22.433] Before removal - sc query zapret: SERVICE_NAME: zapret 
+        TYPE               : 10  WIN32_OWN_PROCESS  
+        STATE              : 1  STOPPED 
+        WIN32_EXIT_CODE    : 0  (0x0)
+        SERVICE_EXIT_CODE  : 0  (0x0)
+        CHECKPOINT         : 0x0
+        WAIT_HINT          : 0x7d0
+[2026-06-12 14:51:22.433]   stop service zapret
+[2026-06-12 14:51:22.433] > net stop zapret
+[2026-06-12 14:51:22.465]   exit: exit status 2
+[2026-06-12 14:51:22.465]   stdout/stderr:
+Служба "zapret" не запущена.
+
+Для вызова дополнительной справки наберите NET HELPMSG 3521.
+[2026-06-12 14:51:22.465]   delete service zapret
+[2026-06-12 14:51:22.465] > sc delete zapret
+[2026-06-12 14:51:22.486]   ok
+[2026-06-12 14:51:22.486]   stdout/stderr:
+[SC] DeleteService: успех
+[2026-06-12 14:51:22.486] > tasklist /FI IMAGENAME eq winws.exe
+[2026-06-12 14:51:22.636]   ok
+[2026-06-12 14:51:22.636]   stdout/stderr:
+Информация: Задачи, отвечающие заданным критериям, отсутствуют.
+[2026-06-12 14:51:22.636] tasklist winws.exe: Информация: Задачи, отвечающие заданным критериям, отсутствуют.
+[2026-06-12 14:51:22.636] > sc query zapret (capture)
+[2026-06-12 14:51:22.659]   exit: exit status 1060
+[2026-06-12 14:51:22.659] After removal - sc query zapret: 
+[2026-06-12 14:51:22.659] > sc query WinDivert
+[2026-06-12 14:51:22.677]   exit: exit status 1060
+[2026-06-12 14:51:22.677]   stdout/stderr:
+[SC] EnumQueryServicesStatus:OpenService: ошибка: 1060:
+
+Указанная служба не установлена.
+[2026-06-12 14:51:22.677]   service WinDivert exists: false
+[2026-06-12 14:51:22.677] > sc query WinDivert14
+[2026-06-12 14:51:22.695]   exit: exit status 1060
+[2026-06-12 14:51:22.695]   stdout/stderr:
+[SC] EnumQueryServicesStatus:OpenService: ошибка: 1060:
+
+Указанная служба не установлена.
+[2026-06-12 14:51:22.695]   service WinDivert14 exists: false
+[2026-06-12 14:51:22.695] Remove completed
+[2026-06-12 14:51:24.972] > reg query HKLM\System\CurrentControlSet\Services\zapret /v zapret-discord-youtube (capture)
+[2026-06-12 14:51:24.989]   exit: exit status 1

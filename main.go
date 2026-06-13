@@ -11,6 +11,7 @@ import (
 	"syscall"
 
 	"zpui/internal/config"
+	"zpui/internal/database"
 	"zpui/internal/executil"
 	"zpui/internal/logger"
 	"zpui/internal/monitor"
@@ -56,6 +57,13 @@ func main() {
 	logMgr.Info("main", fmt.Sprintf("Zapret dir: %s", cfg.ZapretPath))
 	logMgr.Info("main", fmt.Sprintf("Go %s %s/%s", runtime.Version(), runtime.GOOS, runtime.GOARCH))
 
+	dbPath := filepath.Join(exeDir, "zpui.db")
+	if err := database.Init(dbPath); err != nil {
+		log.Fatalf("Failed to initialize database: %v", err)
+	}
+	defer database.Close()
+	logMgr.Info("main", "Database initialized")
+
 	zapretMgr := zapret.NewManager(cfg, logMgr)
 
 	proxyServer := proxy.NewSOCKS5(cfg, logMgr)
@@ -83,6 +91,10 @@ func main() {
 
 	webServer.WaitReady()
 	logMgr.Info("web", fmt.Sprintf("Web server URL: %s", webServer.GetURL()))
+
+	// Запуск трекера устройств
+	webServer.StartDeviceTracker()
+	logMgr.Info("main", "Device tracker started")
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
