@@ -3,11 +3,12 @@ package window
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
+
+	"zpui/internal/executil"
 
 	"github.com/webview/webview_go"
 )
@@ -17,9 +18,7 @@ var (
 	w  webview.WebView
 )
 
-func Open(port int) {
-	url := fmt.Sprintf("http://localhost:%d", port)
-
+func Open(url string) {
 	mu.Lock()
 	if w != nil {
 		mu.Unlock()
@@ -42,7 +41,8 @@ func Open(port int) {
 		mu.Unlock()
 
 		wv.SetTitle("ZPUI")
-		wv.SetSize(1100, 850, webview.HintNone)
+		wv.SetSize(1100, 1050, webview.HintNone)
+		wv.SetSize(1000, 1000, webview.HintMin)
 		wv.Navigate(url)
 		wv.Run()
 
@@ -96,19 +96,19 @@ func openInBrowser(url string) {
 				`--disable-default-apps`,
 				`--disable-popup-blocking`,
 				`--force-color-profile=srgb`,
-				`--window-size=1100,850`,
+				`--window-size=1100,1050`,
 			}
-			cmd := exec.Command(p, args...)
+			cmd := executil.HiddenCmd(p, args...)
 			cmd.Start()
 			return
 		}
 	}
 
-	exec.Command("cmd", "/c", "start", "", url).Start()
+	executil.HiddenCmd("cmd", "/c", "start", "", url).Start()
 }
 
 func IsWindowsDarkTheme() bool {
-	out, err := exec.Command("reg", "query",
+	out, err := executil.HiddenCmd("reg", "query",
 		`HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize`,
 		"/v", "AppsUseLightTheme").CombinedOutput()
 	if err != nil {

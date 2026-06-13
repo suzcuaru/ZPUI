@@ -3,6 +3,7 @@ import Sidebar from './components/Sidebar';
 import Toast from './components/Toast';
 import LogDrawer from './components/LogDrawer';
 import OfflineScreen from './components/OfflineScreen';
+import StatusBar from './components/StatusBar';
 import MonitorPage from './pages/MonitorPage';
 import StrategyPage from './pages/StrategyPage';
 import ListsPage from './pages/ListsPage';
@@ -120,6 +121,7 @@ export default function App() {
         onOpenLogs={() => setLogsOpen(true)}
       />
       <main className="main-content">
+        <StatusBar status={status} />
         <div className="content-inner page-fade" key={activePage}>
           {PageComponent && <PageComponent status={status} showToast={showToast} />}
         </div>

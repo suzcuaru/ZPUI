@@ -3,14 +3,15 @@ package web
 import (
 	"bytes"
 	"embed"
+	"fmt"
 	"io/fs"
 	"net"
 	"net/http"
-	"zpui/internal/executil"
 	"strings"
 	"time"
 
 	"zpui/internal/config"
+	"zpui/internal/executil"
 	"zpui/internal/logger"
 	"zpui/internal/monitor"
 	"zpui/internal/proxy"
@@ -26,6 +27,7 @@ type Server struct {
 	webFS   embed.FS
 	version string
 	server  *http.Server
+	readyCh chan struct{}
 }
 
 func NewServer(
@@ -45,7 +47,19 @@ func NewServer(
 		monitor: trafficMon,
 		webFS:   webFS,
 		version: version,
+		readyCh: make(chan struct{}),
 	}
+}
+
+func (s *Server) GetURL() string {
+	if s.server == nil {
+		return ""
+	}
+	return fmt.Sprintf("http://%s", s.server.Addr)
+}
+
+func (s *Server) WaitReady() {
+	<-s.readyCh
 }
 
 func (s *Server) Start(addr string) error {
@@ -135,20 +149,49 @@ func (s *Server) Start(addr string) error {
 	mux.HandleFunc("/api/up/info", s.cors(s.handleUpInfo))
 	mux.HandleFunc("/api/external", s.cors(s.handleOpenExternal))
 
+	ln, err := net.Listen("tcp", addr)
+	if err != nil {
+		return err
+	}
+
 	s.server = &http.Server{
-		Addr:         addr,
+		Addr:         ln.Addr().String(),
 		Handler:      mux,
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 60 * time.Second,
 	}
 
-	return s.server.ListenAndServe()
+	close(s.readyCh)
+	return s.server.Serve(ln)
 }
 
 func (s *Server) Stop() {
 	if s.server != nil {
 		s.server.Close()
 	}
+}
+
+func (s *Server) GetCachedResourcePercent() int {
+	resourceCacheMu.Lock()
+	if resourceCache == nil {
+		resourceCacheMu.Unlock()
+		return -1
+	}
+	data := resourceCache
+	resourceCacheMu.Unlock()
+
+	total := 0
+	ok := 0
+	for _, r := range data.Default {
+		total++
+		if status, _ := r["status"].(string); status == "ok" {
+			ok++
+		}
+	}
+	if total == 0 {
+		return -1
+	}
+	return ok * 100 / total
 }
 
 func (s *Server) cors(next http.HandlerFunc) http.HandlerFunc {

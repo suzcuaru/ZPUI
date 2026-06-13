@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"runtime"
 	"syscall"
 
 	"zpui/internal/config"
+	"zpui/internal/executil"
 	"zpui/internal/logger"
 	"zpui/internal/monitor"
 	"zpui/internal/proxy"
@@ -75,12 +75,14 @@ func main() {
 	}
 
 	go func() {
-		addr := fmt.Sprintf(":%d", cfg.Web.Port)
-		logMgr.Info("web", fmt.Sprintf("Starting web server on %s", addr))
-		if err := webServer.Start(addr); err != nil {
+		logMgr.Info("web", "Starting web server on 127.0.0.1:0")
+		if err := webServer.Start("127.0.0.1:0"); err != nil {
 			logMgr.Error("web", fmt.Sprintf("Web server error: %v", err))
 		}
 	}()
+
+	webServer.WaitReady()
+	logMgr.Info("web", fmt.Sprintf("Web server URL: %s", webServer.GetURL()))
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
@@ -135,18 +137,14 @@ func gracefulShutdown(
 }
 
 func ensureAdmin() bool {
-	cmd := exec.Command("net", "session")
+	cmd := executil.HiddenCmd("net", "session")
 	if cmd.Run() == nil {
 		return true
 	}
 
-	fmt.Println("Запрос прав администратора...")
 	exe, _ := os.Executable()
-	cmd = exec.Command("powershell", "-NoProfile", "-Command",
+	cmd = executil.HiddenCmd("powershell", "-NoProfile", "-Command",
 		fmt.Sprintf("Start-Process '\"%s\"' -Verb RunAs", exe))
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
 	cmd.Run()
 	return false
 }

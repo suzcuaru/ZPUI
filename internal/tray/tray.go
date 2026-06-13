@@ -23,15 +23,17 @@ type App struct {
 	proxy   *proxy.SOCKS5Server
 	web     *web.Server
 	version string
-	visible bool
 
 	mZapretStatus *systray.MenuItem
 	mProxyStatus  *systray.MenuItem
+	mStrategy     *systray.MenuItem
+	mResource     *systray.MenuItem
 	mStart        *systray.MenuItem
 	mStop         *systray.MenuItem
 	mRestart      *systray.MenuItem
+	mProxyStart   *systray.MenuItem
+	mProxyStop    *systray.MenuItem
 	mPanel        *systray.MenuItem
-	mConsole      *systray.MenuItem
 	mQuit         *systray.MenuItem
 }
 
@@ -50,7 +52,6 @@ func New(
 		proxy:   proxySrv,
 		web:     webSrv,
 		version: version,
-		visible: false,
 	}
 }
 
@@ -66,23 +67,35 @@ func (a *App) Run() error {
 		a.mZapretStatus.Disable()
 		a.mProxyStatus = systray.AddMenuItem("Прокси: ...", "")
 		a.mProxyStatus.Disable()
+		a.mStrategy = systray.AddMenuItem("Стратегия: ...", "")
+		a.mStrategy.Disable()
+		a.mResource = systray.AddMenuItem("Доступность: ...", "")
+		a.mResource.Disable()
 		systray.AddSeparator()
 
-		a.mPanel = systray.AddMenuItem("Открыть панель", "")
-		a.mStart = systray.AddMenuItem("Запустить", "")
-		a.mStop = systray.AddMenuItem("Остановить", "")
-		a.mRestart = systray.AddMenuItem("Перезапустить", "")
+		a.mPanel = systray.AddMenuItem("📊 Открыть панель", "")
 		systray.AddSeparator()
 
-		a.mConsole = systray.AddMenuItem("Консоль", "")
-		a.mQuit = systray.AddMenuItem("Выход", "")
+		a.mStart = systray.AddMenuItem("▶ Запустить запрет", "")
+		a.mStop = systray.AddMenuItem("⏹ Остановить запрет", "")
+		a.mRestart = systray.AddMenuItem("🔄 Перезапустить запрет", "")
+		systray.AddSeparator()
+
+		a.mProxyStart = systray.AddMenuItem("▶ Запустить прокси", "")
+		a.mProxyStop = systray.AddMenuItem("⏹ Остановить прокси", "")
+		systray.AddSeparator()
+
+		a.mQuit = systray.AddMenuItem("❌ Выход", "")
 
 		go a.updateLoop()
 		go a.handleClicks()
 
 		go func() {
 			time.Sleep(500 * time.Millisecond)
-			window.Open(a.cfg.Web.Port)
+			url := a.web.GetURL()
+			if url != "" {
+				window.Open(url)
+			}
 		}()
 	}
 	systray.Run(onReady, func() {
@@ -102,18 +115,36 @@ func (a *App) updateLoop() {
 		zStatus := string(a.zapret.GetStatus())
 		pRunning := a.proxy.IsRunning()
 
+		// Zapret status
 		zText := "Запрет: Остановлен"
 		if zStatus == "running" {
-			zText = "Запрет: Работает"
+			zText = "Запрет: Работает ✓"
 		}
+		a.mZapretStatus.SetTitle(zText)
+
+		// Proxy status
 		pText := "Прокси: Остановлен"
 		if pRunning {
-			pText = fmt.Sprintf("Прокси: Работает (:%d)", a.cfg.GetProxyConfig().Port)
+			pText = fmt.Sprintf("Прокси: Работает ✓ (:%d)", a.cfg.GetProxyConfig().Port)
 		}
-
-		a.mZapretStatus.SetTitle(zText)
 		a.mProxyStatus.SetTitle(pText)
 
+		// Strategy
+		strategy := a.zapret.GetCurrentStrategy()
+		if strategy == "" {
+			strategy = "не выбрана"
+		}
+		a.mStrategy.SetTitle(fmt.Sprintf("Стратегия: %s", strategy))
+
+		// Resource %
+		pct := a.web.GetCachedResourcePercent()
+		resText := "Доступность: ..."
+		if pct >= 0 {
+			resText = fmt.Sprintf("Доступность: %d%%", pct)
+		}
+		a.mResource.SetTitle(resText)
+
+		// Zapret controls
 		if zStatus == "running" {
 			a.mStart.Disable()
 			a.mStop.Enable()
@@ -123,10 +154,14 @@ func (a *App) updateLoop() {
 			a.mStop.Disable()
 			a.mRestart.Disable()
 		}
-		if a.visible {
-			a.mConsole.SetTitle("Скрыть консоль")
+
+		// Proxy controls
+		if pRunning {
+			a.mProxyStart.Disable()
+			a.mProxyStop.Enable()
 		} else {
-			a.mConsole.SetTitle("Показать консоль")
+			a.mProxyStart.Enable()
+			a.mProxyStop.Disable()
 		}
 	}
 }
@@ -135,7 +170,10 @@ func (a *App) handleClicks() {
 	for {
 		select {
 		case <-a.mPanel.ClickedCh:
-			window.Open(a.cfg.Web.Port)
+			url := a.web.GetURL()
+			if url != "" {
+				window.Open(url)
+			}
 		case <-a.mStart.ClickedCh:
 			if err := a.zapret.Start(); err != nil {
 				a.log.Error("tray", fmt.Sprintf("Ошибка: %v", err))
@@ -146,14 +184,12 @@ func (a *App) handleClicks() {
 			if err := a.zapret.Restart(); err != nil {
 				a.log.Error("tray", fmt.Sprintf("Ошибка: %v", err))
 			}
-		case <-a.mConsole.ClickedCh:
-			if a.visible {
-				HideConsole()
-				a.visible = false
-			} else {
-				ShowConsole()
-				a.visible = true
+		case <-a.mProxyStart.ClickedCh:
+			if err := a.proxy.Start(); err != nil {
+				a.log.Error("tray", fmt.Sprintf("Ошибка прокси: %v", err))
 			}
+		case <-a.mProxyStop.ClickedCh:
+			a.proxy.Stop()
 		case <-a.mQuit.ClickedCh:
 			systray.Quit()
 			return
