@@ -1205,6 +1205,43 @@ body { background: var(--bg-app); min-height: 100vh; overflow-x: hidden; -webkit
   .bottom-bar-btn { flex: 1 1 calc(50% - 4px); font-size: 12px; padding: 8px 12px; }
 }
 
+/* ── Status Bar ────────────────────────────────── */
+.status-bar {
+  display: flex; align-items: center; gap: 16px;
+  padding: 8px 20px;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.status-bar-item {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; color: var(--text-2);
+}
+.status-bar-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  flex-shrink: 0;
+}
+.status-bar-dot.on { background: var(--success); box-shadow: 0 0 6px var(--success); }
+.status-bar-dot.off { background: var(--danger); }
+.status-bar-label { font-weight: 500; color: var(--text-1); }
+.status-bar-sep {
+  width: 1px; height: 16px; background: var(--border);
+}
+.status-bar-pct {
+  display: flex; align-items: center; gap: 6px;
+}
+.status-bar-pct-bar {
+  width: 60px; height: 4px; background: var(--bg-elevated);
+  border-radius: 2px; overflow: hidden;
+}
+.status-bar-pct-fill {
+  height: 100%; border-radius: 2px;
+  transition: width 500ms ease, background 300ms;
+}
+.status-bar-pct-text {
+  font-size: 12px; font-weight: 600; min-width: 32px;
+}
+
 /* ── Offline Screen ─────────────────────────────── */
 .offline-screen {
   display: flex;

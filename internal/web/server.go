@@ -184,7 +184,7 @@ func (s *Server) GetCachedResourcePercent() int {
 	ok := 0
 	for _, r := range data.Default {
 		total++
-		if status, _ := r["status"].(string); status == "ok" {
+		if isOk, _ := r["ok"].(bool); isOk {
 			ok++
 		}
 	}

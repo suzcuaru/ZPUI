@@ -11,7 +11,7 @@ export default function StatusBar({ status }) {
       if (!alive || !data) return;
       const defaults = data.default || [];
       if (defaults.length === 0) return;
-      const ok = defaults.filter(r => r.status === 'ok').length;
+      const ok = defaults.filter(r => r.ok === true).length;
       setResourcePct(Math.round((ok / defaults.length) * 100));
     };
     fetchResources();
@@ -24,27 +24,29 @@ export default function StatusBar({ status }) {
   const strategy = status?.zapret?.strategy || 'не выбрана';
   const proxyPort = status?.proxy?.port;
 
-  const pctColor = resourcePct === null ? '#888' :
-    resourcePct >= 80 ? '#4caf50' :
-    resourcePct >= 50 ? '#ff9800' : '#f44336';
+  const pctColor = resourcePct === null ? 'var(--text-3)' :
+    resourcePct >= 80 ? 'var(--success)' :
+    resourcePct >= 50 ? 'var(--warning)' : 'var(--danger)';
 
   return (
     <div className="status-bar">
       <div className="status-bar-item">
-        <span className={`status-dot ${zapretRunning ? 'dot-green' : 'dot-red'}`} />
-        <span>Запрет: {zapretRunning ? 'Работает' : 'Остановлен'}</span>
+        <span className={`status-bar-dot ${zapretRunning ? 'on' : 'off'}`} />
+        <span>Zapret: <span className="status-bar-label">{zapretRunning ? 'Работает' : 'Остановлен'}</span></span>
       </div>
+      <div className="status-bar-sep" />
       <div className="status-bar-item">
-        <span className={`status-dot ${proxyRunning ? 'dot-green' : 'dot-red'}`} />
-        <span>Прокси: {proxyRunning ? `:${proxyPort}` : 'Остановлен'}</span>
+        <span className={`status-bar-dot ${proxyRunning ? 'on' : 'off'}`} />
+        <span>Прокси: <span className="status-bar-label">{proxyRunning ? `:${proxyPort}` : 'Остановлен'}</span></span>
       </div>
+      <div className="status-bar-sep" />
       <div className="status-bar-item">
-        <span className="status-bar-label">Стратегия:</span>
-        <span className="status-bar-value">{strategy}</span>
+        <span>Стратегия: <span className="status-bar-label">{strategy}</span></span>
       </div>
-      <div className="status-bar-item status-bar-resource">
-        <span className="status-bar-label">Доступность:</span>
-        <div className="status-bar-pct-bg">
+      <div className="status-bar-sep" />
+      <div className="status-bar-item status-bar-pct">
+        <span>Доступность:</span>
+        <div className="status-bar-pct-bar">
           <div
             className="status-bar-pct-fill"
             style={{ width: `${resourcePct ?? 0}%`, background: pctColor }}

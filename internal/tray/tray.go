@@ -24,17 +24,14 @@ type App struct {
 	web     *web.Server
 	version string
 
-	mZapretStatus *systray.MenuItem
-	mProxyStatus  *systray.MenuItem
-	mStrategy     *systray.MenuItem
-	mResource     *systray.MenuItem
-	mStart        *systray.MenuItem
-	mStop         *systray.MenuItem
-	mRestart      *systray.MenuItem
-	mProxyStart   *systray.MenuItem
-	mProxyStop    *systray.MenuItem
-	mPanel        *systray.MenuItem
-	mQuit         *systray.MenuItem
+	mTitle     *systray.MenuItem
+	mZapret    *systray.MenuItem
+	mProxy     *systray.MenuItem
+	mStrategy  *systray.MenuItem
+	mResource  *systray.MenuItem
+	mPanel     *systray.MenuItem
+	mRestart   *systray.MenuItem
+	mQuit      *systray.MenuItem
 }
 
 func New(
@@ -60,29 +57,24 @@ func (a *App) Run() error {
 		systray.SetIcon(createIcon())
 		systray.SetTooltip(fmt.Sprintf("ZPUI v%s", a.version))
 
-		systray.AddMenuItem(fmt.Sprintf("ZPUI v%s | Zapret v%s", a.version, a.zapret.GetVersion()), "")
+		a.mTitle = systray.AddMenuItem(fmt.Sprintf("ZPUI v%s", a.version), "")
+		a.mTitle.Disable()
 		systray.AddSeparator()
 
-		a.mZapretStatus = systray.AddMenuItem("Запрет: ...", "")
-		a.mZapretStatus.Disable()
-		a.mProxyStatus = systray.AddMenuItem("Прокси: ...", "")
-		a.mProxyStatus.Disable()
+		// Status items (non-clickable)
+		a.mZapret = systray.AddMenuItem("● Запрет: проверка...", "")
+		a.mZapret.Disable()
+		a.mProxy = systray.AddMenuItem("● Прокси: проверка...", "")
+		a.mProxy.Disable()
 		a.mStrategy = systray.AddMenuItem("Стратегия: ...", "")
 		a.mStrategy.Disable()
 		a.mResource = systray.AddMenuItem("Доступность: ...", "")
 		a.mResource.Disable()
 		systray.AddSeparator()
 
+		// Actions
 		a.mPanel = systray.AddMenuItem("📊 Открыть панель", "")
-		systray.AddSeparator()
-
-		a.mStart = systray.AddMenuItem("▶ Запустить запрет", "")
-		a.mStop = systray.AddMenuItem("⏹ Остановить запрет", "")
 		a.mRestart = systray.AddMenuItem("🔄 Перезапустить запрет", "")
-		systray.AddSeparator()
-
-		a.mProxyStart = systray.AddMenuItem("▶ Запустить прокси", "")
-		a.mProxyStop = systray.AddMenuItem("⏹ Остановить прокси", "")
 		systray.AddSeparator()
 
 		a.mQuit = systray.AddMenuItem("❌ Выход", "")
@@ -90,8 +82,9 @@ func (a *App) Run() error {
 		go a.updateLoop()
 		go a.handleClicks()
 
+		// Open window with delay to let web UI render
 		go func() {
-			time.Sleep(500 * time.Millisecond)
+			time.Sleep(1500 * time.Millisecond)
 			url := a.web.GetURL()
 			if url != "" {
 				window.Open(url)
@@ -115,81 +108,80 @@ func (a *App) updateLoop() {
 		zStatus := string(a.zapret.GetStatus())
 		pRunning := a.proxy.IsRunning()
 
-		// Zapret status
-		zText := "Запрет: Остановлен"
+		// Zapret status — clickable toggle
 		if zStatus == "running" {
-			zText = "Запрет: Работает ✓"
+			a.mZapret.SetTitle("✅ Запрет: Работает (нажмите чтобы остановить)")
+			a.mZapret.Enable()
+			a.mRestart.Enable()
+		} else {
+			a.mZapret.SetTitle("⛔ Запрет: Остановлен (нажмите чтобы запустить)")
+			a.mZapret.Enable()
+			a.mRestart.Disable()
 		}
-		a.mZapretStatus.SetTitle(zText)
 
-		// Proxy status
-		pText := "Прокси: Остановлен"
+		// Proxy status — clickable toggle
 		if pRunning {
-			pText = fmt.Sprintf("Прокси: Работает ✓ (:%d)", a.cfg.GetProxyConfig().Port)
+			a.mProxy.SetTitle(fmt.Sprintf("✅ Прокси: Работает :%d (нажмите чтобы остановить)", a.cfg.GetProxyConfig().Port))
+			a.mProxy.Enable()
+		} else {
+			a.mProxy.SetTitle("⛔ Прокси: Остановлен (нажмите чтобы запустить)")
+			a.mProxy.Enable()
 		}
-		a.mProxyStatus.SetTitle(pText)
 
 		// Strategy
 		strategy := a.zapret.GetCurrentStrategy()
 		if strategy == "" {
 			strategy = "не выбрана"
 		}
-		a.mStrategy.SetTitle(fmt.Sprintf("Стратегия: %s", strategy))
+		a.mStrategy.SetTitle(fmt.Sprintf("📋 Стратегия: %s", strategy))
 
 		// Resource %
 		pct := a.web.GetCachedResourcePercent()
-		resText := "Доступность: ..."
+		resText := "📊 Доступность: ..."
 		if pct >= 0 {
-			resText = fmt.Sprintf("Доступность: %d%%", pct)
+			if pct >= 80 {
+				resText = fmt.Sprintf("📊 Доступность: %d%% ✅", pct)
+			} else if pct >= 50 {
+				resText = fmt.Sprintf("📊 Доступность: %d%% ⚠️", pct)
+			} else {
+				resText = fmt.Sprintf("📊 Доступность: %d%% ❌", pct)
+			}
 		}
 		a.mResource.SetTitle(resText)
-
-		// Zapret controls
-		if zStatus == "running" {
-			a.mStart.Disable()
-			a.mStop.Enable()
-			a.mRestart.Enable()
-		} else {
-			a.mStart.Enable()
-			a.mStop.Disable()
-			a.mRestart.Disable()
-		}
-
-		// Proxy controls
-		if pRunning {
-			a.mProxyStart.Disable()
-			a.mProxyStop.Enable()
-		} else {
-			a.mProxyStart.Enable()
-			a.mProxyStop.Disable()
-		}
 	}
 }
 
 func (a *App) handleClicks() {
 	for {
 		select {
+		case <-a.mZapret.ClickedCh:
+			// Toggle: if running → stop, if stopped → start
+			zStatus := string(a.zapret.GetStatus())
+			if zStatus == "running" {
+				a.zapret.Stop()
+			} else {
+				if err := a.zapret.Start(); err != nil {
+					a.log.Error("tray", fmt.Sprintf("Ошибка: %v", err))
+				}
+			}
+		case <-a.mProxy.ClickedCh:
+			// Toggle: if running → stop, if stopped → start
+			if a.proxy.IsRunning() {
+				a.proxy.Stop()
+			} else {
+				if err := a.proxy.Start(); err != nil {
+					a.log.Error("tray", fmt.Sprintf("Ошибка прокси: %v", err))
+				}
+			}
 		case <-a.mPanel.ClickedCh:
 			url := a.web.GetURL()
 			if url != "" {
 				window.Open(url)
 			}
-		case <-a.mStart.ClickedCh:
-			if err := a.zapret.Start(); err != nil {
-				a.log.Error("tray", fmt.Sprintf("Ошибка: %v", err))
-			}
-		case <-a.mStop.ClickedCh:
-			a.zapret.Stop()
 		case <-a.mRestart.ClickedCh:
 			if err := a.zapret.Restart(); err != nil {
-				a.log.Error("tray", fmt.Sprintf("Ошибка: %v", err))
+				a.log.Error("tray", fmt.Sprintf("Ошибка перезапуска: %v", err))
 			}
-		case <-a.mProxyStart.ClickedCh:
-			if err := a.proxy.Start(); err != nil {
-				a.log.Error("tray", fmt.Sprintf("Ошибка прокси: %v", err))
-			}
-		case <-a.mProxyStop.ClickedCh:
-			a.proxy.Stop()
 		case <-a.mQuit.ClickedCh:
 			systray.Quit()
 			return
