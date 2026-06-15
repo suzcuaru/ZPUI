@@ -1,8 +1,0 @@
-[2026-06-12 15:18:08] [INFO] [web] Starting web server on :8080
-[2026-06-12 15:20:39] [INFO] [web] Starting web server on :8080
-[2026-06-12 15:25:43] [INFO] [web] Starting web server on :8080
-[2026-06-12 15:38:40] [ERROR] [web] Web server error: http: Server closed
-[2026-06-12 16:00:10] [INFO] [web] Starting web server on :8080
-[2026-06-12 16:13:35] [INFO] [web] Starting web server on :8080
-[2026-06-12 16:15:02] [ERROR] [web] Web server error: http: Server closed
-[2026-06-12 16:15:18] [INFO] [web] Starting web server on :8080

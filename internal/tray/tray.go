@@ -3,35 +3,41 @@ package tray
 import (
 	"encoding/binary"
 	"fmt"
-	"os"
 	"time"
 
 	"zpui/internal/config"
 	"zpui/internal/logger"
 	"zpui/internal/proxy"
-	"zpui/internal/web"
-	"zpui/internal/window"
 	"zpui/internal/zapret"
 
 	"fyne.io/systray"
 )
 
-type App struct {
-	cfg     *config.Config
-	log     *logger.Logger
-	zapret  *zapret.Manager
-	proxy   *proxy.SOCKS5Server
-	web     *web.Server
-	version string
+// Controller — интерфейс для управления окном и приложением.
+// Реализуется main.App (Wails runtime).
+type Controller interface {
+	GetCachedResourcePercent() int
+	ToggleWindow()
+	ShowWindow()
+	Quit()
+}
 
-	mTitle     *systray.MenuItem
-	mZapret    *systray.MenuItem
-	mProxy     *systray.MenuItem
-	mStrategy  *systray.MenuItem
-	mResource  *systray.MenuItem
-	mPanel     *systray.MenuItem
-	mRestart   *systray.MenuItem
-	mQuit      *systray.MenuItem
+type App struct {
+	cfg        *config.Config
+	log        *logger.Logger
+	zapret     *zapret.Manager
+	proxy      *proxy.SOCKS5Server
+	controller Controller
+	version    string
+
+	mTitle    *systray.MenuItem
+	mZapret   *systray.MenuItem
+	mProxy    *systray.MenuItem
+	mStrategy *systray.MenuItem
+	mResource *systray.MenuItem
+	mPanel    *systray.MenuItem
+	mRestart  *systray.MenuItem
+	mQuit     *systray.MenuItem
 }
 
 func New(
@@ -39,16 +45,16 @@ func New(
 	log *logger.Logger,
 	zapretMgr *zapret.Manager,
 	proxySrv *proxy.SOCKS5Server,
-	webSrv *web.Server,
+	controller Controller,
 	version string,
 ) *App {
 	return &App{
-		cfg:     cfg,
-		log:     log,
-		zapret:  zapretMgr,
-		proxy:   proxySrv,
-		web:     webSrv,
-		version: version,
+		cfg:        cfg,
+		log:        log,
+		zapret:     zapretMgr,
+		proxy:      proxySrv,
+		controller: controller,
+		version:    version,
 	}
 }
 
@@ -63,10 +69,7 @@ func (a *App) Run() error {
 
 		// Left-click on tray icon → toggle window
 		systray.SetOnTapped(func() {
-			url := a.web.GetURL()
-			if url != "" {
-				window.Toggle(url)
-			}
+			a.controller.ToggleWindow()
 		})
 
 		// Status items (non-clickable)
@@ -90,21 +93,16 @@ func (a *App) Run() error {
 		go a.updateLoop()
 		go a.handleClicks()
 
-		// Open window with delay to let web UI render
+		// Показываем окно при старте
 		go func() {
-			time.Sleep(1500 * time.Millisecond)
-			url := a.web.GetURL()
-			if url != "" {
-				window.Open(url)
-			}
+			time.Sleep(800 * time.Millisecond)
+			a.controller.ShowWindow()
 		}()
 	}
+
 	systray.Run(onReady, func() {
-		a.log.Info("tray", "Завершение работы")
-		window.Close()
+		a.log.Info("tray", "Tray quit")
 		a.proxy.Stop()
-		a.web.Stop()
-		os.Exit(0)
 	})
 	return nil
 }
@@ -144,7 +142,7 @@ func (a *App) updateLoop() {
 		a.mStrategy.SetTitle(fmt.Sprintf("📋 Стратегия: %s", strategy))
 
 		// Resource %
-		pct := a.web.GetCachedResourcePercent()
+		pct := a.controller.GetCachedResourcePercent()
 		resText := "📊 Доступность: ..."
 		if pct >= 0 {
 			if pct >= 80 {
@@ -163,7 +161,6 @@ func (a *App) handleClicks() {
 	for {
 		select {
 		case <-a.mZapret.ClickedCh:
-			// Toggle: if running → stop, if stopped → start
 			zStatus := string(a.zapret.GetStatus())
 			if zStatus == "running" {
 				a.zapret.Stop()
@@ -173,7 +170,6 @@ func (a *App) handleClicks() {
 				}
 			}
 		case <-a.mProxy.ClickedCh:
-			// Toggle: if running → stop, if stopped → start
 			if a.proxy.IsRunning() {
 				a.proxy.Stop()
 			} else {
@@ -182,15 +178,14 @@ func (a *App) handleClicks() {
 				}
 			}
 		case <-a.mPanel.ClickedCh:
-			url := a.web.GetURL()
-			if url != "" {
-				window.Toggle(url)
-			}
+			a.controller.ToggleWindow()
 		case <-a.mRestart.ClickedCh:
 			if err := a.zapret.Restart(); err != nil {
 				a.log.Error("tray", fmt.Sprintf("Ошибка перезапуска: %v", err))
 			}
 		case <-a.mQuit.ClickedCh:
+			a.log.Info("tray", "Quit requested from tray")
+			a.controller.Quit()
 			systray.Quit()
 			return
 		}

@@ -1,12 +1,53 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import Card from '../components/Card';
-import Modal from '../components/Modal';
+import Card from '../components/ui/Card';
+import Modal from '../components/ui/Modal';
 import { api } from '../api';
+
+function formatBytes(bytes) {
+  if (!bytes || bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+}
+
+function DeviceConnections({ mac }) {
+  const [connections, setConnections] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const load = async () => {
+      const r = await api('GET', `/api/devices/${encodeURIComponent(mac)}/connections?limit=50`);
+      if (r) setConnections(r.connections || []);
+      setLoading(false);
+    };
+    load();
+  }, [mac]);
+
+  if (loading) return <div className="ov-empty" style={{ padding: 12 }}>Загрузка соединений...</div>;
+  if (connections.length === 0) return <div className="ov-empty" style={{ padding: 12 }}>Нет данных о соединениях</div>;
+
+  return (
+    <div className="dd-connections">
+      {connections.map((c, i) => (
+        <div key={c.id || i} className="dd-conn-item">
+          <div className="dd-conn-host">{c.dst_host || '—'}:{c.dst_port}</div>
+          <div className="dd-conn-traffic">
+            ↓{formatBytes(c.bytes_dl)} ↑{formatBytes(c.bytes_ul)}
+          </div>
+          <div className="dd-conn-time">
+            {new Date(c.started_at).toLocaleTimeString()}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export default function DevicesPage({ showToast }) {
   const [devices, setDevices] = useState([]);
   const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState('all'); // all | online | offline
+  const [filter, setFilter] = useState('all');
   const [selectedDevice, setSelectedDevice] = useState(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [pingingMAC, setPingingMAC] = useState(null);
@@ -56,7 +97,6 @@ export default function DevicesPage({ showToast }) {
     setActiveTab('overview');
   };
 
-  // Фильтрация
   const filtered = devices.filter(d => {
     if (filter === 'online' && !d.is_online) return false;
     if (filter === 'offline' && d.is_online) return false;
@@ -74,16 +114,15 @@ export default function DevicesPage({ showToast }) {
 
   return (
     <>
-      {/* Заголовок + поиск */}
       <div className="devices-toolbar">
         <div className="devices-stats">
-          <span className="ds-chip online">● {onlineCount} онлайн</span>
-          <span className="ds-chip offline">● {offlineCount} офлайн</span>
+          <span style={{ color: 'var(--success)', fontSize: 12, fontWeight: 500 }}>● {onlineCount}</span>
+          <span style={{ color: 'var(--text-tertiary)', fontSize: 12, fontWeight: 500 }}>● {offlineCount}</span>
         </div>
         <div className="devices-search">
           <input
             type="text"
-            className="input devices-search-input"
+            className="form-input devices-search-input"
             placeholder="Поиск по MAC, IP, имени..."
             value={search}
             onChange={e => setSearch(e.target.value)}
@@ -91,7 +130,7 @@ export default function DevicesPage({ showToast }) {
         </div>
         <div className="devices-filters">
           {['all', 'online', 'offline'].map(f => (
-            <button key={f} className={'btn btn-sm' + (filter === f ? ' btn-active' : '')}
+            <button key={f} className={'btn btn-sm' + (filter === f ? ' btn-accent' : '')}
               onClick={() => setFilter(f)}>
               {f === 'all' ? 'Все' : f === 'online' ? 'Онлайн' : 'Офлайн'}
             </button>
@@ -99,37 +138,32 @@ export default function DevicesPage({ showToast }) {
         </div>
       </div>
 
-      {/* Сетка устройств */}
       {loading ? (
-        <div className="devices-loading">Загрузка устройств...</div>
+        <div className="ov-empty">Загрузка устройств...</div>
       ) : filtered.length === 0 ? (
-        <div className="devices-empty">
+        <div className="ov-empty">
           <p>Устройства не обнаружены</p>
-          <p className="devices-empty-hint">Попробуйте обновить страницу или подождать</p>
+          <p style={{ fontSize: 12, marginTop: 4, opacity: 0.6 }}>Попробуйте обновить страницу или подождать</p>
         </div>
       ) : (
         <div className="devices-grid">
           {filtered.map(d => (
             <div key={d.mac} className={'device-card' + (d.is_online ? ' online' : ' offline')}
               onClick={() => openDrawer(d)}>
-              <div className="dc-status-dot"></div>
+              <div className="dc-status-dot" />
               <div className="dc-info">
                 <div className="dc-hostname">{d.hostname || d.mac}</div>
                 <div className="dc-ip">{d.ip || '—'}</div>
-                <div className="dc-mac">{d.mac}</div>
               </div>
               <div className="dc-meta">
-                {d.is_online && <span className="dc-online-badge">онлайн</span>}
-                <span className="dc-traffic">
-                  ↓{formatBytes(d.total_dl)} ↑{formatBytes(d.total_ul)}
-                </span>
+                {d.is_online && <span className="badge badge-success" style={{ fontSize: 10 }}>онлайн</span>}
+                <span className="dc-traffic">↓{formatBytes(d.total_dl)}</span>
               </div>
             </div>
           ))}
         </div>
       )}
 
-      {/* DeviceDrawer — боковая панель */}
       <Modal open={drawerOpen} onClose={() => setDrawerOpen(false)} title={selectedDevice?.hostname || selectedDevice?.mac || 'Устройство'}>
         {selectedDevice && (
           <div className="device-drawer">
@@ -175,10 +209,10 @@ export default function DevicesPage({ showToast }) {
                   <button className="btn btn-accent btn-sm"
                     onClick={() => handlePing(selectedDevice.mac)}
                     disabled={pingingMAC === selectedDevice.mac}>
-                    {pingingMAC === selectedDevice.mac ? 'Пингую...' : '📡 Ping'}
+                    {pingingMAC === selectedDevice.mac ? 'Пингую...' : 'Ping'}
                   </button>
                   <button className="btn btn-danger btn-sm" onClick={() => handleDelete(selectedDevice.mac)}>
-                    🗑 Забыть
+                    Забыть
                   </button>
                 </div>
 
@@ -202,45 +236,4 @@ export default function DevicesPage({ showToast }) {
       </Modal>
     </>
   );
-}
-
-function DeviceConnections({ mac }) {
-  const [connections, setConnections] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const load = async () => {
-      const r = await api('GET', `/api/devices/${encodeURIComponent(mac)}/connections?limit=50`);
-      if (r) setConnections(r.connections || []);
-      setLoading(false);
-    };
-    load();
-  }, [mac]);
-
-  if (loading) return <div className="dd-loading">Загрузка соединений...</div>;
-  if (connections.length === 0) return <div className="dd-empty">Нет данных о соединениях</div>;
-
-  return (
-    <div className="dd-connections">
-      {connections.map((c, i) => (
-        <div key={c.id || i} className="dd-conn-item">
-          <div className="dd-conn-host">{c.dst_host || '—'}:{c.dst_port}</div>
-          <div className="dd-conn-traffic">
-            ↓{formatBytes(c.bytes_dl)} ↑{formatBytes(c.bytes_ul)}
-          </div>
-          <div className="dd-conn-time">
-            {new Date(c.started_at).toLocaleTimeString()}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function formatBytes(bytes) {
-  if (!bytes || bytes === 0) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 }

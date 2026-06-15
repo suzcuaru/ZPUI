@@ -9,6 +9,8 @@
  * периодически опрашиваются.
  */
 
+import { api } from './api';
+
 const _cache = new Map();
 
 /** Получить закэшированные данные по ключу (in-memory). */
@@ -39,9 +41,7 @@ export async function getSnapshots(sinceMs) {
     ? Math.ceil((Date.now() - sinceMs) / 60000)
     : 30;
   try {
-    const resp = await fetch(`/api/monitor/snapshots?minutes=${minutes}`);
-    if (!resp.ok) return [];
-    const data = await resp.json();
+    const data = await api('GET', `/api/monitor/snapshots?minutes=${minutes}`);
     if (!data || !data.snapshots) return [];
     // Нормализуем поля под формат, ожидаемый фронтендом
     return data.snapshots.map(s => ({

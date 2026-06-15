@@ -1,3 +1,0 @@
-[2026-06-14 17:21:10] [INFO] [web] Starting web server on 127.0.0.1:0
-[2026-06-14 17:21:10] [INFO] [web] Web server URL: http://127.0.0.1:54809
-[2026-06-14 23:57:28] [ERROR] [web] Web server error: http: Server closed

@@ -1,14 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
-import Card from '../components/Card';
-import Modal from '../components/Modal';
-import Switch from '../components/Switch';
-import { api, apiCall } from '../api';
+import Card from '../components/ui/Card';
+import Modal from '../components/ui/Modal';
+import Switch from '../components/ui/Switch';
+import { api, apiCall, createStream } from '../api';
 import { cacheGet, cacheSet } from '../db';
 
 export default function FiltersPage({ status, showToast }) {
   const z = status?.zapret || {};
 
-  // === Strategy state ===
   const [strategies, setStrategies] = useState([]);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [testModal, setTestModal] = useState(false);
@@ -22,14 +21,12 @@ export default function FiltersPage({ status, showToast }) {
   const esRef = useRef(null);
   const dropdownRef = useRef(null);
 
-  // === Lists state ===
   const [gameFilter, setGameFilter] = useState('disabled');
   const [ipsetStatus, setIpsetStatus] = useState('loaded');
   const [autoUpdate, setAutoUpdate] = useState(true);
 
   useEffect(() => { loadStrategies(); loadFilters(); }, []);
 
-  // Закрытие dropdown при клике вне
   useEffect(() => {
     const handleClick = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
@@ -40,7 +37,6 @@ export default function FiltersPage({ status, showToast }) {
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
-  // === Strategy functions ===
   const loadStrategies = async () => {
     const cached = await cacheGet('strategies');
     if (cached) setStrategies(cached.strategies || []);
@@ -58,7 +54,7 @@ export default function FiltersPage({ status, showToast }) {
 
   const handleAutoTest = () => {
     setTestModal(true); setTesting(true); setTestResults([]); setTestProgress(null); setTestInfo(null); setBestStrategy(null);
-    const es = new EventSource('/api/strategy/stream');
+    const es = createStream('/api/strategy/stream');
     esRef.current = es;
     es.onmessage = (e) => {
       const d = JSON.parse(e.data);
@@ -96,7 +92,6 @@ export default function FiltersPage({ status, showToast }) {
     });
   };
 
-  // === Lists functions ===
   const loadFilters = async () => {
     const gf = await api('GET', '/api/zapret/game-filter');
     if (gf) setGameFilter(gf.mode || 'disabled');
@@ -127,9 +122,8 @@ export default function FiltersPage({ status, showToast }) {
   const strategyLabel = currentStrategy?.name || z.strategy || 'Не выбрана';
 
   return (
-    <>
-      {/* Стратегия */}
-      <Card className="settings-card">
+    <div className="filters-page">
+      <Card>
         <div className="settings-card-header">
           <h3>Стратегия обхода DPI</h3>
           <p>Текущая: <strong>{strategyLabel}</strong></p>
@@ -163,13 +157,16 @@ export default function FiltersPage({ status, showToast }) {
           )}
         </div>
 
-        <button className="btn btn-accent" onClick={handleAutoTest} disabled={testing} style={{ marginTop: 14 }}>
-          {testing ? 'Тестирование...' : '🔍 Запустить автотест'}
+        <button className="btn btn-accent btn-auto-test" onClick={handleAutoTest} disabled={testing}>
+          {testing ? (
+            <><span className="offline-spinner" /> Тестирование...</>
+          ) : (
+            <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Запустить автотест</>
+          )}
         </button>
       </Card>
 
-      {/* Списки фильтрации */}
-      <Card className="settings-card" style={{ marginTop: 16 }}>
+      <Card style={{ marginTop: 12 }}>
         <div className="settings-card-header">
           <h3>Фильтры и настройки</h3>
           <p>Game Filter, IPSet, автообновления</p>
@@ -213,7 +210,6 @@ export default function FiltersPage({ status, showToast }) {
         </div>
       </Card>
 
-      {/* Модал автотеста */}
       <Modal open={testModal} onClose={() => {}} title="Автоподбор стратегии" wide>
         {testing && (
           <div className="at-active">
@@ -243,7 +239,13 @@ export default function FiltersPage({ status, showToast }) {
                   <>
                     <span className="at-lr-score">{r.resources_ok}/{r.resources_n}</span>
                     <span className="at-lr-ms">{r.response_ms}мс</span>
-                    {r.resources_detail && r.resources_detail.every(x => x.ok) ? '⭐' : r.resources_ok > 0 ? '👍' : '👎'}
+                    {r.resources_detail && r.resources_detail.every(x => x.ok) ? (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--success)" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                    ) : r.resources_ok > 0 ? (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                    ) : (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    )}
                   </>
                 )}
               </div>
@@ -257,7 +259,7 @@ export default function FiltersPage({ status, showToast }) {
         {!testing && bestStrategy && (
           <div className="at-best">
             <div className="at-best-header">
-              <span className="at-best-icon">🏆</span>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--warning)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
               <span className="at-best-title">Лучшая стратегия</span>
             </div>
             <div className="at-best-card">
@@ -335,7 +337,7 @@ export default function FiltersPage({ status, showToast }) {
           </button>
         )}
       </Modal>
-    </>
+    </div>
   );
 }
 
@@ -350,7 +352,7 @@ function DonutChart({ percent, size = 80, stroke = 6, color = 'var(--accent)' })
         strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round"
         style={{ transition: 'stroke-dashoffset 0.6s ease' }} />
       <text x={size/2} y={size/2} textAnchor="middle" dominantBaseline="central"
-        fill="var(--text-1)" fontSize="16" fontWeight="700" style={{ transform: 'rotate(90deg)', transformOrigin: 'center' }}>
+        fill="var(--text-primary)" fontSize="16" fontWeight="700" style={{ transform: 'rotate(90deg)', transformOrigin: 'center' }}>
         {Math.round(percent)}%
       </text>
     </svg>
