@@ -39,3 +39,5 @@
 [2026-06-13 16:01:19] [INFO] [web] Starting web server on 127.0.0.1:0
 [2026-06-13 16:01:19] [INFO] [web] Web server URL: http://127.0.0.1:64832
 [2026-06-13 16:08:36] [ERROR] [web] Web server error: http: Server closed
+[2026-06-13 22:01:41] [INFO] [web] Starting web server on 127.0.0.1:0
+[2026-06-13 22:01:41] [INFO] [web] Web server URL: http://127.0.0.1:49889
