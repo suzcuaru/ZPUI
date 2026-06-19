@@ -1,3 +1,5 @@
 [2026-06-15 23:39:30] [INFO] [proxy] Firewall rule added for port 1080
 [2026-06-15 23:39:30] [INFO] [proxy] SOCKS5 proxy started on :1080
 [2026-06-15 23:39:30] [INFO] [network] SOCKS5 proxy listening on port 1080
+[2026-06-15 23:59:23] [INFO] [proxy] Firewall rule removed
+[2026-06-15 23:59:23] [INFO] [proxy] SOCKS5 proxy stopped

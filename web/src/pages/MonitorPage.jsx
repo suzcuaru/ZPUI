@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from 'react';
-import Card from '../components/ui/Card';
 import CopyBtn from '../components/ui/CopyBtn';
 import Skeleton from '../components/ui/Skeleton';
 import { api } from '../api';
@@ -54,10 +53,19 @@ export default function MonitorPage({ status, showToast }) {
       try {
         const d = await api('GET', '/api/monitor/history?minutes=30');
         if (d && d.snapshots) {
-          const snap = d.snapshots.slice(-30);
+          const snap = d.snapshots.slice(-31);
+          const dl = snap.map(s => s.dl || 0);
+          const ul = snap.map(s => s.ul || 0);
+          function toDeltas(arr) {
+            const nonZero = arr.filter(v => v > 0);
+            if (nonZero.length < 2) return arr;
+            const isCumulative = nonZero.every((v, i) => i === 0 || v >= nonZero[i - 1]);
+            if (!isCumulative) return arr;
+            return arr.map((v, i) => i === 0 ? v : Math.max(0, v - arr[i - 1]));
+          }
           setHistory({
-            dl: snap.map(s => s.dl || 0),
-            ul: snap.map(s => s.ul || 0),
+            dl: toDeltas(dl).slice(-30),
+            ul: toDeltas(ul).slice(-30),
           });
         }
       } catch {}

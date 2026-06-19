@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import Card from '../components/ui/Card';
 import Modal from '../components/ui/Modal';
 import { api } from '../api';
 

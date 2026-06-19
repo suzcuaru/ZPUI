@@ -158,9 +158,7 @@ export default function AboutPage({ status, showToast }) {
       </div>
 
       <div className="about-update-card" style={{ gridColumn: '1 / -1' }}>
-        <div className="settings-card-header">
-          <h3>Ссылки</h3>
-        </div>
+        <div className="flt-label">Ссылки</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <a className="about-link" href="#" onClick={e => { e.preventDefault(); openExternal(zapretRepo); }}>
             <div className="about-link-icon">

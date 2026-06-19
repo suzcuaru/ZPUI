@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from 'react';
-import Card from '../components/ui/Card';
 import Modal from '../components/ui/Modal';
 import Switch from '../components/ui/Switch';
 import { api, apiCall, createStream } from '../api';
@@ -123,11 +122,9 @@ export default function FiltersPage({ status, showToast }) {
 
   return (
     <div className="filters-page">
-      <Card>
-        <div className="settings-card-header">
-          <h3>Стратегия обхода DPI</h3>
-          <p>Текущая: <strong>{strategyLabel}</strong></p>
-        </div>
+      <div className="flt-section">
+        <div className="flt-label">Стратегия обхода DPI</div>
+        <div className="flt-desc">Текущая: <strong>{strategyLabel}</strong></div>
 
         <div className="strategy-dropdown-wrapper" ref={dropdownRef}>
           <button
@@ -157,22 +154,20 @@ export default function FiltersPage({ status, showToast }) {
           )}
         </div>
 
-        <button className="btn btn-accent btn-auto-test" onClick={handleAutoTest} disabled={testing}>
+        <button className="btn btn-accent" onClick={handleAutoTest} disabled={testing} style={{ width: '100%' }}>
           {testing ? (
             <><span className="offline-spinner" /> Тестирование...</>
           ) : (
             <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Запустить автотест</>
           )}
         </button>
-      </Card>
+      </div>
 
-      <Card style={{ marginTop: 12 }}>
-        <div className="settings-card-header">
-          <h3>Фильтры и настройки</h3>
-          <p>Game Filter, IPSet, автообновления</p>
-        </div>
-        <div className="settings-section-label">Game Filter</div>
-        <div className="radio-group settings-radio">
+      <div className="flt-section">
+        <div className="flt-label">Фильтры и настройки</div>
+        <div className="flt-desc">Game Filter, IPSet, автообновления</div>
+        <div className="flt-label">Game Filter</div>
+        <div className="radio-group">
           {[
             { v: 'disabled', l: 'Выключен', d: 'Не добавлять игровые порты' },
             { v: 'all', l: 'TCP + UDP', d: 'Добавить все порты 1024-65535' },
@@ -188,27 +183,27 @@ export default function FiltersPage({ status, showToast }) {
             </label>
           ))}
         </div>
-        <div className="settings-divider"></div>
-        <div className="settings-section-label">IPSet Filter</div>
-        <div className="settings-switch-row">
-          <div className="settings-switch-info">
-            <span className="settings-switch-title">IPSet фильтр</span>
-            <span className="settings-switch-desc">Текущий статус: <strong>{ipsetStatus}</strong></span>
+        <div className="flt-divider"></div>
+        <div className="flt-label">IPSet Filter</div>
+        <div className="flt-row">
+          <div className="flt-row-info">
+            <span className="flt-row-title">IPSet фильтр</span>
+            <span className="flt-row-desc">Текущий статус: <strong>{ipsetStatus}</strong></span>
           </div>
           <button className="btn btn-sm" onClick={handleIpsetToggle}>
             {ipsetStatus === 'loaded' ? 'Отключить' : ipsetStatus === 'none' ? 'Включить (пустой)' : 'Загрузить'}
           </button>
         </div>
-        <div className="settings-divider"></div>
-        <div className="settings-section-label">Auto-Update</div>
-        <div className="settings-switch-row">
-          <div className="settings-switch-info">
-            <span className="settings-switch-title">Автопроверка обновлений</span>
-            <span className="settings-switch-desc">Проверять обновления при запуске</span>
+        <div className="flt-divider"></div>
+        <div className="flt-label">Auto-Update</div>
+        <div className="flt-row">
+          <div className="flt-row-info">
+            <span className="flt-row-title">Автопроверка обновлений</span>
+            <span className="flt-row-desc">Проверять обновления при запуске</span>
           </div>
           <Switch checked={autoUpdate} onChange={handleAutoUpdate} />
         </div>
-      </Card>
+      </div>
 
       <Modal open={testModal} onClose={() => {}} title="Автоподбор стратегии" wide>
         {testing && (

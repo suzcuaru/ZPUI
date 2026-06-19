@@ -100,13 +100,10 @@ export default function App() {
 
   return (
     <div className="app">
-      {!sidebarCollapsed && (
-        <Sidebar
-          activePage={activePage}
-          onNavigate={setActivePage}
-          onOpenLogs={() => setLogsOpen(true)}
-        />
-      )}
+      <Sidebar
+        activePage={activePage}
+        onNavigate={setActivePage}
+      />
       <div className="app-body">
         <Header
           status={status}
