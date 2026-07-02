@@ -78,6 +78,14 @@ func (m *Manager) GetVersion() string {
 	return m.version
 }
 
+func (m *Manager) RefreshVersion() {
+	ver := detectZapretVersion(m.cfg)
+	m.mu.Lock()
+	m.version = ver
+	m.mu.Unlock()
+	m.log.Info("zapret", "Version refreshed: "+ver)
+}
+
 func (m *Manager) Start() error {
 	if m.isServiceRunning() {
 		m.log.Info("zapret", "Service already running")

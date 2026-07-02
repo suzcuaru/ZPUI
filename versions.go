@@ -162,8 +162,12 @@ func (a *App) UpdateComponent(name string) map[string]interface{} {
 		go func() {
 			zapretUpdate := filepath.Join(exeDir, "zapretupdate.exe")
 			if _, err := os.Stat(zapretUpdate); err == nil {
-				executil.HiddenCmd(zapretUpdate).Start()
+				cmd := executil.HiddenCmd(zapretUpdate)
+				cmd.Start()
+				cmd.Wait()
 			}
+			a.zapret.RefreshVersion()
+			a.log.Info("updater", "Zapret update process finished, version="+a.zapret.GetVersion())
 		}()
 		return map[string]interface{}{"status": "zapretupdate_started"}
 

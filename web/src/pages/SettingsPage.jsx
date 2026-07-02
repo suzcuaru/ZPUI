@@ -84,11 +84,17 @@ export default function SettingsPage({ status, showToast }) {
     showToast(t('settings.componentUpdateStarted', { name }));
     if (name === 'Zapret') {
       setZapretCheck({ state: 'idle', current: null, latest: null });
+      const poll = async () => {
+        for (let i = 0; i < 15; i++) {
+          await new Promise(r => setTimeout(r, 3000));
+          await checkZapretUpdate();
+          loadVersions();
+        }
+      };
+      poll();
+    } else {
+      setTimeout(loadVersions, 3000);
     }
-    setTimeout(() => {
-      loadVersions();
-      if (name === 'Zapret') checkZapretUpdate();
-    }, 5000);
   };
 
   if (!config) return null;
