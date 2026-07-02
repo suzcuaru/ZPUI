@@ -1,38 +1,48 @@
+import { formatBytes } from '../../utils';
+import { useT } from '../../i18n';
+
 export default function Footer({ status }) {
-  if (!status) return null;
+  const { t } = useT();
+  if (!status) return <div className="footer" />;
 
   const strategy = status?.zapret?.strategy || '—';
-  const resPct = status?.mod?.resource_pct ?? -1;
+  const mon = status?.monitor || {};
+  const dlSpeed = mon.dl_speed_fmt || '0 B/s';
+  const ulSpeed = mon.ul_speed_fmt || '0 B/s';
+  const dlTotal = formatBytes(mon.download_bytes || 0);
+  const ulTotal = formatBytes(mon.upload_bytes || 0);
   const hostname = status?.network?.hostname || '';
   const ips = status?.network?.ips || [];
-
-  const pctColor = resPct >= 80 ? 'var(--success)' : resPct >= 50 ? 'var(--warning)' : 'var(--danger)';
 
   return (
     <div className="footer">
       <div className="footer-item">
-        <span style={{ color: 'var(--text-tertiary)' }}>Стратегия:</span>
-        <span className="footer-mono" style={{ color: 'var(--text-secondary)' }}>{strategy}</span>
+        <span style={{ color: 'var(--text-tertiary)' }}>▼</span>
+        <span className="footer-mono footer-num" style={{ color: 'var(--accent)' }}>{dlSpeed}</span>
+      </div>
+      <div className="footer-item">
+        <span style={{ color: 'var(--text-tertiary)' }}>▲</span>
+        <span className="footer-mono footer-num" style={{ color: 'var(--success)' }}>{ulSpeed}</span>
       </div>
 
       <span className="footer-sep" />
 
-      {resPct >= 0 && (
-        <>
-          <div className="footer-item footer-pct">
-            <span style={{ fontWeight: 600, color: pctColor }}>{resPct}%</span>
-            <span className="footer-pct-bar">
-              <span className="footer-pct-fill" style={{ width: resPct + '%', background: pctColor }} />
-            </span>
-            <span style={{ color: 'var(--text-tertiary)' }}>доступно</span>
-          </div>
-          <span className="footer-sep" />
-        </>
-      )}
+      <div className="footer-item">
+        <span style={{ color: 'var(--text-tertiary)' }}>{t('footer.total')}</span>
+        <span className="footer-mono footer-num" style={{ color: 'var(--text-secondary)' }}>↓{dlTotal}</span>
+        <span className="footer-mono footer-num" style={{ color: 'var(--text-secondary)' }}>↑{ulTotal}</span>
+      </div>
+
+      <span className="footer-sep" />
+
+      <div className="footer-item">
+        <span style={{ color: 'var(--text-tertiary)' }}>{t('footer.strategy')}</span>
+        <span className="footer-mono" style={{ color: 'var(--text-secondary)' }}>{strategy}</span>
+      </div>
 
       <div className="footer-item footer-right">
         <span className="footer-mono" style={{ color: 'var(--text-tertiary)' }}>
-          {hostname && `${hostname} `}
+          {hostname && `${hostname} · `}
           {ips[0] || '127.0.0.1'}
         </span>
       </div>

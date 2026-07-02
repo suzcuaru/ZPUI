@@ -45,6 +45,7 @@ function parseQuery(path) {
  */
 const GET_ROUTES = {
   '/api/status': (app) => app.GetStatus(),
+  '/api/system-theme': (app) => app.GetSystemTheme(),
   '/api/zapret/strategies': (app) => app.GetStrategies(),
   '/api/zapret/service/status': (app) => app.GetServiceStatus(),
   '/api/zapret/game-filter': (app) => app.GetGameFilter(),
@@ -56,21 +57,38 @@ const GET_ROUTES = {
   '/api/proxy/connections': (app) => app.GetProxyConnections(),
   '/api/proxy/config': (app) => app.GetProxyConfig(),
   '/api/proxy/qrcode': (app) => app.GetProxyQRCode(),
+  '/api/xbox-dns/config': (app) => app.GetXboxDnsConfig(),
   '/api/monitor/traffic': (app) => app.GetTraffic(),
   '/api/monitor/devices': (app) => app.GetMonitorDevices(),
   '/api/monitor/snapshots': (app, p) => app.GetTrafficSnapshots(parseInt(p.minutes) || 30),
   '/api/monitor/history': (app, p) => app.GetTrafficSnapshots(parseInt(p.minutes) || 30),
+  '/api/system-resources': (app) => app.GetSystemResources(),
   '/api/autostart/status': (app) => app.GetAutostartStatus(),
   '/api/logs/files': (app) => app.GetLogFiles(),
   '/api/logs/actions': (app, p) => app.GetActionLogs(p.category || '', parseInt(p.limit) || 0, parseInt(p.offset) || 0),
   '/api/logs': (app, p) => app.GetLogs(p.category || 'zapret', parseInt(p.lines) || 100),
+  // '/api/logs/clear' — POST route (см. POST_ROUTES)
   '/api/config': (app) => app.GetConfig(),
   '/api/resource-status': (app) => app.GetResourceStatus(),
   '/api/up/info': (app) => app.GetUpInfo(),
   '/api/devices': (app) => app.GetDevices(),
-  // Алиасы обновлений (AboutPage)
-  '/api/updates/check/zpui': (app) => app.CheckForUpdates(),
+  '/api/updates/check/zpui': (app) => app.CheckZPUIUpdate(),
   '/api/updates/check/zapret': (app) => app.CheckForUpdates(),
+  '/api/zapret/local': (app) => app.HasLocalZapret(),
+  '/api/zapret/system-service': (app) => app.HasSystemZapretService(),
+  '/api/zapret/install-log': (app) => app.GetInstallLog(),
+  '/api/zapret/default-strategy': (app) => app.DefaultStrategy(),
+  '/api/wizard/done': (app) => app.CheckWizardDone(),
+  '/api/versions': (app) => app.GetVersions(),
+  '/api/components/check': (app) => app.CheckComponentUpdates(),
+  '/api/health': (app) => app.HealthCheck(),
+  '/api/network-info': (app) => app.GetNetworkInfo(),
+  '/api/backups': (app, p) => app.GetBackups(p.component || ''),
+  '/api/ignored-versions': (app) => app.GetIgnoredVersions(),
+  '/api/logs/errors': (app) => app.GetErrorSnapshots(),
+  '/api/logs/error': (app, p) => app.ReadErrorSnapshot(p.name || ''),
+  '/api/logs/archive': (app) => app.GetArchiveLogs(),
+  '/api/logs/archive/read': (app, p) => app.ReadArchiveLog(p.name || ''),
 };
 
 /**
@@ -95,6 +113,10 @@ const POST_ROUTES = {
   '/api/proxy/start': (app) => app.ProxyStart(),
   '/api/proxy/stop': (app) => app.ProxyStop(),
   '/api/proxy/config': (app, b) => app.SetProxyConfig(b || {}),
+  '/api/xbox-dns/config': (app, b) => app.SetXboxDnsConfig(b || {}),
+  '/api/component-states': (app) => app.SaveComponentStates(),
+  '/api/resource-check': (app, b) => app.CheckResource(b.url || ''),
+  '/api/resource-add': (app, b) => app.AddHostToUserList(b.host || ''),
   '/api/update/check': (app) => app.CheckForUpdates(),
   '/api/update/apply': (app) => app.ApplyUpdate(),
   '/api/strategy/auto': (app) => app.StartAutoTest(),
@@ -104,6 +126,16 @@ const POST_ROUTES = {
   '/api/logs/frontend': (app, b) => app.FrontendLogs(b.events || []),
   '/api/config': (app, b) => app.SetConfig(b || {}),
   '/api/external': (app, b) => app.OpenExternal(b.url || ''),
+  '/api/zapret/remove-system-service': (app) => app.RemoveSystemZapretService(),
+  '/api/wizard/run': (app) => app.RunWizard(),
+  '/api/components/update': (app, b) => app.UpdateComponent(b.name || ''),
+  '/api/restore-backup': (app, b) => app.RestoreFromBackup(b.name || ''),
+  '/api/ignore-version': (app, b) => app.AddIgnoredVersion(b.component || '', b.version || '', b.reason || ''),
+  '/api/unignore-version': (app, b) => app.RemoveIgnoredVersion(b.component || '', b.version || ''),
+  '/api/zapret/auto-install': (app) => app.AutoInstallZapret(),
+  '/api/zapret/install-service-logged': (app, b) => app.InstallServiceLogged(b.strategy || ''),
+  '/api/zapret/autoselect': (app) => app.RunAutoSelectStream(),
+  '/api/logs/clear': (app) => app.ClearLogs(),
 };
 
 const DELETE_ROUTES = {
@@ -245,7 +277,7 @@ export function createStream(path) {
         this._eventNames.push('strategy:event');
 
         rt.EventsOn('strategy:done', (data) => {
-          if (this._onmessage) this._onmessage({ data: JSON.stringify(data || { type: 'done' }) });
+          if (this._onmessage) this._onmessage({ data: JSON.stringify({ ...(data || {}), type: 'done' }) });
         });
         this._eventNames.push('strategy:done');
 
@@ -271,6 +303,23 @@ export function createStream(path) {
         app.RunUpdateStream().catch(err => {
           if (this._onerror) this._onerror(err);
         });
+
+      } else if (path === '/api/autoselect/stream') {
+        // Автоподбор лучшей стратегии с применением
+        rt.EventsOn('autoselect:event', (data) => {
+          if (this._onmessage) this._onmessage({ data: JSON.stringify(data) });
+        });
+        this._eventNames.push('autoselect:event');
+
+        rt.EventsOn('autoselect:done', (data) => {
+          if (this._onmessage) this._onmessage({ data: JSON.stringify({ ...(data || {}), type: 'done' }) });
+        });
+        this._eventNames.push('autoselect:done');
+
+        // Запускаем бэкенд-метод
+        app.RunAutoSelectStream().catch(err => {
+          if (this._onerror) this._onerror(err);
+        });
       }
     },
 
@@ -278,8 +327,8 @@ export function createStream(path) {
       for (const name of this._eventNames) {
         try { rt.EventsOff(name); } catch {}
       }
-      // Отмена автотеста при закрытии strategy stream
-      if (path === '/api/strategy/stream') {
+      // Отмена автотеста при закрытии strategy/autoselect stream
+      if (path === '/api/strategy/stream' || path === '/api/autoselect/stream') {
         try { app.CancelAutoTest(); } catch {}
       }
       this._eventNames = [];

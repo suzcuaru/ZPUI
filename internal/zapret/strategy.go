@@ -362,11 +362,40 @@ func testURL(client *http.Client, url string) (bool, int64) {
 	start := time.Now()
 	resp, err := client.Get(url)
 	elapsed := time.Since(start).Milliseconds()
-	if err != nil {
-		return false, elapsed
+	ok := false
+	if err == nil {
+		resp.Body.Close()
+		ok = resp.StatusCode < 500
 	}
-	resp.Body.Close()
-	return resp.StatusCode >= 200 && resp.StatusCode < 500, elapsed
+	if !ok {
+		host := extractHost(url)
+		if host != "" {
+			conn, dialErr := net.DialTimeout("tcp", host+":443", 3*time.Second)
+			if dialErr == nil {
+				conn.Close()
+				ok = true
+			}
+		}
+	}
+	return ok, elapsed
+}
+
+func extractHost(rawURL string) string {
+	if strings.HasPrefix(rawURL, "https://") {
+		rest := rawURL[8:]
+		if idx := strings.IndexByte(rest, '/'); idx >= 0 {
+			return rest[:idx]
+		}
+		return rest
+	}
+	if strings.HasPrefix(rawURL, "http://") {
+		rest := rawURL[7:]
+		if idx := strings.IndexByte(rest, '/'); idx >= 0 {
+			return rest[:idx]
+		}
+		return rest
+	}
+	return ""
 }
 
 type testTarget struct {
@@ -375,46 +404,50 @@ type testTarget struct {
 }
 
 func (m *Manager) loadTestTargets() []testTarget {
-	path := filepath.Join(m.cfg.GetZapretPath(), "utils", "targets.txt")
-	data, err := os.ReadFile(path)
-	if err != nil {
-		m.log.Warn("strategy", fmt.Sprintf("Cannot read targets.txt (%s), fallback to defaults", path))
-		return []testTarget{
+	var targets []testTarget
+
+	targetsPath := filepath.Join(m.cfg.GetZapretPath(), "utils", "targets.txt")
+	if body, err := os.ReadFile(targetsPath); err == nil {
+		for _, line := range strings.Split(string(body), "\n") {
+			line = strings.TrimSpace(line)
+			if line == "" || strings.HasPrefix(line, "#") {
+				continue
+			}
+			parts := strings.SplitN(line, "=", 2)
+			if len(parts) != 2 {
+				continue
+			}
+			key := strings.TrimSpace(parts[0])
+			val := strings.TrimSpace(parts[1])
+			val = strings.Trim(val, `"`)
+			if strings.HasPrefix(val, "PING:") {
+				continue
+			}
+			if !strings.HasPrefix(val, "http://") && !strings.HasPrefix(val, "https://") {
+				continue
+			}
+			targets = append(targets, testTarget{Name: key, URL: val})
+		}
+	}
+
+	listPath := filepath.Join(m.cfg.ListsDir(), "list-general-user.txt")
+	if body, err := os.ReadFile(listPath); err == nil {
+		for _, line := range strings.Split(string(body), "\n") {
+			line = strings.TrimSpace(line)
+			if line == "" || strings.HasPrefix(line, "#") {
+				continue
+			}
+			targets = append(targets, testTarget{Name: line, URL: "https://" + line})
+		}
+	}
+
+	if len(targets) == 0 {
+		targets = []testTarget{
 			{Name: "DiscordMain", URL: "https://discord.com"},
 			{Name: "YouTubeWeb", URL: "https://www.youtube.com"},
 			{Name: "GoogleMain", URL: "https://www.google.com"},
 			{Name: "CloudflareWeb", URL: "https://www.cloudflare.com"},
 		}
-	}
-
-	var targets []testTarget
-	for _, line := range strings.Split(string(data), "\n") {
-		line = strings.TrimSpace(line)
-		if line == "" || strings.HasPrefix(line, "#") || strings.HasPrefix(line, "//") || strings.HasPrefix(line, ";") {
-			continue
-		}
-		if !strings.Contains(line, "=") {
-			continue
-		}
-		parts := strings.SplitN(line, "=", 2)
-		name := strings.TrimSpace(parts[0])
-		val := strings.TrimSpace(parts[1])
-		val = strings.Trim(val, `" `)
-		if name == "" || val == "" {
-			continue
-		}
-		if strings.HasPrefix(val, "PING:") {
-			continue
-		}
-		if !strings.HasPrefix(val, "http://") && !strings.HasPrefix(val, "https://") {
-			continue
-		}
-		targets = append(targets, testTarget{Name: name, URL: val})
-	}
-
-	if len(targets) == 0 {
-		targets = append(targets, testTarget{Name: "DiscordMain", URL: "https://discord.com"})
-		targets = append(targets, testTarget{Name: "YouTubeWeb", URL: "https://www.youtube.com"})
 	}
 
 	return targets
@@ -458,4 +491,222 @@ func (m *Manager) SetGameFilter(mode string) error {
 	default:
 		return fmt.Errorf("invalid game filter mode: %s", mode)
 	}
+}
+
+// AutoSelectAndApply последовательно тестирует все стратегии, находит лучшую
+// и применяет её (установка службы). В отличие от RunAutoTest не восстанавливает
+// прежнюю стратегию, а оставляет лучшую.
+func (m *Manager) AutoSelectAndApply(ctx context.Context, results chan<- AutoTestResult, done chan<- struct{}) {
+	defer close(done)
+	defer close(results)
+
+	autoTestMu.Lock()
+	if autoTestActive {
+		autoTestMu.Unlock()
+		results <- AutoTestResult{Type: "done", Error: "Автоподбор уже запущен"}
+		return
+	}
+	autoTestActive = true
+	testCtx, cancel := context.WithCancel(ctx)
+	autoTestCancel = cancel
+	autoTestMu.Unlock()
+
+	defer func() {
+		autoTestMu.Lock()
+		autoTestActive = false
+		autoTestCancel = nil
+		autoTestMu.Unlock()
+	}()
+
+	strategies := m.ListStrategies()
+	resources := m.loadTestTargets()
+
+	m.log.Info("strategy", fmt.Sprintf("Auto-select started: %d strategies, %d resources", len(strategies), len(resources)))
+
+	if len(strategies) == 0 {
+		results <- AutoTestResult{Type: "info", Message: "Стратегии не найдены — нечего подбирать"}
+		results <- AutoTestResult{Type: "done", Error: "no strategies"}
+		return
+	}
+
+	results <- AutoTestResult{
+		Type:    "info",
+		Total:   len(strategies),
+		Message: fmt.Sprintf("Подбор лучшей стратегии: %d стратегий, %d ресурсов", len(strategies), len(resources)),
+	}
+
+	httpClient := &http.Client{
+		Timeout: 8 * time.Second,
+		Transport: &http.Transport{
+			TLSClientConfig:   &tls.Config{InsecureSkipVerify: true},
+			DisableKeepAlives: true,
+			MaxIdleConns:      1,
+			DialContext:       (&net.Dialer{Timeout: 4 * time.Second}).DialContext,
+		},
+	}
+
+	var allResults []testResultData
+
+	for i, s := range strategies {
+		select {
+		case <-testCtx.Done():
+			results <- AutoTestResult{Type: "info", Message: "Подбор отменён"}
+			goto applyBest
+		default:
+		}
+
+		m.log.Info("strategy", fmt.Sprintf("[%d/%d] Testing %s", i+1, len(strategies), s.Name))
+
+		results <- AutoTestResult{
+			Type:     "progress",
+			Current:  i + 1,
+			Total:    len(strategies),
+			Strategy: s.Filename,
+			Phase:    "start",
+			Message:  fmt.Sprintf("[%d/%d] %s", i+1, len(strategies), s.Name),
+		}
+
+		proc, err := m.startWinws(s.Filename)
+		if err != nil {
+			results <- AutoTestResult{Type: "result", Strategy: s.Filename, Error: err.Error()}
+			continue
+		}
+
+		if !sleepCtx(testCtx, 3*time.Second) {
+			proc.Process.Kill()
+			proc.Wait()
+			goto applyBest
+		}
+
+		if proc.ProcessState != nil && proc.ProcessState.Exited() {
+			results <- AutoTestResult{Type: "result", Strategy: s.Filename, Error: "winws завершился сразу"}
+			continue
+		}
+
+		results <- AutoTestResult{
+			Type:     "progress",
+			Current:  i + 1,
+			Total:    len(strategies),
+			Strategy: s.Filename,
+			Phase:    "test",
+			Message:  fmt.Sprintf("[%d/%d] %s — проверка ресурсов", i+1, len(strategies), s.Name),
+		}
+
+		var detail []ResourceResult
+		var totalMs int64
+		okCount := 0
+		for _, res := range resources {
+			select {
+			case <-testCtx.Done():
+				proc.Process.Kill()
+				proc.Wait()
+				goto applyBest
+			default:
+			}
+			ok, ms := testURL(httpClient, res.URL)
+			detail = append(detail, ResourceResult{Name: res.Name, URL: res.URL, OK: ok, Ms: ms})
+			if ok {
+				okCount++
+				totalMs += ms
+			}
+		}
+
+		avgMs := int64(0)
+		if okCount > 0 {
+			avgMs = totalMs / int64(okCount)
+		}
+
+		proc.Process.Kill()
+		proc.Wait()
+
+		d := testResultData{
+			Strategy:  s.Filename,
+			Resources: detail,
+			Ok:        okCount,
+			Total:     len(resources),
+			AvgMs:     avgMs,
+		}
+		allResults = append(allResults, d)
+
+		results <- AutoTestResult{
+			Type:            "result",
+			Strategy:        s.Filename,
+			ResourcesOK:     okCount,
+			ResourcesN:      len(resources),
+			ResponseMs:      avgMs,
+			ResourcesDetail: detail,
+		}
+
+		if !sleepCtx(testCtx, 1*time.Second) {
+			goto applyBest
+		}
+	}
+
+applyBest:
+	if len(allResults) == 0 {
+		results <- AutoTestResult{Type: "info", Message: "Нет рабочих стратегий"}
+		results <- AutoTestResult{Type: "done", Error: "no working strategy"}
+		return
+	}
+
+	sort.Slice(allResults, func(i, j int) bool {
+		scoreI := float64(allResults[i].Ok) / float64(allResults[i].Total)
+		scoreJ := float64(allResults[j].Ok) / float64(allResults[j].Total)
+		if scoreI != scoreJ {
+			return scoreI > scoreJ
+		}
+		return allResults[i].AvgMs < allResults[j].AvgMs
+	})
+
+	// Применяем стратегии по убыванию качества, проверяя что служба реально работает.
+	applied := false
+	for idx, cand := range allResults {
+		results <- AutoTestResult{
+			Type:    "info",
+			Message: fmt.Sprintf("Применяем %s (%d/%d ресурсов, %d мс)...", cand.Strategy, cand.Ok, cand.Total, cand.AvgMs),
+		}
+
+		killWinws()
+		sleepCtx(testCtx, 2*time.Second)
+
+		if err := m.InstallService(cand.Strategy); err != nil {
+			results <- AutoTestResult{Type: "info", Message: "Установка не удалась: " + err.Error()}
+			continue
+		}
+
+		results <- AutoTestResult{Type: "info", Message: "Проверка работоспособности службы..."}
+		sleepCtx(testCtx, 4*time.Second)
+
+		if !m.isServiceRunning() {
+			results <- AutoTestResult{Type: "info", Message: "Служба упала после применения " + cand.Strategy}
+			m.log.Warn("strategy", "Service crashed after applying: "+cand.Strategy)
+			m.RemoveService()
+			if idx < len(allResults)-1 {
+				results <- AutoTestResult{Type: "info", Message: "Пробуем следующую стратегию..."}
+				continue
+			}
+			results <- AutoTestResult{Type: "done", Error: "Служба падает на всех стратегиях"}
+			return
+		}
+
+		results <- AutoTestResult{
+			Type:            "result",
+			Strategy:        cand.Strategy,
+			ResourcesOK:     cand.Ok,
+			ResourcesN:      cand.Total,
+			ResponseMs:      cand.AvgMs,
+			ResourcesDetail: cand.Resources,
+		}
+		results <- AutoTestResult{Type: "info", Message: "Применена стратегия: " + cand.Strategy}
+		m.log.Info("strategy", fmt.Sprintf("Auto-select complete, applied: %s", cand.Strategy))
+		applied = true
+		break
+	}
+
+	if !applied {
+		results <- AutoTestResult{Type: "done", Error: "Не удалось применить ни одну стратегию"}
+		return
+	}
+
+	results <- AutoTestResult{Type: "done"}
 }

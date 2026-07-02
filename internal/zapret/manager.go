@@ -271,3 +271,229 @@ func (m *Manager) FindZapretDir(searchDir string) string {
 	})
 	return m.cfg.GetZapretPath()
 }
+
+// InstallResult — результат установки службы запрета с логом.
+type InstallResult struct {
+	Success  bool     `json:"success"`
+	Version  string   `json:"version"`
+	Strategy string   `json:"strategy"`
+	Running  bool     `json:"running"`
+	Errors   []string `json:"errors,omitempty"`
+}
+
+// DefaultStrategyName возвращает стратегию по умолчанию (первый general* ALT).
+func (m *Manager) DefaultStrategyName() string {
+	strategies := m.ListStrategies()
+	preferred := "general (ALT).bat"
+	for _, s := range strategies {
+		if s.Filename == preferred {
+			return preferred
+		}
+	}
+	if len(strategies) > 0 {
+		return strategies[0].Filename
+	}
+	return "general.bat"
+}
+
+// EnsureUserLists создаёт пользовательские списки со значениями по умолчанию,
+// если они отсутствуют (аналог load_user_lists в service.bat). Без этих файлов
+// winws.exe падает с exit status 1, ссылаясь на отсутствующий ipset-exclude-user.
+func (m *Manager) EnsureUserLists() error {
+	listsDir := m.cfg.ListsDir()
+	if err := os.MkdirAll(listsDir, 0755); err != nil {
+		return fmt.Errorf("create lists dir: %w", err)
+	}
+	defaults := map[string]string{
+		"ipset-exclude-user.txt": "203.0.113.113/32",
+		"list-general-user.txt":  "domain.example.abc",
+		"list-exclude-user.txt":  "domain.example.abc",
+	}
+	var created []string
+	for name, content := range defaults {
+		path := filepath.Join(listsDir, name)
+		if _, err := os.Stat(path); os.IsNotExist(err) {
+			if err := os.WriteFile(path, []byte(content+"\n"), 0644); err != nil {
+				return fmt.Errorf("create %s: %w", name, err)
+			}
+			created = append(created, name)
+		}
+	}
+	if len(created) > 0 {
+		m.log.Info("zapret", "Созданы пользовательские списки: "+strings.Join(created, ", "))
+	}
+	return nil
+}
+
+// InstallServiceLogged устанавливает службу запрета, записывая процесс в
+// logs/install.log (перезаписываемый, не накапливается), и проверяет, что
+// служба создалась и отвечает.
+func (m *Manager) InstallServiceLogged(strategyFile string) (*InstallResult, error) {
+	logsDir := m.cfg.LogsDir()
+	if err := os.MkdirAll(logsDir, 0755); err != nil {
+		return nil, fmt.Errorf("create logs dir: %w", err)
+	}
+	logPath := filepath.Join(logsDir, "install.log")
+	f, err := os.OpenFile(logPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
+	if err != nil {
+		return nil, fmt.Errorf("open install log: %w", err)
+	}
+	defer f.Close()
+
+	wlog := func(step, msg string) {
+		ts := time.Now().Format("2006-01-02 15:04:05")
+		fmt.Fprintf(f, "[%s] [%s] %s\n", ts, step, msg)
+		m.log.Info("install", "["+step+"] "+msg)
+	}
+
+	if strategyFile == "" {
+		strategyFile = m.cfg.GetCurrentStrategy()
+	}
+	if strategyFile == "" {
+		strategyFile = m.DefaultStrategyName()
+	}
+
+	wlog("init", fmt.Sprintf("Установка службы запрета, стратегия: %s", strategyFile))
+
+	wlog("lists", "Проверка пользовательских списков...")
+	if err := m.EnsureUserLists(); err != nil {
+		wlog("warn", "Не удалось создать списки: "+err.Error())
+	}
+
+	strategyPath := m.cfg.StrategyPath(strategyFile)
+	if _, err := os.Stat(strategyPath); err != nil {
+		wlog("error", "Файл стратегии не найден: "+strategyPath)
+		return &InstallResult{Errors: []string{"стратегия не найдена: " + strategyFile}}, nil
+	}
+	winws := filepath.Join(m.cfg.BinDir(), "winws.exe")
+	if _, err := os.Stat(winws); err != nil {
+		wlog("error", "winws.exe не найден: "+winws)
+		return &InstallResult{Errors: []string{"winws.exe не найден — запрет не установлен"}}, nil
+	}
+
+	wlog("service", "Остановка и удаление прежней службы...")
+	m.Stop()
+	m.serviceRemove()
+
+	wlog("service", "Создание и запуск службы...")
+	if err := m.serviceCreate(strategyFile); err != nil {
+		wlog("error", "Ошибка создания службы: "+err.Error())
+		return &InstallResult{Errors: []string{err.Error()}}, nil
+	}
+	wlog("service", "Служба создана и запущена")
+
+	wlog("verify", "Проверка состояния службы...")
+	time.Sleep(1500 * time.Millisecond)
+	running := m.isServiceRunning()
+	svc := m.GetServiceStatus()
+	wlog("verify", fmt.Sprintf("installed=%v running=%v pid=%d", svc.Installed, running, svc.PID))
+
+	if !running {
+		wlog("warn", "Служба не отвечает на запрос (RUNNING)")
+	}
+
+	m.cfg.SetCurrentStrategy(strategyFile)
+
+	return &InstallResult{
+		Success:  true,
+		Version:  m.GetVersion(),
+		Strategy: strategyFile,
+		Running:  running,
+	}, nil
+}
+
+// ============================================================
+// BACKUP / RESTORE состояния zapret
+// ============================================================
+
+// BackupSnapshot — слепок состояния zapret перед обновлением.
+type BackupSnapshot struct {
+	Timestamp  time.Time         `json:"timestamp"`
+	Strategy   string            `json:"strategy"`
+	Version    string            `json:"version"`
+	UserLists  map[string]string `json:"user_lists"`
+	GameFilter string            `json:"game_filter"`
+}
+
+// CaptureState создаёт слепок текущего состояния: стратегия, версия,
+// все пользовательские списки (*-user.txt) и режим game_filter.
+func (m *Manager) CaptureState() *BackupSnapshot {
+	snap := &BackupSnapshot{
+		Timestamp: time.Now(),
+		Strategy:  m.cfg.GetCurrentStrategy(),
+		Version:   m.GetVersion(),
+		UserLists: make(map[string]string),
+	}
+
+	listsDir := m.cfg.ListsDir()
+	if entries, err := os.ReadDir(listsDir); err == nil {
+		for _, e := range entries {
+			if e.IsDir() {
+				continue
+			}
+			name := e.Name()
+			if strings.HasSuffix(name, "-user.txt") {
+				if data, err := os.ReadFile(filepath.Join(listsDir, name)); err == nil {
+					snap.UserLists[name] = string(data)
+				}
+			}
+		}
+	}
+
+	if gfPath := filepath.Join(m.cfg.GetZapretPath(), "utils", "game_filter.enabled"); true {
+		if data, err := os.ReadFile(gfPath); err == nil {
+			snap.GameFilter = strings.TrimSpace(string(data))
+		}
+	}
+
+	m.log.Info("zapret", fmt.Sprintf("CaptureState: стратегия=%s, списков=%d, game_filter=%q, версия=%s", snap.Strategy, len(snap.UserLists), snap.GameFilter, snap.Version))
+	return snap
+}
+
+// RestoreState восстанавливает состояние из слепка: пользовательские списки,
+// game_filter, стратегию и работоспособность службы.
+func (m *Manager) RestoreState(snap *BackupSnapshot) error {
+	if snap == nil {
+		return nil
+	}
+
+	listsDir := m.cfg.ListsDir()
+	os.MkdirAll(listsDir, 0755)
+
+	for name, content := range snap.UserLists {
+		if err := os.WriteFile(filepath.Join(listsDir, name), []byte(content), 0644); err != nil {
+			m.log.Warn("zapret", "Восстановление списка "+name+": "+err.Error())
+		}
+	}
+
+	m.EnsureUserLists()
+
+	if snap.GameFilter != "" {
+		gfPath := filepath.Join(m.cfg.GetZapretPath(), "utils", "game_filter.enabled")
+		os.MkdirAll(filepath.Dir(gfPath), 0755)
+		if err := os.WriteFile(gfPath, []byte(snap.GameFilter+"\n"), 0644); err != nil {
+			m.log.Warn("zapret", "Восстановление game_filter: "+err.Error())
+		}
+	}
+
+	if snap.Strategy != "" {
+		m.cfg.SetCurrentStrategy(snap.Strategy)
+		strategyPath := m.cfg.StrategyPath(snap.Strategy)
+		winws := filepath.Join(m.cfg.BinDir(), "winws.exe")
+		if _, err := os.Stat(strategyPath); err == nil {
+			if _, err := os.Stat(winws); err == nil {
+				m.log.Info("zapret", "RestoreState: переустановка службы "+snap.Strategy)
+				if err := m.InstallService(snap.Strategy); err != nil {
+					m.log.Warn("zapret", "RestoreState: служба не установлена: "+err.Error())
+				}
+			} else {
+				m.log.Warn("zapret", "RestoreState: winws.exe отсутствует — запуск пропущен")
+			}
+		} else {
+			m.log.Warn("zapret", "RestoreState: стратегия не найдена: "+snap.Strategy)
+		}
+	}
+
+	m.log.Info("zapret", "RestoreState завершён")
+	return nil
+}

@@ -2,24 +2,64 @@ package main
 
 import (
 	"crypto/tls"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/wailsapp/wails/v2/pkg/runtime"
+
+	"zpui/internal/blockcheck"
+	"zpui/internal/database"
 	"zpui/internal/executil"
+	"zpui/internal/updater"
 	"zpui/internal/monitor"
+	"zpui/internal/sysinfo"
 	"zpui/internal/zapret"
 )
 
 // ============================================================
 // STATUS
 // ============================================================
+
+// GetSystemTheme — определяет тёмную/светлую тему Windows через реестр.
+func (a *App) GetSystemTheme() string {
+	out, err := executil.HiddenCmd("reg", "query",
+		`HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize`,
+		"/v", "AppsUseLightTheme").Output()
+	if err != nil {
+		return "dark"
+	}
+	if strings.Contains(string(out), "0x0") {
+		return "dark"
+	}
+	return "light"
+}
+
+// SaveComponentStates — сохраняет текущие состояния компонентов в конфиг.
+func (a *App) SaveComponentStates() map[string]interface{} {
+	zRun := a.zapret.GetStatus() == "running"
+	pRun := a.proxy.IsRunning()
+
+	a.cfg.LastZapretState = zRun
+	a.cfg.LastProxyState = pRun
+	a.cfg.LastXboxDnsState = a.cfg.XboxDns.Enabled
+	if err := a.cfg.Save(); err != nil {
+		a.log.Error("app", "SaveComponentStates error: "+err.Error())
+	}
+	return map[string]interface{}{
+		"zapret":   zRun,
+		"proxy":    pRun,
+		"xbox_dns": a.cfg.XboxDns.Enabled,
+	}
+}
 
 // GetStatus — агрегированный статус системы (замена GET /api/status).
 func (a *App) GetStatus() map[string]interface{} {
@@ -53,6 +93,11 @@ func (a *App) GetStatus() map[string]interface{} {
 			"port":    pcfg.Port,
 			"stats":   a.proxy.GetStats(),
 		},
+		"xbox_dns": map[string]interface{}{
+			"enabled":       a.cfg.XboxDns.Enabled,
+			"primary_dns":   a.cfg.XboxDns.PrimaryDNS,
+			"secondary_dns": a.cfg.XboxDns.SecondaryDNS,
+		},
 		"monitor": map[string]interface{}{
 			"download_bytes": traffic.DownloadBytes,
 			"upload_bytes":   traffic.UploadBytes,
@@ -64,12 +109,16 @@ func (a *App) GetStatus() map[string]interface{} {
 			"ul_speed_fmt":   monitor.FormatSpeed(traffic.UploadSpeed),
 		},
 		"mod": map[string]interface{}{
-			"version":      a.version,
-			"autostart":    a.cfg.AutoStart,
-			"web_port":     a.cfg.Web.Port,
-			"zapret_repo":  a.cfg.ZapretRepoURL,
-			"mod_repo":     a.cfg.ModRepoURL,
-		},
+			"version":        a.version,
+			"autostart":      a.cfg.AutoStart,
+			"web_port":       a.cfg.Web.Port,
+			"zapret_repo":    a.cfg.ZapretRepoURL,
+			"mod_repo":       a.cfg.ModRepoURL,
+			"theme":          a.cfg.Theme,
+		"first_run_done": a.cfg.FirstRunDone,
+		"start_minimized": a.cfg.StartMinimized,
+		"close_to_tray":  a.cfg.GetCloseToTray(),
+	},
 		"network": map[string]interface{}{
 			"hostname": getHostname(),
 			"mac":      getMACAddress(),
@@ -140,6 +189,41 @@ func (a *App) RemoveService() map[string]interface{} {
 
 func (a *App) GetServiceStatus() interface{} {
 	return a.zapret.GetServiceStatus()
+}
+
+// InstallServiceLogged — устанавливает службу запрета, записывая процесс в
+// logs/install.log (перезаписываемый), с проверкой что служба отвечает.
+func (a *App) InstallServiceLogged(strategy string) map[string]interface{} {
+	res, err := a.zapret.InstallServiceLogged(strategy)
+	if err != nil {
+		return map[string]interface{}{"error": err.Error()}
+	}
+	return map[string]interface{}{
+		"success":  res.Success,
+		"version":  res.Version,
+		"strategy": res.Strategy,
+		"running":  res.Running,
+		"errors":   res.Errors,
+	}
+}
+
+// GetInstallLog — содержимое logs/install.log (для показа ошибок пользователю).
+func (a *App) GetInstallLog() map[string]interface{} {
+	logPath := filepath.Join(a.cfg.LogsDir(), "install.log")
+	data, err := os.ReadFile(logPath)
+	if err != nil {
+		return map[string]interface{}{"lines": []string{}}
+	}
+	content := strings.TrimSpace(string(data))
+	if content == "" {
+		return map[string]interface{}{"lines": []string{}}
+	}
+	return map[string]interface{}{"lines": strings.Split(content, "\n")}
+}
+
+// DefaultStrategy — стратегия по умолчанию (первый general ALT).
+func (a *App) DefaultStrategy() map[string]interface{} {
+	return map[string]interface{}{"strategy": a.zapret.DefaultStrategyName()}
 }
 
 // ============================================================
@@ -306,6 +390,7 @@ func (a *App) CheckForUpdates() interface{} {
 }
 
 func (a *App) ApplyUpdate() map[string]interface{} {
+	a.saveBackupToDB()
 	progress := make(chan zapret.UpdateProgress, 20)
 	go a.zapret.PerformUpdate(progress)
 	return map[string]interface{}{"status": "started"}
@@ -407,19 +492,102 @@ func (a *App) GetLogFiles() map[string]interface{} {
 	return map[string]interface{}{"files": a.log.ListLogFiles()}
 }
 
+func (a *App) ClearLogs() map[string]interface{} {
+	a.log.Clear()
+	return map[string]interface{}{"status": "ok"}
+}
+
+func (a *App) GetErrorSnapshots() map[string]interface{} {
+	errorsDir := filepath.Join(a.cfg.LogsDir(), "errors")
+	entries, err := os.ReadDir(errorsDir)
+	if err != nil {
+		return map[string]interface{}{"files": []interface{}{}}
+	}
+	var files []map[string]interface{}
+	for i := len(entries) - 1; i >= 0; i-- {
+		e := entries[i]
+		if e.IsDir() {
+			continue
+		}
+		info, _ := e.Info()
+		files = append(files, map[string]interface{}{
+			"name": e.Name(),
+			"size": info.Size(),
+			"date": info.ModTime().Format("2006-01-02 15:04:05"),
+		})
+	}
+	return map[string]interface{}{"files": files}
+}
+
+func (a *App) ReadErrorSnapshot(name string) map[string]interface{} {
+	if name == "" {
+		return map[string]interface{}{"error": "name required"}
+	}
+	path := filepath.Join(a.cfg.LogsDir(), "errors", name)
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return map[string]interface{}{"error": err.Error()}
+	}
+	return map[string]interface{}{"content": string(data), "name": name}
+}
+
+func (a *App) GetArchiveLogs() map[string]interface{} {
+	archiveDir := filepath.Join(a.cfg.LogsDir(), "archive")
+	entries, err := os.ReadDir(archiveDir)
+	if err != nil {
+		return map[string]interface{}{"files": []interface{}{}}
+	}
+	var files []map[string]interface{}
+	for i := len(entries) - 1; i >= 0; i-- {
+		e := entries[i]
+		if e.IsDir() {
+			continue
+		}
+		info, _ := e.Info()
+		files = append(files, map[string]interface{}{
+			"name": e.Name(),
+			"size": info.Size(),
+			"date": info.ModTime().Format("2006-01-02 15:04:05"),
+		})
+	}
+	return map[string]interface{}{"files": files}
+}
+
+func (a *App) ReadArchiveLog(name string) map[string]interface{} {
+	if name == "" {
+		return map[string]interface{}{"error": "name required"}
+	}
+	path := filepath.Join(a.cfg.LogsDir(), "archive", name)
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return map[string]interface{}{"error": err.Error()}
+	}
+	return map[string]interface{}{"content": string(data), "name": name}
+}
+
 // ============================================================
 // CONFIG
 // ============================================================
 
 func (a *App) GetConfig() map[string]interface{} {
 	return map[string]interface{}{
-		"zapret_path":       a.cfg.GetZapretPath(),
-		"current_strategy":  a.cfg.GetCurrentStrategy(),
-		"web_port":          a.cfg.Web.Port,
-		"proxy":             a.cfg.GetProxyConfig(),
-		"autostart":         a.cfg.AutoStart,
-		"auto_update_check": a.cfg.AutoUpdateCheck,
-		"logs":              a.cfg.Logs,
+		"current_strategy":    a.cfg.GetCurrentStrategy(),
+		"web_port":            a.cfg.Web.Port,
+		"proxy":               a.cfg.GetProxyConfig(),
+		"xbox_dns":            a.cfg.GetXboxDnsConfig(),
+		"autostart":           a.cfg.AutoStart,
+		"auto_update_check":   a.cfg.AutoUpdateCheck,
+		"theme":               a.cfg.Theme,
+		"first_run_done":      a.cfg.FirstRunDone,
+		"start_minimized":     a.cfg.StartMinimized,
+		"close_to_tray":       a.cfg.GetCloseToTray(),
+		"last_zapret_state":   a.cfg.LastZapretState,
+		"last_proxy_state":    a.cfg.LastProxyState,
+		"last_xbox_dns_state": a.cfg.LastXboxDnsState,
+		"auto_start_zapret":   a.cfg.AutoStartZapret,
+		"auto_start_proxy":    a.cfg.AutoStartProxy,
+		"auto_start_xbox_dns": a.cfg.AutoStartXboxDns,
+		"logs":                a.cfg.Logs,
 	}
 }
 
@@ -428,8 +596,26 @@ func (a *App) SetConfig(opts map[string]interface{}) map[string]interface{} {
 	if port, ok := opts["web_port"].(float64); ok {
 		a.cfg.Web.Port = int(port)
 	}
-	if path, ok := opts["zapret_path"].(string); ok {
-		a.cfg.SetZapretPath(path)
+	if theme, ok := opts["theme"].(string); ok {
+		a.cfg.SetTheme(theme)
+	}
+	if v, ok := opts["start_minimized"].(bool); ok {
+		a.cfg.StartMinimized = v
+	}
+	if v, ok := opts["close_to_tray"].(bool); ok {
+		a.cfg.CloseToTray = v
+	}
+	if v, ok := opts["auto_start_zapret"].(bool); ok {
+		a.cfg.AutoStartZapret = v
+	}
+	if v, ok := opts["auto_start_proxy"].(bool); ok {
+		a.cfg.AutoStartProxy = v
+	}
+	if v, ok := opts["auto_start_xbox_dns"].(bool); ok {
+		a.cfg.AutoStartXboxDns = v
+	}
+	if v, ok := opts["first_run_done"].(bool); ok {
+		a.cfg.FirstRunDone = v
 	}
 	if err := a.cfg.Save(); err != nil {
 		a.log.Error("config", "Save error: "+err.Error())
@@ -440,6 +626,72 @@ func (a *App) SetConfig(opts map[string]interface{}) map[string]interface{} {
 }
 
 // ============================================================
+// XBOX DNS CONFIG
+// ============================================================
+
+func (a *App) GetXboxDnsConfig() interface{} {
+	return a.cfg.GetXboxDnsConfig()
+}
+
+func (a *App) SetXboxDnsConfig(opts map[string]interface{}) map[string]interface{} {
+	cfg := a.cfg.GetXboxDnsConfig()
+	wasEnabled := cfg.Enabled
+	if v, ok := opts["enabled"].(bool); ok {
+		cfg.Enabled = v
+	}
+	if v, ok := opts["primary_dns"].(string); ok {
+		cfg.PrimaryDNS = v
+	}
+	if v, ok := opts["secondary_dns"].(string); ok {
+		cfg.SecondaryDNS = v
+	}
+	a.cfg.SetXboxDnsConfig(cfg)
+	a.log.Info("xbox_dns", "Xbox DNS config saved")
+
+	if cfg.Enabled && !wasEnabled {
+		a.xboxDns.Configure(cfg.PrimaryDNS, cfg.SecondaryDNS)
+		go func() {
+			if err := a.xboxDns.Enable(); err != nil {
+				a.log.Error("xbox_dns", "Enable failed: "+err.Error())
+			}
+		}()
+	} else if !cfg.Enabled && wasEnabled {
+		go func() {
+			if err := a.xboxDns.Disable(); err != nil {
+				a.log.Error("xbox_dns", "Disable failed: "+err.Error())
+			}
+		}()
+	}
+
+	return map[string]interface{}{"status": "ok"}
+}
+
+func (a *App) ToggleXboxDns(enabled bool) map[string]interface{} {
+	cfg := a.cfg.GetXboxDnsConfig()
+	wasEnabled := cfg.Enabled
+	cfg.Enabled = enabled
+	a.cfg.SetXboxDnsConfig(cfg)
+
+	if enabled && !wasEnabled {
+		a.xboxDns.Configure(cfg.PrimaryDNS, cfg.SecondaryDNS)
+		go func() {
+			if err := a.xboxDns.Enable(); err != nil {
+				a.log.Error("xbox_dns", "Enable failed: "+err.Error())
+			}
+		}()
+		return map[string]interface{}{"status": "starting"}
+	} else if !enabled && wasEnabled {
+		go func() {
+			if err := a.xboxDns.Disable(); err != nil {
+				a.log.Error("xbox_dns", "Disable failed: "+err.Error())
+			}
+		}()
+		return map[string]interface{}{"status": "stopping"}
+	}
+	return map[string]interface{}{"status": "nochange"}
+}
+
+// ============================================================
 // ZAPRET INSTALL
 // ============================================================
 
@@ -447,9 +699,21 @@ func (a *App) InstallZapret(sourceDir string) map[string]interface{} {
 	if sourceDir == "" {
 		return map[string]interface{}{"error": "source_dir required"}
 	}
+	a.saveBackupToDB()
 	progress := make(chan zapret.UpdateProgress, 20)
 	go a.zapret.InstallZapret(sourceDir, progress)
 	return map[string]interface{}{"status": "started"}
+}
+
+// saveBackupToDB сохраняет слепок состояния zapret в базу данных перед обновлением.
+// При следующем запуске, если zapret повреждён, состояние будет восстановлено.
+func (a *App) saveBackupToDB() {
+	snap := a.zapret.CaptureState()
+	if data, err := json.Marshal(snap); err == nil {
+		if err := database.SaveZapretBackup(string(data)); err != nil {
+			a.log.Warn("app", "Не удалось сохранить backup в базу: "+err.Error())
+		}
+	}
 }
 
 // ============================================================
@@ -835,3 +1099,402 @@ func downloadAndSave(url, destPath string) map[string]interface{} {
 	}
 	return map[string]interface{}{"status": "ok"}
 }
+
+// ============================================================
+// SYSTEM RESOURCES
+// ============================================================
+
+func (a *App) GetSystemResources() interface{} {
+	return sysinfo.GetSystemResources()
+}
+
+// ============================================================
+// NETWORK INFO
+// ============================================================
+
+func (a *App) GetNetworkInfo() map[string]interface{} {
+	result := map[string]interface{}{
+		"public_ip": "",
+		"isp":       "",
+		"asn":       "",
+		"city":      "",
+		"country":   "",
+		"org":       "",
+		"local_ips": []string{},
+	}
+
+	checker := blockcheck.NewChecker(8, "")
+	info := checker.GetProviderInfo()
+	result["public_ip"] = info.IP
+	result["isp"] = info.ISP
+	result["asn"] = info.ASN
+	result["city"] = info.City
+	result["country"] = info.Country
+	result["org"] = info.Org
+
+	ifaces, err := net.InterfaceAddrs()
+	if err == nil {
+		var ips []string
+		for _, addr := range ifaces {
+			if ipnet, ok := addr.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+				ips = append(ips, ipnet.IP.String())
+			}
+		}
+		result["local_ips"] = ips
+	}
+
+	return result
+}
+
+// ============================================================
+// RESOURCE CHECKER (Block Checker)
+// ============================================================
+
+func (a *App) CheckResource(rawURL string) map[string]interface{} {
+	if rawURL == "" {
+		return map[string]interface{}{"error": "URL required"}
+	}
+
+	var proxyAddr string
+	if a.proxy.IsRunning() {
+		pcfg := a.cfg.GetProxyConfig()
+		proxyAddr = fmt.Sprintf("127.0.0.1:%d", pcfg.Port)
+	}
+
+	checker := blockcheck.NewChecker(5, proxyAddr)
+
+	provider := checker.GetProviderInfo()
+	direct := checker.Check(rawURL)
+
+	var bypassResult *blockcheck.CheckResult
+	if proxyAddr != "" {
+		bypassResult = checker.CheckViaProxy(rawURL)
+	}
+
+	blocked := direct.Verdict != blockcheck.VerdictOK
+	bypassWorks := false
+	if bypassResult != nil {
+		bypassWorks = bypassResult.Verdict == blockcheck.VerdictOK
+	}
+
+	inList := a.isHostInUserList(direct.Host)
+
+	report := blockcheck.FullReport{
+		URL:         rawURL,
+		Host:        direct.Host,
+		Direct:      direct,
+		WithBypass:  bypassResult,
+		Provider:    provider,
+		Blocked:     blocked,
+		BlockType:   direct.Verdict,
+		BypassWorks: bypassWorks,
+		InUserList:  inList,
+		CheckedAt:   time.Now().Format("2006-01-02 15:04:05"),
+	}
+
+	return map[string]interface{}{
+		"report": report,
+	}
+}
+
+func (a *App) AddHostToUserList(host string) map[string]interface{} {
+	if host == "" {
+		return map[string]interface{}{"error": "host required"}
+	}
+
+	listPath := filepath.Join(a.cfg.ListsDir(), "list-general-user.txt")
+	data, _ := os.ReadFile(listPath)
+	lines := strings.Split(string(data), "\n")
+
+	for _, l := range lines {
+		if strings.TrimSpace(l) == host {
+			return map[string]interface{}{"status": "already_exists"}
+		}
+	}
+
+	content := strings.Join(lines, "\n")
+	if !strings.HasSuffix(content, "\n") && content != "" {
+		content += "\n"
+	}
+	content += host + "\n"
+
+	if err := os.WriteFile(listPath, []byte(content), 0644); err != nil {
+		return map[string]interface{}{"error": err.Error()}
+	}
+	return map[string]interface{}{"status": "ok"}
+}
+
+func (a *App) isHostInUserList(host string) bool {
+	listPath := filepath.Join(a.cfg.ListsDir(), "list-general-user.txt")
+	data, err := os.ReadFile(listPath)
+	if err != nil {
+		return false
+	}
+	for _, line := range strings.Split(string(data), "\n") {
+		if strings.TrimSpace(line) == host {
+			return true
+		}
+	}
+	return false
+}
+
+// ============================================================
+// FIRST RUN / ZAPRET MANAGEMENT
+// ============================================================
+
+func (a *App) HasLocalZapret() bool {
+	winws := filepath.Join(a.cfg.GetZapretPath(), "bin", "winws.exe")
+	_, err := os.Stat(winws)
+	return err == nil
+}
+
+func (a *App) HasSystemZapretService() bool {
+	cmd := executil.HiddenCmd("sc", "query", "zapret")
+	output, err := cmd.Output()
+	if err != nil {
+		return false
+	}
+	return strings.Contains(string(output), "zapret")
+}
+
+func (a *App) RemoveSystemZapretService() map[string]interface{} {
+	a.log.Info("zapret", "Removing system zapret service...")
+
+	executil.HiddenCmd("net", "stop", "zapret").Run()
+	executil.HiddenCmd("taskkill", "/IM", "winws.exe", "/F").Run()
+	time.Sleep(1 * time.Second)
+
+	executil.HiddenCmd("sc", "delete", "zapret").Run()
+	executil.HiddenCmd("sc", "delete", "WinDivert").Run()
+	executil.HiddenCmd("sc", "delete", "WinDivert14").Run()
+
+	a.log.Info("zapret", "System zapret service removed")
+	return map[string]interface{}{"status": "ok"}
+}
+
+func (a *App) RunWizard() map[string]interface{} {
+	exePath, err := os.Executable()
+	if err != nil {
+		return map[string]interface{}{"error": err.Error()}
+	}
+	exeDir := filepath.Dir(exePath)
+	wizardPath := filepath.Join(exeDir, "wizard.exe")
+
+	if _, err := os.Stat(wizardPath); err != nil {
+		return map[string]interface{}{"error": "wizard.exe не найден"}
+	}
+
+	cmd := executil.HiddenCmd(wizardPath)
+	if err := cmd.Start(); err != nil {
+		return map[string]interface{}{"error": err.Error()}
+	}
+
+	a.log.Info("app", "Wizard started (PID: "+strconv.Itoa(cmd.Process.Pid)+")")
+	return map[string]interface{}{"status": "ok"}
+}
+
+func (a *App) CheckWizardDone() bool {
+	return a.HasLocalZapret()
+}
+
+// ============================================================
+// MODS SYSTEM
+// ============================================================
+
+// ============================================================
+// HEALTH CHECK
+// ============================================================
+
+type SystemHealth struct {
+	Overall    string                   `json:"overall"`
+	Components []ComponentHealth        `json:"components"`
+	Satellites map[string]string       `json:"satellites"`
+	Warnings   []string                 `json:"warnings"`
+	Timestamp  string                   `json:"timestamp"`
+}
+
+type ComponentHealth struct {
+	Name    string `json:"name"`
+	Status  string `json:"status"`
+	Running bool   `json:"running"`
+	Detail  string `json:"detail,omitempty"`
+	Version string `json:"version,omitempty"`
+}
+
+func (a *App) HealthCheck() map[string]interface{} {
+	warnings := []string{}
+	components := []ComponentHealth{}
+
+	zStatus := string(a.zapret.GetStatus())
+	zHealth := ComponentHealth{
+		Name:    "Запрет",
+		Status:  zStatus,
+		Running: zStatus == "running",
+		Version: a.zapret.GetVersion(),
+	}
+	if !a.HasLocalZapret() {
+		zHealth.Status = "missing"
+		zHealth.Detail = "Локальный Запрет не найден"
+		warnings = append(warnings, "Запрет: не установлен локально")
+	}
+	components = append(components, zHealth)
+
+	pRunning := a.proxy.IsRunning()
+	pHealth := ComponentHealth{
+		Name:    "Proxy",
+		Status:  "stopped",
+		Running: pRunning,
+	}
+	if pRunning {
+		pHealth.Status = "running"
+	} else {
+		pHealth.Detail = "Остановлен"
+	}
+	components = append(components, pHealth)
+
+	xdRunning := a.xboxDns.IsEnabled()
+	xdHealth := ComponentHealth{
+		Name:    "Xbox DNS",
+		Status:  "stopped",
+		Running: xdRunning,
+	}
+	if xdRunning {
+		xdHealth.Status = "running"
+	}
+	components = append(components, xdHealth)
+
+	exePath, _ := os.Executable()
+	exeDir := filepath.Dir(exePath)
+	satellites := map[string]string{}
+	for _, name := range []string{"wizard", "autoselect", "selfupdate", "zapretupdate"} {
+		exeFile := filepath.Join(exeDir, name+".exe")
+		if _, err := os.Stat(exeFile); err != nil {
+			satellites[name] = "missing"
+			warnings = append(warnings, name+".exe: файл не найден")
+		} else {
+			satellites[name] = "ok"
+		}
+	}
+
+	overall := "healthy"
+	if len(warnings) > 0 {
+		hasBroken := false
+		for _, c := range components {
+			if c.Status == "missing" || c.Status == "broken" {
+				hasBroken = true
+				break
+			}
+		}
+		for _, s := range satellites {
+			if s == "missing" {
+				hasBroken = true
+				break
+			}
+		}
+		if hasBroken {
+			overall = "critical"
+		} else {
+			overall = "degraded"
+		}
+	}
+
+	return map[string]interface{}{
+		"overall":    overall,
+		"components": components,
+		"satellites": satellites,
+		"warnings":   warnings,
+		"timestamp":  time.Now().Format("15:04:05"),
+	}
+}
+
+// ============================================================
+// BACKUP & RESTORE
+// ============================================================
+
+func (a *App) GetBackups(component string) []updater.BackupEntry {
+	bm := updater.NewBackupManager(a.exeDir)
+	return bm.ListBackups(component)
+}
+
+func (a *App) RestoreFromBackup(backupName string) map[string]interface{} {
+	bm := updater.NewBackupManager(a.exeDir)
+	if err := bm.RestoreBackup(backupName); err != nil {
+		return map[string]interface{}{"error": err.Error()}
+	}
+	return map[string]interface{}{"status": "ok"}
+}
+
+func (a *App) GetIgnoredVersions() []updater.IgnoredVersion {
+	bm := updater.NewBackupManager(a.exeDir)
+	return bm.ListIgnoredVersions()
+}
+
+func (a *App) AddIgnoredVersion(component, version, reason string) map[string]interface{} {
+	bm := updater.NewBackupManager(a.exeDir)
+	if err := bm.AddIgnoredVersion(component, version, reason); err != nil {
+		return map[string]interface{}{"error": err.Error()}
+	}
+	return map[string]interface{}{"status": "ok"}
+}
+
+func (a *App) RemoveIgnoredVersion(component, version string) map[string]interface{} {
+	bm := updater.NewBackupManager(a.exeDir)
+	if err := bm.RemoveIgnoredVersion(component, version); err != nil {
+		return map[string]interface{}{"error": err.Error()}
+	}
+	return map[string]interface{}{"status": "ok"}
+}
+
+func (a *App) AutoInstallZapret() map[string]interface{} {
+	a.saveBackupToDB()
+	err := a.zapret.DownloadAndInstall(func(downloaded, total int64) {
+		runtime.EventsEmit(a.ctx, "download:progress", map[string]interface{}{
+			"downloaded": downloaded,
+			"total":      total,
+			"percent":    percentOrZero(downloaded, total),
+		})
+	})
+	if err != nil {
+		return map[string]interface{}{"error": err.Error()}
+	}
+
+	strategy := a.zapret.GetCurrentStrategy()
+	if strategy == "" {
+		strategies := a.zapret.ListStrategies()
+		if len(strategies) > 0 {
+			strategy = strategies[0].Filename
+			a.cfg.SetCurrentStrategy(strategy)
+			a.cfg.Save()
+		}
+	}
+
+	var startErr string
+	if strategy != "" {
+		if err := a.zapret.SetStrategy(strategy); err != nil {
+			startErr = err.Error()
+		}
+	} else {
+		if err := a.zapret.Start(); err != nil {
+			startErr = err.Error()
+		}
+	}
+
+	return map[string]interface{}{
+		"status":      "ok",
+		"version":     a.zapret.GetVersion(),
+		"strategy":    a.zapret.GetCurrentStrategy(),
+		"start_error": startErr,
+	}
+}
+
+func percentOrZero(done, total int64) int {
+	if total == 0 {
+		return 0
+	}
+	p := int(done * 100 / total)
+	if p > 100 {
+		return 100
+	}
+	return p
+}
+

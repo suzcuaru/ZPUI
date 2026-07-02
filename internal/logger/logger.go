@@ -11,24 +11,64 @@ import (
 	"time"
 )
 
+// ringMax — верхний предел in-memory кольцевого буфера (записи всех категорий).
+const ringMax = 5000
+
+// ringWindow — глубина среза ошибок (логи за этот период до ошибки).
+const ringWindow = 1 * time.Hour
+
+// snapshotDebounce — минимальный интервал между срезами ошибок (анти-спам).
+const snapshotDebounce = 30 * time.Second
+
+// errRetention — сколько дней хранить файлы срезов ошибок.
+const errRetention = 30
+
 type Logger struct {
-	mu       sync.Mutex
-	baseDir  string
-	maxFiles int
-	files    map[string]*os.File
-	stopCh   chan struct{}
+	mu        sync.Mutex
+	baseDir   string
+	maxDays   int
+	files     map[string]*os.File // bucket -> открытый файл (текущий день)
+	fileDates map[string]string   // bucket -> дата (YYYY-MM-DD) открытия
+	ring      []ringEntry         // кольцевой буфер: последние записи (все категории)
+	lastSnap  time.Time           // анти-спам для срезов ошибок
+	stopCh    chan struct{}
 }
 
-func New(baseDir string, maxFiles int) (*Logger, error) {
+type ringEntry struct {
+	t        time.Time
+	level    string
+	category string
+	msg      string
+}
+
+type LogEntry struct {
+	Time    string `json:"time"`
+	Level   string `json:"level"`
+	Message string `json:"message"`
+}
+
+// New создаёт логгер. baseDir — каталог логов, maxDays — срок хранения архивов.
+func New(baseDir string, maxDays int) (*Logger, error) {
 	if err := os.MkdirAll(baseDir, 0755); err != nil {
 		return nil, fmt.Errorf("create logs dir: %w", err)
 	}
+	if err := os.MkdirAll(filepath.Join(baseDir, "archive"), 0755); err != nil {
+		return nil, fmt.Errorf("create archive dir: %w", err)
+	}
+	if err := os.MkdirAll(filepath.Join(baseDir, "errors"), 0755); err != nil {
+		return nil, fmt.Errorf("create errors dir: %w", err)
+	}
+
+	if maxDays <= 0 {
+		maxDays = 7
+	}
 
 	l := &Logger{
-		baseDir:  baseDir,
-		maxFiles: maxFiles,
-		files:    make(map[string]*os.File),
-		stopCh:   make(chan struct{}),
+		baseDir:   baseDir,
+		maxDays:   maxDays,
+		files:     make(map[string]*os.File),
+		fileDates: make(map[string]string),
+		stopCh:    make(chan struct{}),
 	}
 
 	go l.cleanupLoop()
@@ -73,8 +113,21 @@ func (l *Logger) WriteZapretOutput(line string) {
 	l.ZapretLog(strings.TrimRight(line, "\r\n"))
 }
 
+// mapBucket сворачивает категорию в физический файл-бакет.
+func mapBucket(category string) string {
+	switch category {
+	case "network", "proxy":
+		return "network"
+	case "zapret", "service", "strategy", "updater", "install":
+		return "zapret"
+	default:
+		return category
+	}
+}
+
 func (l *Logger) write(level, category, msg string) {
-	timestamp := time.Now().Format("2006-01-02 15:04:05")
+	now := time.Now()
+	timestamp := now.Format("2006-01-02 15:04:05")
 	entry := fmt.Sprintf("[%s] [%s] [%s] %s\n", timestamp, level, category, msg)
 
 	l.mu.Lock()
@@ -82,34 +135,99 @@ func (l *Logger) write(level, category, msg string) {
 
 	fmt.Print(entry)
 
-	cat := category
-	if cat == "network" || cat == "proxy" {
-		cat = "network"
-	} else if cat == "zapret" || cat == "service" || cat == "strategy" || cat == "updater" {
-		cat = "zapret"
+	// Кольцевой буфер
+	l.ring = append(l.ring, ringEntry{t: now, level: level, category: category, msg: msg})
+	if len(l.ring) > ringMax {
+		l.ring = l.ring[len(l.ring)-ringMax:]
 	}
 
-	if l.files[cat] == nil {
-		l.openFile(cat)
-	}
+	bucket := mapBucket(category)
+	today := now.Format("2006-01-02")
 
-	if f, ok := l.files[cat]; ok {
+	// Ротация: если файл открыт для другой даты — архивируем
+	if l.files[bucket] != nil && l.fileDates[bucket] != today {
+		l.files[bucket].Close()
+		delete(l.files, bucket)
+	}
+	if l.files[bucket] == nil {
+		l.openFile(bucket, today)
+	}
+	if f, ok := l.files[bucket]; ok {
 		f.WriteString(entry)
+	}
+
+	// Срез ошибки
+	if level == "ERROR" {
+		l.flushErrorSnapshot(now, category, msg)
 	}
 }
 
-func (l *Logger) openFile(category string) {
-	dateStr := time.Now().Format("2006-01-02")
-	filename := fmt.Sprintf("%s_%s.log", dateStr, category)
-	path := filepath.Join(l.baseDir, filename)
+// openFile открывает (или создаёт) файл бакета. Если существует устаревший
+// файл — он переносится в archive/ перед созданием нового.
+func (l *Logger) openFile(bucket, today string) {
+	path := filepath.Join(l.baseDir, bucket+".log")
+
+	if info, err := os.Stat(path); err == nil {
+		fileDate := info.ModTime().Format("2006-01-02")
+		if fileDate != today {
+			archiveDir := filepath.Join(l.baseDir, "archive")
+			os.MkdirAll(archiveDir, 0755)
+			archivePath := filepath.Join(archiveDir, fmt.Sprintf("%s-%s.log", bucket, fileDate))
+			os.Rename(path, archivePath)
+		}
+	}
 
 	f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to open log file %s: %v\n", path, err)
 		return
 	}
+	l.files[bucket] = f
+	l.fileDates[bucket] = today
+}
 
-	l.files[category] = f
+// flushErrorSnapshot создаёт файл в errors/ с логами за последний час.
+func (l *Logger) flushErrorSnapshot(now time.Time, category, msg string) {
+	if now.Sub(l.lastSnap) < snapshotDebounce {
+		return
+	}
+	l.lastSnap = now
+
+	cutoff := now.Add(-ringWindow)
+	var entries []ringEntry
+	for _, e := range l.ring {
+		if e.t.After(cutoff) {
+			entries = append(entries, e)
+		}
+	}
+
+	errorsDir := filepath.Join(l.baseDir, "errors")
+	os.MkdirAll(errorsDir, 0755)
+
+	fname := fmt.Sprintf("error-%s.log", now.Format("2006-01-02_150405"))
+	path := filepath.Join(errorsDir, fname)
+
+	f, err := os.Create(path)
+	if err != nil {
+		return
+	}
+	defer f.Close()
+
+	fmt.Fprintf(f, "=== СРЕЗ ОШИБКИ ===\n")
+	fmt.Fprintf(f, "Время:  %s\n", now.Format("2006-01-02 15:04:05"))
+	fmt.Fprintf(f, "Кат-я:  %s\n", category)
+	fmt.Fprintf(f, "Ошибка: %s\n", msg)
+	fmt.Fprintf(f, "Записей за последний час: %d\n", len(entries))
+	fmt.Fprintf(f, "\n--- Хронология логов (за час до ошибки) ---\n\n")
+
+	for _, e := range entries {
+		ts := e.t.Format("2006-01-02 15:04:05")
+		marker := ""
+		if e.level == "ERROR" {
+			marker = " <<<"
+		}
+		fmt.Fprintf(f, "[%s] [%s] [%s] %s%s\n", ts, e.level, e.category, e.msg, marker)
+	}
 }
 
 func (l *Logger) cleanupLoop() {
@@ -130,69 +248,54 @@ func (l *Logger) cleanup() {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
-	entries, err := os.ReadDir(l.baseDir)
-	if err != nil {
-		return
-	}
+	cutoffDate := time.Now().AddDate(0, 0, -l.maxDays)
 
-	type logFile struct {
-		name    string
-		modTime time.Time
-	}
-
-	var files []logFile
-	for _, e := range entries {
-		if e.IsDir() || !strings.HasSuffix(e.Name(), ".log") {
-			continue
-		}
-		info, err := e.Info()
-		if err != nil {
-			continue
-		}
-		files = append(files, logFile{name: e.Name(), modTime: info.ModTime()})
-	}
-
-	cutoff := time.Now().AddDate(0, 0, -l.maxFiles)
-	for _, f := range files {
-		if f.modTime.Before(cutoff) {
-			os.Remove(filepath.Join(l.baseDir, f.name))
+	// Архивы старше maxDays
+	archiveDir := filepath.Join(l.baseDir, "archive")
+	if entries, err := os.ReadDir(archiveDir); err == nil {
+		for _, e := range entries {
+			if e.IsDir() || !strings.HasSuffix(e.Name(), ".log") {
+				continue
+			}
+			info, err := e.Info()
+			if err != nil {
+				continue
+			}
+			if info.ModTime().Before(cutoffDate) {
+				os.Remove(filepath.Join(archiveDir, e.Name()))
+			}
 		}
 	}
 
-	cutOff := time.Now().AddDate(0, 0, -1)
-	for cat, f := range l.files {
-		fi, err := f.Stat()
-		if err != nil {
-			continue
+	// Срезы ошибок старше errRetention дней
+	errCutoff := time.Now().AddDate(0, 0, -errRetention)
+	errorsDir := filepath.Join(l.baseDir, "errors")
+	if entries, err := os.ReadDir(errorsDir); err == nil {
+		for _, e := range entries {
+			if e.IsDir() || !strings.HasSuffix(e.Name(), ".log") {
+				continue
+			}
+			info, err := e.Info()
+			if err != nil {
+				continue
+			}
+			if info.ModTime().Before(errCutoff) {
+				os.Remove(filepath.Join(errorsDir, e.Name()))
+			}
 		}
-		dateStr := fi.ModTime().Format("2006-01-02")
-		today := time.Now().Format("2006-01-02")
-		if dateStr != today {
-			f.Close()
-			delete(l.files, cat)
-		}
-		_ = cutOff
 	}
-}
-
-type LogEntry struct {
-	Time    string `json:"time"`
-	Level   string `json:"level"`
-	Message string `json:"message"`
 }
 
 func (l *Logger) ReadRecent(category string, lines int) []LogEntry {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
-	if l.files[category] != nil {
-		l.files[category].Sync()
+	bucket := mapBucket(category)
+	if f := l.files[bucket]; f != nil {
+		f.Sync()
 	}
 
-	dateStr := time.Now().Format("2006-01-02")
-	filename := fmt.Sprintf("%s_%s.log", dateStr, category)
-	path := filepath.Join(l.baseDir, filename)
-
+	path := filepath.Join(l.baseDir, bucket+".log")
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil
@@ -245,28 +348,80 @@ func parseLine(line string) *LogEntry {
 	return &LogEntry{Time: "", Level: "INFO", Message: line}
 }
 
+func (l *Logger) Clear() {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	for bucket, f := range l.files {
+		f.Close()
+		path := filepath.Join(l.baseDir, bucket+".log")
+		if newF, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644); err == nil {
+			l.files[bucket] = newF
+		} else {
+			delete(l.files, bucket)
+		}
+	}
+	l.ring = nil
+}
+
+// ListLogFiles возвращает все доступные лог-файлы: текущие, архивы и срезы ошибок.
 func (l *Logger) ListLogFiles() []string {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
-	entries, err := os.ReadDir(l.baseDir)
-	if err != nil {
-		return nil
-	}
-
 	var names []string
-	for _, e := range entries {
-		if !e.IsDir() && strings.HasSuffix(e.Name(), ".log") {
-			names = append(names, e.Name())
+
+	// Текущие логи (корень baseDir)
+	if entries, err := os.ReadDir(l.baseDir); err == nil {
+		for _, e := range entries {
+			if !e.IsDir() && strings.HasSuffix(e.Name(), ".log") {
+				names = append(names, e.Name())
+			}
 		}
 	}
+
+	// Архивы
+	archiveDir := filepath.Join(l.baseDir, "archive")
+	if entries, err := os.ReadDir(archiveDir); err == nil {
+		for _, e := range entries {
+			if !e.IsDir() && strings.HasSuffix(e.Name(), ".log") {
+				names = append(names, "archive/"+e.Name())
+			}
+		}
+	}
+
+	// Срезы ошибок
+	errorsDir := filepath.Join(l.baseDir, "errors")
+	if entries, err := os.ReadDir(errorsDir); err == nil {
+		for _, e := range entries {
+			if !e.IsDir() && strings.HasSuffix(e.Name(), ".log") {
+				names = append(names, "errors/"+e.Name())
+			}
+		}
+	}
+
 	sort.Strings(names)
 	return names
 }
 
+// ReadLogFile читает лог-файл по имени. Поддерживает подпапки archive/ и errors/.
 func (l *Logger) ReadLogFile(name string) (string, error) {
-	path := filepath.Join(l.baseDir, filepath.Base(name))
-	f, err := os.Open(path)
+	clean := filepath.ToSlash(filepath.Clean(name))
+	if clean == "" || clean == "." || clean == ".." || strings.HasPrefix(clean, "../") || strings.HasPrefix(clean, "/") {
+		return "", fmt.Errorf("invalid log file path")
+	}
+
+	path := filepath.Join(l.baseDir, clean)
+	resolved, err := filepath.Abs(path)
+	if err != nil {
+		return "", err
+	}
+	baseAbs, _ := filepath.Abs(l.baseDir)
+	if !strings.HasPrefix(resolved, baseAbs) {
+		return "", fmt.Errorf("path outside logs dir")
+	}
+
+	f, err := os.Open(resolved)
 	if err != nil {
 		return "", err
 	}

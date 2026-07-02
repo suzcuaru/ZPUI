@@ -4,116 +4,154 @@ setlocal enabledelayedexpansion
 set "BAT_DIR=%~dp0"
 cd /d "%BAT_DIR%"
 
-echo -----------------------------------------
-echo   ZPUI Build Script (Wails GUI)
-echo   v2.12.0
-echo -----------------------------------------
+REM --- Auto-increment version ---
+if exist "%BAT_DIR%version.txt" (
+    set /p OLD_VER=<"%BAT_DIR%version.txt"
+) else (
+    set "OLD_VER=1.0.0"
+)
+for /f "tokens=1-3 delims=." %%a in ("%OLD_VER%") do (
+    set /a "PATCH=%%c+1"
+    set "VERSION=%%a.%%b.!PATCH!"
+)
+echo %VERSION%>"%BAT_DIR%version.txt"
+echo [INFO] Version updated: %OLD_VER% ^> %VERSION%
+
+REM --- Sync wails.json productVersion ---
+powershell -NoProfile -Command "& {$p='%BAT_DIR%wails.json'; $c=Get-Content $p -Raw | ConvertFrom-Json; $c.info.productVersion='%VERSION%'; $enc=New-Object System.Text.UTF8Encoding $false; [System.IO.File]::WriteAllText($p, ($c | ConvertTo-Json -Depth 10), $enc)}" > nul 2>&1
+
+set "DIST=%BAT_DIR%build\dist"
+
+echo ========================================
+echo   ZPUI Build System v%VERSION%
+echo   Core + Satellites + Mods
+echo ========================================
 echo.
 
 REM --- Find required tools ---
-where go > nul 2>&1
-if %errorlevel% neq 0 (
-    echo [ERROR] Go not found in PATH. Install from: https://go.dev/dl/
-    pause
-    exit /b 1
-)
+where go > nul 2>&1 || (echo [ERROR] Go not found & timeout /t 10 > nul & exit /b 1)
+where node > nul 2>&1 || (echo [ERROR] Node.js not found & timeout /t 10 > nul & exit /b 1)
 
-where node > nul 2>&1
-if %errorlevel% neq 0 (
-    echo [ERROR] Node.js not found in PATH. Install from: https://nodejs.org/
-    pause
-    exit /b 1
-)
-
-REM Try to find wails: PATH, GOPATH/bin, user profile
+REM --- Find wails ---
 set "WAILS="
-where wails > nul 2>&1
-if %errorlevel% equ 0 (
-    for /f "delims=" %%A in ('where wails') do (
-        set "WAILS=%%A"
-        goto :wails_found
-    )
-)
-if defined GOPATH if exist "%GOPATH%\bin\wails.exe" (
-    set "WAILS=%GOPATH%\bin\wails.exe"
-    goto :wails_found
-)
-if exist "%USERPROFILE%\go\bin\wails.exe" (
-    set "WAILS=%USERPROFILE%\go\bin\wails.exe"
-    goto :wails_found
-)
-if exist "C:\Users\Suzuc\go\bin\wails.exe" (
-    set "WAILS=C:\Users\Suzuc\go\bin\wails.exe"
-    goto :wails_found
-)
-
-echo [ERROR] wails CLI not found
-echo Install: go install github.com/wailsapp/wails/v2/cmd/wails@latest
-pause
-exit /b 1
-
+where wails > nul 2>&1 && for /f "delims=" %%A in ('where wails') do (set "WAILS=%%A" & goto :wails_found)
+if defined GOPATH if exist "%GOPATH%\bin\wails.exe" (set "WAILS=%GOPATH%\bin\wails.exe" & goto :wails_found)
+if exist "%USERPROFILE%\go\bin\wails.exe" (set "WAILS=%USERPROFILE%\go\bin\wails.exe" & goto :wails_found)
+echo [ERROR] wails CLI not found & timeout /t 10 > nul & exit /b 1
 :wails_found
 echo [INFO] Wails: %WAILS%
-echo [INFO] Go:    %GOPATH%
 echo.
 
-REM --- Clean previous build ---
-echo [1/4] Cleaning previous build...
-if exist zpui.exe del /f /q zpui.exe > nul 2>&1
-if exist build\bin\zpui.exe del /f /q build\bin\zpui.exe > nul 2>&1
-if exist build\bin\config.json del /f /q build\bin\config.json > nul 2>&1
+REM === STEP 1: Clean ===
+echo [1/7] Cleaning old builds...
+
+REM Kill running ZPUI processes first
+taskkill /IM zpui.exe /F > nul 2>&1
+taskkill /IM wizard.exe /F > nul 2>&1
+taskkill /IM autoselect.exe /F > nul 2>&1
+taskkill /IM selfupdate.exe /F > nul 2>&1
+taskkill /IM zapretupdate.exe /F > nul 2>&1
+timeout /t 1 /nobreak > nul
+
+if exist "%DIST%" rmdir /s /q "%DIST%"
+if exist "%BAT_DIR%build\bin\zpui.exe" del /f /q "%BAT_DIR%build\bin\zpui.exe"
+del /f /q "%BAT_DIR%zpui.exe" 2>nul
+del /f /q "%BAT_DIR%wizard.exe" 2>nul
+del /f /q "%BAT_DIR%autoselect.exe" 2>nul
+del /f /q "%BAT_DIR%selfupdate.exe" 2>nul
+del /f /q "%BAT_DIR%zapretupdate.exe" 2>nul
 echo Done.
+echo.
 
-REM --- Build frontend ---
-echo [2/4] Installing web dependencies...
+REM === STEP 2: Build frontend ===
+echo [2/7] Building frontend...
 pushd web
-call npm install
-if %errorlevel% neq 0 (
-    popd
-    echo [ERROR] npm install failed
-    pause
-    exit /b 1
-)
-
-echo [3/4] Building web interface...
+call npm install --silent 2>nul
 call npm run build
-if %errorlevel% neq 0 (
-    popd
-    echo [ERROR] Web build failed
-    pause
-    exit /b 1
-)
+if errorlevel 1 (popd & echo [ERROR] Web build failed & timeout /t 10 > nul & exit /b 1)
 popd
+echo.
 
-REM --- Build Go binary with Wails ---
-echo [4/4] Building ZPUI via Wails...
+REM === STEP 3: Build main app (Wails) ===
+echo [3/7] Building ZPUI core...
+"%WAILS%" build -platform windows/amd64 -s -skipbindings -o zpui.exe ^
+    -ldflags "-s -w -H windowsgui -X main.version=%VERSION%" -trimpath
+if errorlevel 1 (echo [ERROR] Wails build failed & timeout /t 10 > nul & exit /b 1)
+copy /y "build\bin\zpui.exe" "zpui.exe" > nul
+echo.
 
-"%WAILS%" build ^
-    -platform windows/amd64 ^
-    -s ^
-    -skipbindings ^
-    -skipembedcreate ^
-    -o zpui.exe ^
-    -ldflags "-s -w -H windowsgui -X main.version=1.0.0" ^
-    -trimpath
+REM === STEP 4: Build satellite exes ===
+echo [4/7] Building satellite tools...
 
-if %errorlevel% neq 0 (
-    echo [ERROR] Wails build failed
-    pause
-    exit /b 1
+go build -o wizard.exe       -ldflags "-s -w -H windowsgui -X main.version=%VERSION%" -trimpath ./cmd/wizard/
+if errorlevel 1 (echo [ERROR] wizard.exe build failed & timeout /t 10 > nul & exit /b 1)
+echo   [OK] wizard.exe
+
+go build -o autoselect.exe   -ldflags "-s -w -H windowsgui -X main.version=%VERSION%" -trimpath ./cmd/autoselect/
+if errorlevel 1 (echo [ERROR] autoselect.exe build failed & timeout /t 10 > nul & exit /b 1)
+echo   [OK] autoselect.exe
+
+go build -o selfupdate.exe   -ldflags "-s -w -H windowsgui -X main.version=%VERSION%" -trimpath ./cmd/selfupdate/
+if errorlevel 1 (echo [ERROR] selfupdate.exe build failed & timeout /t 10 > nul & exit /b 1)
+echo   [OK] selfupdate.exe
+
+go build -o zapretupdate.exe -ldflags "-s -w -H windowsgui -X main.version=%VERSION%" -trimpath ./cmd/zapretupdate/
+if errorlevel 1 (echo [ERROR] zapretupdate.exe build failed & timeout /t 10 > nul & exit /b 1)
+echo   [OK] zapretupdate.exe
+echo.
+
+REM === STEP 5: Assemble dist package ===
+echo [5/7] Assembling dist package...
+mkdir "%DIST%"
+
+copy /y "zpui.exe"           "%DIST%\" > nul
+copy /y "wizard.exe"         "%DIST%\" > nul
+copy /y "autoselect.exe"     "%DIST%\" > nul
+copy /y "selfupdate.exe"     "%DIST%\" > nul
+copy /y "zapretupdate.exe"   "%DIST%\" > nul
+
+REM --- Generate versions.json ---
+echo {> "%DIST%\versions.json"
+echo   "zpui": "%VERSION%",>> "%DIST%\versions.json"
+echo   "wizard": "%VERSION%",>> "%DIST%\versions.json"
+echo   "autoselect": "%VERSION%",>> "%DIST%\versions.json"
+echo   "selfupdate": "%VERSION%",>> "%DIST%\versions.json"
+echo   "zapretupdate": "%VERSION%">> "%DIST%\versions.json"
+echo }>> "%DIST%\versions.json"
+
+echo Done.
+echo.
+
+REM === STEP 6: Copy mods ===
+echo [6/7] Copying mods...
+if exist "%BAT_DIR%mods" (
+    xcopy /e /i /y /q "%BAT_DIR%mods" "%DIST%\mods" > nul
+    echo   [OK] mods copied
+) else (
+    mkdir "%DIST%\mods"
+    echo   [INFO] No mods directory found, created empty
 )
+echo.
 
-REM --- Copy to project root ---
-copy /y build\bin\zpui.exe zpui.exe > nul
+REM === STEP 7: Done ===
+echo [7/7] Build complete!
+echo.
 
+REM --- Summary ---
+echo ========================================
+echo   Output: %DIST%\
 echo.
-echo Build successful!
-echo Output: %CD%\zpui.exe
+echo   Core:
+for %%f in ("%DIST%\*.exe") do (
+    for %%s in ("%%f") do echo     %%~nxf  %%~zs bytes
+)
+echo   versions.json
 echo.
-for %%f in (zpui.exe) do echo   Size: %%~zf bytes
-if exist build\bin\zpui.exe for %%f in (build\bin\zpui.exe) do echo   Built: %%~tf
+echo   Mods:
+dir /b /ad "%DIST%\mods" 2>nul || echo     (none)
 echo.
-echo Wails v2 GUI + System Tray
-echo CGO_ENABLED=0, GOARCH=amd64
+echo   ZPUI v%VERSION% + 4 satellites
+echo ========================================
 echo.
-pause
+echo   Press any key to close...
+timeout /t 5 /nobreak > nul

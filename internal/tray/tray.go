@@ -30,12 +30,7 @@ type App struct {
 	controller Controller
 	version    string
 
-	mTitle    *systray.MenuItem
-	mZapret   *systray.MenuItem
-	mProxy    *systray.MenuItem
-	mStrategy *systray.MenuItem
-	mResource *systray.MenuItem
-	mPanel    *systray.MenuItem
+	mOpen     *systray.MenuItem
 	mRestart  *systray.MenuItem
 	mQuit     *systray.MenuItem
 }
@@ -61,39 +56,19 @@ func New(
 func (a *App) Run() error {
 	onReady := func() {
 		systray.SetIcon(createIcon())
-		systray.SetTooltip("ZPUI — Управление Zapret")
+		systray.SetTooltip(fmt.Sprintf("ZPUI v%s", a.version))
 
-		a.mTitle = systray.AddMenuItem("ZPUI", "")
-		a.mTitle.Disable()
+		a.mOpen = systray.AddMenuItem("Открыть ZPUI", "")
+		a.mRestart = systray.AddMenuItem("Перезапустить", "")
 		systray.AddSeparator()
+		a.mQuit = systray.AddMenuItem("Выход", "")
 
-		// Left-click on tray icon → toggle window
 		systray.SetOnTapped(func() {
 			a.controller.ToggleWindow()
 		})
 
-		// Status items (non-clickable)
-		a.mZapret = systray.AddMenuItem("● Запрет: проверка...", "")
-		a.mZapret.Disable()
-		a.mProxy = systray.AddMenuItem("● Прокси: проверка...", "")
-		a.mProxy.Disable()
-		a.mStrategy = systray.AddMenuItem("Стратегия: ...", "")
-		a.mStrategy.Disable()
-		a.mResource = systray.AddMenuItem("Доступность: ...", "")
-		a.mResource.Disable()
-		systray.AddSeparator()
-
-		// Actions
-		a.mPanel = systray.AddMenuItem("📊 Показать/Скрыть окно", "")
-		a.mRestart = systray.AddMenuItem("🔄 Перезапустить запрет", "")
-		systray.AddSeparator()
-
-		a.mQuit = systray.AddMenuItem("❌ Выход", "")
-
-		go a.updateLoop()
 		go a.handleClicks()
 
-		// Показываем окно при старте
 		go func() {
 			time.Sleep(800 * time.Millisecond)
 			a.controller.ShowWindow()
@@ -107,82 +82,25 @@ func (a *App) Run() error {
 	return nil
 }
 
-func (a *App) updateLoop() {
-	ticker := time.NewTicker(3 * time.Second)
-	defer ticker.Stop()
-	for range ticker.C {
-		zStatus := string(a.zapret.GetStatus())
-		pRunning := a.proxy.IsRunning()
-
-		// Zapret status — clickable toggle
-		if zStatus == "running" {
-			a.mZapret.SetTitle("✅ Запрет: Работает (нажмите чтобы остановить)")
-			a.mZapret.Enable()
-			a.mRestart.Enable()
-		} else {
-			a.mZapret.SetTitle("⛔ Запрет: Остановлен (нажмите чтобы запустить)")
-			a.mZapret.Enable()
-			a.mRestart.Disable()
-		}
-
-		// Proxy status — clickable toggle
-		if pRunning {
-			a.mProxy.SetTitle(fmt.Sprintf("✅ Прокси: Работает :%d (нажмите чтобы остановить)", a.cfg.GetProxyConfig().Port))
-			a.mProxy.Enable()
-		} else {
-			a.mProxy.SetTitle("⛔ Прокси: Остановлен (нажмите чтобы запустить)")
-			a.mProxy.Enable()
-		}
-
-		// Strategy
-		strategy := a.zapret.GetCurrentStrategy()
-		if strategy == "" {
-			strategy = "не выбрана"
-		}
-		a.mStrategy.SetTitle(fmt.Sprintf("📋 Стратегия: %s", strategy))
-
-		// Resource %
-		pct := a.controller.GetCachedResourcePercent()
-		resText := "📊 Доступность: ..."
-		if pct >= 0 {
-			if pct >= 80 {
-				resText = fmt.Sprintf("📊 Доступность: %d%% ✅", pct)
-			} else if pct >= 50 {
-				resText = fmt.Sprintf("📊 Доступность: %d%% ⚠️", pct)
-			} else {
-				resText = fmt.Sprintf("📊 Доступность: %d%% ❌", pct)
-			}
-		}
-		a.mResource.SetTitle(resText)
-	}
-}
-
 func (a *App) handleClicks() {
 	for {
 		select {
-		case <-a.mZapret.ClickedCh:
-			zStatus := string(a.zapret.GetStatus())
-			if zStatus == "running" {
-				a.zapret.Stop()
-			} else {
-				if err := a.zapret.Start(); err != nil {
-					a.log.Error("tray", fmt.Sprintf("Ошибка: %v", err))
-				}
-			}
-		case <-a.mProxy.ClickedCh:
-			if a.proxy.IsRunning() {
-				a.proxy.Stop()
-			} else {
-				if err := a.proxy.Start(); err != nil {
-					a.log.Error("tray", fmt.Sprintf("Ошибка прокси: %v", err))
-				}
-			}
-		case <-a.mPanel.ClickedCh:
-			a.controller.ToggleWindow()
+		case <-a.mOpen.ClickedCh:
+			a.log.Info("tray", "Show window requested")
+			a.controller.ShowWindow()
 		case <-a.mRestart.ClickedCh:
-			if err := a.zapret.Restart(); err != nil {
-				a.log.Error("tray", fmt.Sprintf("Ошибка перезапуска: %v", err))
-			}
+			a.log.Info("tray", "Restart requested")
+			go func() {
+				a.proxy.Stop()
+				a.zapret.Stop()
+				time.Sleep(2 * time.Second)
+				if a.cfg.LastProxyState {
+					a.proxy.Start()
+				}
+				if a.cfg.LastZapretState {
+					a.zapret.Start()
+				}
+			}()
 		case <-a.mQuit.ClickedCh:
 			a.log.Info("tray", "Quit requested from tray")
 			a.controller.Quit()
@@ -231,24 +149,24 @@ func createIcon() []byte {
 		for x := 0; x < w; x++ {
 			dstY := h - 1 - y
 			idx := (dstY*w + x) * 4
-			dx := x - w/2
-			dy := y - h/2
-			dist := dx*dx + dy*dy
-			if dist < (w/2-1)*(w/2-1) {
-				if dist < 9 {
-					pixels[idx+0] = 0xFF
-					pixels[idx+1] = 0xD4
-					pixels[idx+2] = 0x00
-					pixels[idx+3] = 0xFF
-				} else {
-					pixels[idx+0] = 0x20
-					pixels[idx+1] = 0x10
-					pixels[idx+2] = 0x10
-					pixels[idx+3] = 0xFF
-				}
-			} else {
-				pixels[idx+3] = 0x00
+
+			bgR, bgG, bgB, bgA := byte(0x6C), byte(0x5C), byte(0xE7), byte(0xFF)
+			fgR, fgG, fgB, fgA := byte(0xFF), byte(0xFF), byte(0xFF), byte(0xFF)
+
+			if !isInRoundedSquare(x, y, w, h, 3) {
+				bgA = 0x00
+				fgA = 0x00
 			}
+
+			r, g, b, a := bgR, bgG, bgB, bgA
+			if isZPixel(x, y) {
+				r, g, b, a = fgR, fgG, fgB, fgA
+			}
+
+			pixels[idx+0] = b
+			pixels[idx+1] = g
+			pixels[idx+2] = r
+			pixels[idx+3] = a
 		}
 	}
 
@@ -260,4 +178,55 @@ func createIcon() []byte {
 	result = append(result, pixels...)
 	result = append(result, mask...)
 	return result
+}
+
+func isInRoundedSquare(x, y, w, h, r int) bool {
+	if x < r && y < r {
+		dx := r - x
+		dy := r - y
+		return dx*dx+dy*dy <= r*r
+	}
+	if x >= w-r && y < r {
+		dx := x - (w - r - 1)
+		dy := r - y
+		return dx*dx+dy*dy <= r*r
+	}
+	if x < r && y >= h-r {
+		dx := r - x
+		dy := y - (h - r - 1)
+		return dx*dx+dy*dy <= r*r
+	}
+	if x >= w-r && y >= h-r {
+		dx := x - (w - r - 1)
+		dy := y - (h - r - 1)
+		return dx*dx+dy*dy <= r*r
+	}
+	return true
+}
+
+func isZPixel(x, y int) bool {
+	if x < 4 || x > 11 {
+		return false
+	}
+	if y >= 3 && y <= 4 {
+		return true
+	}
+	if y >= 11 && y <= 12 {
+		return true
+	}
+	switch y {
+	case 5:
+		return x >= 8 && x <= 11
+	case 6:
+		return x >= 7 && x <= 10
+	case 7:
+		return x >= 6 && x <= 9
+	case 8:
+		return x >= 5 && x <= 8
+	case 9:
+		return x >= 4 && x <= 7
+	case 10:
+		return x >= 4 && x <= 6
+	}
+	return false
 }

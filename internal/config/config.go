@@ -17,6 +17,12 @@ type ProxyConfig struct {
 	Password  string `json:"password"`
 }
 
+type XboxDnsConfig struct {
+	Enabled      bool   `json:"enabled"`
+	PrimaryDNS   string `json:"primary_dns"`
+	SecondaryDNS string `json:"secondary_dns"`
+}
+
 type WebConfig struct {
 	Port int `json:"port"`
 }
@@ -28,16 +34,32 @@ type LogConfig struct {
 
 type Config struct {
 	mu              sync.RWMutex
-	ZapretPath      string      `json:"zapret_path"`
-	CurrentStrategy string      `json:"current_strategy"`
-	ModVersion      string      `json:"mod_version"`
-	Proxy           ProxyConfig `json:"proxy"`
-	Web             WebConfig   `json:"web"`
-	AutoStart       bool        `json:"autostart"`
-	Logs            LogConfig   `json:"logs"`
-	AutoUpdateCheck bool        `json:"auto_update_check"`
-	ZapretRepoURL   string      `json:"zapret_repo_url"`
-	ModRepoURL      string      `json:"mod_repo_url"`
+	ZapretPath      string        `json:"zapret_path"`
+	CurrentStrategy string        `json:"current_strategy"`
+	ModVersion      string        `json:"mod_version"`
+	Proxy           ProxyConfig   `json:"proxy"`
+	XboxDns         XboxDnsConfig `json:"xbox_dns"`
+	Web             WebConfig     `json:"web"`
+	AutoStart       bool          `json:"autostart"`
+	Logs            LogConfig     `json:"logs"`
+	AutoUpdateCheck bool          `json:"auto_update_check"`
+	ZapretRepoURL   string        `json:"zapret_repo_url"`
+	ModRepoURL      string        `json:"mod_repo_url"`
+
+	Theme        string `json:"theme"`
+	FirstRunDone bool   `json:"first_run_done"`
+	StartMinimized bool  `json:"start_minimized"`
+	CloseToTray    bool  `json:"close_to_tray"`
+
+	LastZapretState  bool `json:"last_zapret_state"`
+	LastProxyState   bool `json:"last_proxy_state"`
+	LastXboxDnsState bool `json:"last_xbox_dns_state"`
+
+	AutoStartZapret  bool `json:"auto_start_zapret"`
+	AutoStartProxy   bool `json:"auto_start_proxy"`
+	AutoStartXboxDns bool `json:"auto_start_xbox_dns"`
+
+	DisabledMods []string `json:"disabled_mods"`
 
 	configPath string
 }
@@ -53,6 +75,11 @@ func defaultConfig(zapretDir string) *Config {
 			Username:  "",
 			Password:  "",
 		},
+		XboxDns: XboxDnsConfig{
+			Enabled:      false,
+			PrimaryDNS:   "111.88.96.50",
+			SecondaryDNS: "111.88.96.51",
+		},
 		Web: WebConfig{
 			Port: 8080,
 		},
@@ -61,6 +88,10 @@ func defaultConfig(zapretDir string) *Config {
 		AutoUpdateCheck: true,
 		ZapretRepoURL:   "https://github.com/bol-van/zapret",
 		ModRepoURL:      "https://github.com/bol-van/zapret",
+
+		Theme:        "system",
+		FirstRunDone: false,
+		CloseToTray:  true,
 	}
 }
 
@@ -80,6 +111,11 @@ func Load(configPath, zapretDir string) *Config {
 	}
 
 	cfg.configPath = configPath
+
+	// Migrate: force fixed xbox-dns.ru servers
+	cfg.XboxDns.PrimaryDNS = "111.88.96.50"
+	cfg.XboxDns.SecondaryDNS = "111.88.96.51"
+
 	return cfg
 }
 
@@ -138,6 +174,40 @@ func (c *Config) SetProxyConfig(p ProxyConfig) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.Proxy = p
+	return c.save()
+}
+
+func (c *Config) GetXboxDnsConfig() XboxDnsConfig {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.XboxDns
+}
+
+func (c *Config) SetXboxDnsConfig(x XboxDnsConfig) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	x.PrimaryDNS = "111.88.96.50"
+	x.SecondaryDNS = "111.88.96.51"
+	c.XboxDns = x
+	return c.save()
+}
+
+func (c *Config) GetTheme() string {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.Theme
+}
+
+func (c *Config) GetCloseToTray() bool {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.CloseToTray
+}
+
+func (c *Config) SetTheme(theme string) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.Theme = theme
 	return c.save()
 }
 

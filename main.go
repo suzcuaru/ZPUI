@@ -20,7 +20,9 @@ import (
 	"zpui/internal/logger"
 	"zpui/internal/monitor"
 	"zpui/internal/proxy"
+	"zpui/internal/singleinstance"
 	"zpui/internal/tray"
+	"zpui/internal/xboxdns"
 	"zpui/internal/zapret"
 )
 
@@ -40,10 +42,19 @@ func main() {
 	}
 	exeDir := filepath.Dir(exePath)
 
+	// Проверка единственного экземпляра
+	if cleanup, err := singleinstance.Check(exePath); err != nil {
+		fmt.Println("ZPUI:", err)
+		return
+	} else if cleanup != nil {
+		defer cleanup()
+	}
+
 	configPath := filepath.Join(exeDir, "config.json")
-	zapretDir := findZapretDir(exeDir)
+	zapretDir := filepath.Join(exeDir, "zapret")
 
 	cfg := config.Load(configPath, zapretDir)
+	cfg.SetZapretPath(zapretDir)
 	cfg.ModVersion = version
 
 	logMgr, err := logger.New(cfg.LogsDir(), 7)
@@ -66,13 +77,21 @@ func main() {
 	zapretMgr := zapret.NewManager(cfg, logMgr)
 	proxyServer := proxy.NewSOCKS5(cfg, logMgr)
 	trafficMonitor := monitor.NewTrafficMonitor(logMgr)
+	xboxDnsMgr := xboxdns.NewManager(logMgr)
 
 	// Создаём Wails-приложение
-	app := NewApp(cfg, logMgr, zapretMgr, proxyServer, trafficMonitor, version)
+	app := NewApp(cfg, logMgr, zapretMgr, proxyServer, trafficMonitor, xboxDnsMgr, version, exeDir)
 
 	// Создаём tray (контроллер = app, управляет окном через Wails runtime)
 	trayApp := tray.New(cfg, logMgr, zapretMgr, proxyServer, app, version)
-	go trayApp.Run()
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				logMgr.Error("tray", fmt.Sprintf("Tray panic: %v", r))
+			}
+		}()
+		trayApp.Run()
+	}()
 
 	// Готовим embedded assets для Wails
 	distFS, err := fs.Sub(webFS, "web/dist")
@@ -84,10 +103,12 @@ func main() {
 	logMgr.Info("main", "Starting Wails application...")
 	err = wails.Run(&options.App{
 		Title:     "ZPUI",
-		Width:     1200,
-		Height:    800,
-		MinWidth:  1200,
-		MinHeight: 800,
+		Width:     960,
+		Height:    640,
+		MinWidth:  960,
+		MinHeight: 640,
+		MaxWidth:  960,
+		MaxHeight: 640,
 		AssetServer: &assetserver.Options{
 			Assets: distFS,
 		},
@@ -105,21 +126,6 @@ func main() {
 		logMgr.Error("main", fmt.Sprintf("Wails error: %v", err))
 		log.Fatal(err)
 	}
-}
-
-func findZapretDir(exeDir string) string {
-	candidates := []string{
-		exeDir,
-		filepath.Dir(exeDir),
-		filepath.Join(exeDir, "zapret"),
-	}
-	for _, dir := range candidates {
-		winws := filepath.Join(dir, "bin", "winws.exe")
-		if _, err := os.Stat(winws); err == nil {
-			return dir
-		}
-	}
-	return exeDir
 }
 
 func ensureAdmin() bool {

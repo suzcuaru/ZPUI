@@ -1,9 +1,0 @@
-[2026-06-16 00:04:08] [INFO] [zapret] Zapret service is installed and running
-[2026-06-16 00:13:33] [INFO] [zapret] Zapret service is installed and running
-[2026-06-16 00:14:32] [INFO] [zapret] Zapret service is installed and running
-[2026-06-16 00:15:14] [INFO] [zapret] Zapret service is installed and running
-[2026-06-16 00:35:54] [INFO] [zapret] Zapret service is installed and running
-[2026-06-16 00:36:12] [WARN] [strategy] Cannot read targets.txt (C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\mod\build\bin\utils\targets.txt), fallback to defaults
-[2026-06-16 00:36:12] [INFO] [strategy] Auto-test started: 0 strategies, 4 resources
-[2026-06-16 00:36:12] [INFO] [strategy] Results written to C:\Users\Suzuc\Documents\VS_code\Проэкты\DPIF2\mod\build\bin\logs\auto_test_results.json
-[2026-06-16 00:36:12] [INFO] [strategy] Auto-test complete

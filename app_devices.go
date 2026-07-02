@@ -267,6 +267,36 @@ func (a *App) RunAutoTestStream() {
 	}
 }
 
+// RunAutoSelectStream — автоподбор лучшей стратегии с применением.
+// Эмитит события: autoselect:event (каждый результат), autoselect:done (завершение).
+func (a *App) RunAutoSelectStream() {
+	if a.zapret.IsAutoTestRunning() {
+		runtime.EventsEmit(a.ctx, "autoselect:done", map[string]interface{}{"error": "Подбор уже запущен"})
+		return
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	results := make(chan zapret.AutoTestResult, 50)
+	done := make(chan struct{})
+	go a.zapret.AutoSelectAndApply(ctx, results, done)
+
+	for {
+		select {
+		case result, ok := <-results:
+			if !ok {
+				runtime.EventsEmit(a.ctx, "autoselect:done", map[string]interface{}{})
+				return
+			}
+			runtime.EventsEmit(a.ctx, "autoselect:event", result)
+		case <-done:
+			runtime.EventsEmit(a.ctx, "autoselect:done", map[string]interface{}{})
+			return
+		}
+	}
+}
+
 // RunUpdateStream — запуск обновления с потоковой передачей прогресса.
 // Эмитит события: update:progress (каждый шаг), update:done (завершение).
 func (a *App) RunUpdateStream() {

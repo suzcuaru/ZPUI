@@ -1,6 +1,8 @@
 import { useState } from 'react';
+import { useT } from '../../i18n';
 
 export default function OfflineScreen({ onRetry }) {
+  const { t } = useT();
   const [loading, setLoading] = useState(false);
 
   const handleRetry = async () => {
@@ -23,14 +25,14 @@ export default function OfflineScreen({ onRetry }) {
             <line x1="12" y1="20" x2="12.01" y2="20"/>
           </svg>
         </div>
-        <div className="offline-title">Бэкенд недоступен</div>
+        <div className="offline-title">{t('offline.title')}</div>
         <div className="offline-desc">
-          Не удаётся подключиться к бэкенду ZPUI.<br/>
-          Проверьте, запущен ли процесс.
+          {t('offline.desc')}<br/>
+          {t('offline.desc2')}
         </div>
         <button className="offline-retry-btn" onClick={handleRetry} disabled={loading}>
           {loading && <span className="offline-spinner" />}
-          {loading ? 'Подключение...' : 'Повторить'}
+          {loading ? t('offline.connecting') : t('offline.retry')}
         </button>
       </div>
     </div>

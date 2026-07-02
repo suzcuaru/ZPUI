@@ -11,6 +11,17 @@ export function formatSpeed(bps) {
   return (bps / (1024 * 1024)).toFixed(1) + ' MB/s';
 }
 
+export function formatSpeedMB(bps) {
+  const mb = bps / (1024 * 1024);
+  return mb.toFixed(2).padStart(6, ' ') + ' MB/s';
+}
+
+export function formatBytesMB(bytes) {
+  const mb = bytes / (1024 * 1024);
+  if (mb < 1) return '0.00 MB';
+  return mb.toFixed(2).padStart(6, ' ') + ' MB';
+}
+
 export function strategyDisplayName(raw) {
   if (!raw) return '—';
   let s = String(raw).trim();

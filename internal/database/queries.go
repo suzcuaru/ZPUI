@@ -268,3 +268,31 @@ func BatchInsertActionLogs(logs []ActionLog) error {
 
 	return tx.Commit()
 }
+
+// === Zapret Backup ===
+
+// SaveZapretBackup сохраняет JSON-слепок состояния zapret (перезапись).
+func SaveZapretBackup(data string) error {
+	_, err := DB().Exec(`
+		INSERT INTO zapret_backup (id, data, updated_at)
+		VALUES (1, ?, CURRENT_TIMESTAMP)
+		ON CONFLICT(id) DO UPDATE SET data = excluded.data, updated_at = CURRENT_TIMESTAMP
+	`, data)
+	return err
+}
+
+// GetZapretBackup возвращает сохранённый слепок состояния zapret.
+func GetZapretBackup() (string, error) {
+	var data string
+	err := DB().QueryRow(`SELECT data FROM zapret_backup WHERE id = 1`).Scan(&data)
+	if err == sql.ErrNoRows {
+		return "", nil
+	}
+	return data, err
+}
+
+// DeleteZapretBackup удаляет слепок состояния zapret.
+func DeleteZapretBackup() error {
+	_, err := DB().Exec(`DELETE FROM zapret_backup WHERE id = 1`)
+	return err
+}

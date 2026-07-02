@@ -117,6 +117,12 @@ func migrate() error {
 		CREATE INDEX IF NOT EXISTS idx_conn_device ON device_connections(device_id);
 		CREATE INDEX IF NOT EXISTS idx_log_ts ON action_logs(timestamp);
 		CREATE INDEX IF NOT EXISTS idx_snap_ts ON traffic_snapshots(timestamp);
+
+		CREATE TABLE IF NOT EXISTS zapret_backup (
+			id INTEGER PRIMARY KEY DEFAULT 1,
+			data TEXT,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		);
 	`)
 	return err
 }
