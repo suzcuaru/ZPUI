@@ -82,7 +82,13 @@ export default function SettingsPage({ status, showToast }) {
     const d = await api('POST', '/api/components/update', { name });
     if (d?.error) { showToast(t('settings.errorPrefix', { error: d.error }), 'error'); return; }
     showToast(t('settings.componentUpdateStarted', { name }));
-    setTimeout(loadVersions, 3000);
+    if (name === 'Zapret') {
+      setZapretCheck({ state: 'idle', current: null, latest: null });
+    }
+    setTimeout(() => {
+      loadVersions();
+      if (name === 'Zapret') checkZapretUpdate();
+    }, 5000);
   };
 
   if (!config) return null;
@@ -128,7 +134,7 @@ export default function SettingsPage({ status, showToast }) {
           </div>
 
           <div className="section">
-            <div className="section-title">{t('settings.zapretSection')}</div>
+            <div className="section-title">Zapret</div>
             <div className="set-row" style={{ padding: '3px 0' }}>
               <div className="set-row-info"><span className="set-row-title">{t('settings.localInstall')}</span></div>
               <span className="set-static mono" style={{ fontSize: 10 }}>{'<app>\\zapret\\'}</span>
@@ -183,7 +189,7 @@ export default function SettingsPage({ status, showToast }) {
             </div>
             <div className="upd-card" style={{ padding: '8px 10px' }}>
               <div className="upd-info">
-                <span className="upd-name">{t('nav.zapret')}</span>
+                <span className="upd-name">Zapret</span>
                 <div className="upd-ver-row">
                   <span className="upd-ver">v{zapretCheck.current || status?.zapret?.version || '—'}</span>
                   {zapretCheck.state === 'available' && zapretCheck.latest && (
