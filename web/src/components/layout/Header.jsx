@@ -1,6 +1,5 @@
-import { useState } from 'react';
-import { api, apiCall } from '../../api';
 import { useT } from '../../i18n';
+import { useServiceToggle } from '../../hooks/useServiceToggle';
 
 const ICONS = {
   sun: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.2" y1="4.2" x2="5.6" y2="5.6"/><line x1="18.4" y1="18.4" x2="19.8" y2="19.8"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.2" y1="19.8" x2="5.6" y2="18.4"/><line x1="18.4" y1="5.6" x2="19.8" y2="4.2"/></svg>,
@@ -16,63 +15,39 @@ export default function Header({ status, onOpenLogs, isDark, onToggleTheme, show
   const xRun = status?.xbox_dns?.enabled === true;
   const port = status?.proxy?.port || '—';
 
-  const [zLoading, setZLoading] = useState(false);
-  const [pLoading, setPLoading] = useState(false);
-  const [xLoading, setXLoading] = useState(false);
-
-  const toggleZapret = async () => {
-    setZLoading(true);
-    await apiCall(() => api('POST', '/api/zapret/' + (zRun ? 'stop' : 'start')), zRun ? t('header.zapretStopped') : t('header.zapretStarted'), showToast);
-    await apiCall(() => api('POST', '/api/component-states'));
-    setZLoading(false);
-  };
-
-  const toggleProxy = async () => {
-    setPLoading(true);
-    await apiCall(() => api('POST', '/api/proxy/' + (pRun ? 'stop' : 'start')), pRun ? t('header.proxyStopped') : t('header.proxyStarted'), showToast);
-    await apiCall(() => api('POST', '/api/component-states'));
-    setPLoading(false);
-  };
-
-  const toggleXboxDns = async () => {
-    setXLoading(true);
-    const cfg = await api('GET', '/api/xbox-dns/config');
-    if (cfg) {
-      await apiCall(() => api('POST', '/api/xbox-dns/config', { ...cfg, enabled: !xRun }), xRun ? t('header.xboxDnsOff') : t('header.xboxDnsOn'), showToast);
-      await apiCall(() => api('POST', '/api/component-states'));
-    }
-    setXLoading(false);
-  };
+  const zapret = useServiceToggle('zapret', zRun, showToast, { startMsg: t('header.zapretStarted'), stopMsg: t('header.zapretStopped') });
+  const proxy = useServiceToggle('proxy', pRun, showToast, { startMsg: t('header.proxyStarted'), stopMsg: t('header.proxyStopped') });
+  const xbox = useServiceToggle('xboxdns', xRun, showToast, { startMsg: t('header.xboxDnsOn'), stopMsg: t('header.xboxDnsOff') });
 
   return (
     <header className="header">
       <div className="header-svc-group">
         <button
-          className={'header-svc' + (zRun ? ' on' : '') + (zLoading ? ' loading' : '')}
-          onClick={toggleZapret}
-          disabled={zLoading}
+          className={'header-svc' + (zRun ? ' on' : '') + (zapret.loading ? ' loading' : '')}
+          onClick={zapret.toggle}
+          disabled={zapret.loading}
         >
-          {zLoading ? <span className="header-svc-spinner" /> : <span className="header-svc-dot" />}
+          {zapret.loading ? <span className="header-svc-spinner" /> : <span className="header-svc-dot" />}
           <span>{t('header.zapret')}</span>
           <span>{zRun ? 'ON' : 'OFF'}</span>
         </button>
 
         <button
-          className={'header-svc' + (pRun ? ' on' : '') + (pLoading ? ' loading' : '')}
-          onClick={toggleProxy}
-          disabled={pLoading}
+          className={'header-svc' + (pRun ? ' on' : '') + (proxy.loading ? ' loading' : '')}
+          onClick={proxy.toggle}
+          disabled={proxy.loading}
         >
-          {pLoading ? <span className="header-svc-spinner" /> : <span className="header-svc-dot" />}
+          {proxy.loading ? <span className="header-svc-spinner" /> : <span className="header-svc-dot" />}
           <span>{t('header.proxy')}</span>
           <span>{pRun ? ':' + port : 'OFF'}</span>
         </button>
 
         <button
-          className={'header-svc' + (xRun ? ' on' : '') + (xLoading ? ' loading' : '')}
-          onClick={toggleXboxDns}
-          disabled={xLoading}
+          className={'header-svc' + (xRun ? ' on' : '') + (xbox.loading ? ' loading' : '')}
+          onClick={xbox.toggle}
+          disabled={xbox.loading}
         >
-          {xLoading ? <span className="header-svc-spinner" /> : <span className="header-svc-dot" />}
+          {xbox.loading ? <span className="header-svc-spinner" /> : <span className="header-svc-dot" />}
           {ICONS.xbox}
           <span>{xRun ? 'ON' : 'OFF'}</span>
         </button>

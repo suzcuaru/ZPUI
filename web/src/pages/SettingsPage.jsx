@@ -1,19 +1,17 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Switch from '../components/ui/Switch';
 import { api, apiCall } from '../api';
 import { useT } from '../i18n';
+import { usePolling } from '../hooks/usePolling';
+import { useDebouncedSave } from '../hooks/useDebouncedSave';
 
 export default function SettingsPage({ status, showToast }) {
   const { t, lang, changeLang } = useT();
   const [config, setConfig] = useState(null);
   const [versions, setVersions] = useState(null);
-  const saveTimer = useRef(null);
 
   const [zpuiCheck, setZpuiCheck] = useState({ state: 'idle', current: null, latest: null });
   const [zapretCheck, setZapretCheck] = useState({ state: 'idle', current: null, latest: null });
-
-  useEffect(() => { loadConfig(); loadVersions(); }, []);
-  useEffect(() => { const iv = setInterval(loadVersions, 10000); return () => clearInterval(iv); }, []);
 
   const loadConfig = async () => {
     const d = await api('GET', '/api/config');
@@ -25,16 +23,14 @@ export default function SettingsPage({ status, showToast }) {
     if (d) setVersions(d);
   };
 
+  useEffect(() => { loadConfig(); }, []);
+  usePolling(loadVersions, 10000);
+
+  const saveConfig = useDebouncedSave('/api/config', 500, null);
   const update = useCallback((patch) => {
-    setConfig(prev => {
-      const next = { ...prev, ...patch };
-      clearTimeout(saveTimer.current);
-      saveTimer.current = setTimeout(async () => {
-        await api('POST', '/api/config', next);
-      }, 500);
-      return next;
-    });
-  }, []);
+    setConfig(prev => ({ ...prev, ...patch }));
+    if (config) saveConfig(patch, config);
+  }, [saveConfig, config]);
 
   const handleTheme = async (theme) => {
     update({ theme });

@@ -299,7 +299,8 @@
   },
   "toast": {
     "updateAvailable": "Доступно обновление {name}: {version}",
-    "errorInZpui": "Ошибка в ZPUI"
+    "errorInZpui": "Ошибка в ZPUI",
+    "requestFailed": "Ошибка выполнения запроса"
   },
   "xboxdns": {
     "internalDns": "Внутренний DNS-сервер",

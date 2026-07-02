@@ -30,7 +30,7 @@ export function useDebouncedSave(url, delay = 500, onSuccess = null) {
     timerRef.current = setTimeout(async () => {
       await apiCall(
         () => api('POST', url, configRef.current),
-        onSuccess ? null : null,
+        null,
         null
       );
       if (onSuccess) onSuccess();

@@ -1,23 +1,26 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import Switch from '../components/ui/Switch';
-import { api, apiCall } from '../api';
+import Row from '../components/ui/Row';
+import { api } from '../api';
 import { useT } from '../i18n';
+import { usePolling } from '../hooks/usePolling';
+import { useServiceToggle } from '../hooks/useServiceToggle';
+import { useDebouncedSave } from '../hooks/useDebouncedSave';
 
 export default function ProxyPage({ status, showToast }) {
   const { t } = useT();
   const [devices, setDevices] = useState([]);
-  const [conns, setConns] = useState(null);
   const [config, setConfig] = useState({ port: 1080, username: '', password: '', auto_start: false });
-  const [pLoading, setPLoading] = useState(false);
-  const [saveTimer, setSaveTimer] = useState(null);
 
   const pRun = status?.proxy?.running === true;
   const port = status?.proxy?.port || 1080;
 
+  const proxy = useServiceToggle('proxy', pRun, showToast);
+  const saveProxyConfig = useDebouncedSave('/api/proxy/config', 500, () => showToast(t('proxy.settingsSaved'), 'success'));
+
   const loadData = useCallback(async () => {
-    const [devs, c, cfg] = await Promise.all([
+    const [devs, cfg] = await Promise.all([
       api('GET', '/api/proxy/connections'),
-      api('GET', '/api/proxy/status'),
       api('GET', '/api/proxy/config'),
     ]);
     if (devs?.by_client) {
@@ -33,34 +36,12 @@ export default function ProxyPage({ status, showToast }) {
     if (cfg) setConfig(cfg);
   }, []);
 
-  useEffect(() => {
-    loadData();
-    const iv = setInterval(loadData, 5000);
-    return () => clearInterval(iv);
-  }, [loadData]);
-
-  const toggleProxy = async () => {
-    setPLoading(true);
-    await apiCall(() => api('POST', '/api/proxy/' + (pRun ? 'stop' : 'start')), null, showToast);
-    await apiCall(() => api('POST', '/api/component-states'));
-    setPLoading(false);
-  };
+  usePolling(loadData, 5000);
 
   const updateConfig = (patch) => {
-    setConfig(prev => {
-      const next = { ...prev, ...patch };
-      clearTimeout(saveTimer);
-      const timer = setTimeout(async () => {
-        await apiCall(() => api('POST', '/api/proxy/config', {
-          port: parseInt(next.port),
-          username: next.username,
-          password: next.password,
-          auto_start: next.auto_start,
-        }), t('proxy.settingsSaved'), showToast);
-      }, 500);
-      setSaveTimer(timer);
-      return next;
-    });
+    const next = { ...config, ...patch };
+    setConfig(next);
+    saveProxyConfig(patch, next);
   };
 
   const totalConns = devices.reduce((sum, d) => sum + d.connections, 0);
@@ -68,15 +49,14 @@ export default function ProxyPage({ status, showToast }) {
   return (
     <>
       <div className="section">
-        <div className="set-row">
-          <div className="set-row-info">
-            <span className="set-row-title">{t('proxy.socks5Proxy')}</span>
-            <span className="set-row-desc">{pRun ? t('proxy.runningOnPort', { port }) : t('proxy.stopped')} · {devices.length} {t('proxy.devicesSuffix')} · {totalConns} {t('proxy.connSuffix')}</span>
-          </div>
-          <button className={'btn ' + (pRun ? 'btn-danger' : 'btn-accent')} onClick={toggleProxy} disabled={pLoading}>
-            {pLoading ? '...' : pRun ? t('common.stop') : t('common.start')}
+        <Row
+          title={t('proxy.socks5Proxy')}
+          desc={`${pRun ? t('proxy.runningOnPort', { port }) : t('proxy.stopped')} · ${devices.length} ${t('proxy.devicesSuffix')} · ${totalConns} ${t('proxy.connSuffix')}`}
+        >
+          <button className={'btn ' + (pRun ? 'btn-danger' : 'btn-accent')} onClick={proxy.toggle} disabled={proxy.loading}>
+            {proxy.loading ? '...' : pRun ? t('common.stop') : t('common.start')}
           </button>
-        </div>
+        </Row>
       </div>
 
       <div className="section">
@@ -119,13 +99,9 @@ export default function ProxyPage({ status, showToast }) {
           <input type="password" className="form-input" value={config.password || ''} placeholder={t('proxy.noAuth')}
             onChange={e => updateConfig({ password: e.target.value })} />
         </div>
-        <div className="set-row">
-          <div className="set-row-info">
-            <span className="set-row-title">{t('proxy.autoStartProxy')}</span>
-            <span className="set-row-desc">{t('proxy.autoStartProxyDesc')}</span>
-          </div>
+        <Row title={t('proxy.autoStartProxy')} desc={t('proxy.autoStartProxyDesc')}>
           <Switch checked={config.auto_start || false} onChange={() => updateConfig({ auto_start: !config.auto_start })} />
-        </div>
+        </Row>
       </div>
     </>
   );

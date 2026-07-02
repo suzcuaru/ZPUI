@@ -6,6 +6,11 @@ const dictionaries = { ru, en };
 
 const I18nContext = createContext(null);
 
+// Module-level accessor for non-React modules (e.g. api.js).
+let currentT = (key) => key;
+export function setT(fn) { currentT = fn; }
+export function tr(key, vars) { return currentT(key, vars); }
+
 export function I18nProvider({ children }) {
   const [lang, setLang] = useState(() => {
     const saved = localStorage.getItem('zpui-lang');
@@ -48,6 +53,10 @@ export function I18nProvider({ children }) {
   useEffect(() => {
     document.documentElement.lang = lang;
   }, [lang]);
+
+  useEffect(() => {
+    setT(t);
+  }, [t]);
 
   return (
     <I18nContext.Provider value={{ lang, t, changeLang }}>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import Switch from '../components/ui/Switch';
+import Row from '../components/ui/Row';
 import { api, apiCall } from '../api';
 import { useT } from '../i18n';
 
@@ -57,29 +58,22 @@ export default function XboxDnsPage({ status, showToast }) {
 
       <div className="section">
         <div className="section-title">{t('xboxdns.dnsServers')}</div>
-        <div className="set-row">
-          <div className="set-row-info"><span className="set-row-title">{t('xboxdns.primaryDns')}</span></div>
+        <Row title={t('xboxdns.primaryDns')}>
           <span className="set-static mono">{primary}</span>
-        </div>
-        <div className="set-row">
-          <div className="set-row-info"><span className="set-row-title">{t('xboxdns.secondaryDns')}</span></div>
+        </Row>
+        <Row title={t('xboxdns.secondaryDns')}>
           <span className="set-static mono">{secondary}</span>
-        </div>
-        <div className="set-row">
-          <div className="set-row-info"><span className="set-row-title">{t('xboxdns.provider')}</span></div>
+        </Row>
+        <Row title={t('xboxdns.provider')}>
           <span className="set-static mono">xbox-dns.ru</span>
-        </div>
+        </Row>
       </div>
 
       <div className="section">
         <div className="section-title">{t('xboxdns.options')}</div>
-        <div className="set-row">
-          <div className="set-row-info">
-            <span className="set-row-title">{t('xboxdns.autoStart')}</span>
-            <span className="set-row-desc">{t('xboxdns.autoStartDesc')}</span>
-          </div>
+        <Row title={t('xboxdns.autoStart')} desc={t('xboxdns.autoStartDesc')}>
           <Switch checked={autoStart} onChange={toggleAutoStart} />
-        </div>
+        </Row>
       </div>
 
       <div className="section">

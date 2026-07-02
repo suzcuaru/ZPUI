@@ -263,6 +263,17 @@ func killWinws() {
 	kill.Run()
 }
 
+// Teardown полностью останавливает и удаляет службу zapret вместе с драйверами WinDivert.
+// Используется при ручном удалении системной службы (RemoveSystemZapretService).
+func (m *Manager) Teardown() {
+	m.log.Info("zapret", "Teardown: stopping zapret service and WinDivert drivers")
+	stopService("zapret")
+	killWinws()
+	time.Sleep(1 * time.Second)
+	deleteService("zapret")
+	removeWinDivertDrivers()
+}
+
 func (m *Manager) FindZapretDir(searchDir string) string {
 	filepath.Walk(searchDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {

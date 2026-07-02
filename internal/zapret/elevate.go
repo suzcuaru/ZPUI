@@ -23,10 +23,7 @@ func (m *Manager) serviceCreate(strategyFile string) error {
 
 	stopService("zapret")
 	deleteService("zapret")
-	stopService("WinDivert")
-	deleteService("WinDivert")
-	stopService("WinDivert14")
-	deleteService("WinDivert14")
+	removeWinDivertDrivers()
 
 	if err := runSc("create", "zapret",
 		"binPath=", fullCmd,
@@ -65,14 +62,7 @@ func (m *Manager) serviceRemove() {
 		runCmd("taskkill", "/IM", "winws.exe", "/F")
 	}
 
-	if serviceExists("WinDivert") {
-		stopService("WinDivert")
-		deleteService("WinDivert")
-	}
-	if serviceExists("WinDivert14") {
-		stopService("WinDivert14")
-		deleteService("WinDivert14")
-	}
+	removeWinDivertDrivers()
 }
 
 func (m *Manager) serviceChangeStrategy(strategyFile string) error {
@@ -82,10 +72,7 @@ func (m *Manager) serviceChangeStrategy(strategyFile string) error {
 		m.log.Info("service", "Existing service found, removing first")
 		stopService("zapret")
 		deleteService("zapret")
-		stopService("WinDivert")
-		deleteService("WinDivert")
-		stopService("WinDivert14")
-		deleteService("WinDivert14")
+		removeWinDivertDrivers()
 	}
 
 	return m.serviceCreate(strategyFile)
@@ -121,6 +108,19 @@ func deleteService(name string) {
 
 func serviceExists(name string) bool {
 	return executil.HiddenCmd("sc", "query", name).Run() == nil
+}
+
+// stopWinDivertDrivers останавливает драйверы WinDivert (без удаления) — перед обновлением.
+func stopWinDivertDrivers() {
+	stopService("WinDivert")
+	stopService("WinDivert14")
+}
+
+// removeWinDivertDrivers останавливает и удаляет драйверы WinDivert.
+func removeWinDivertDrivers() {
+	stopWinDivertDrivers()
+	deleteService("WinDivert")
+	deleteService("WinDivert14")
 }
 
 

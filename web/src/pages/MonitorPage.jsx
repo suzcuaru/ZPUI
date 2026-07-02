@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { api } from '../api';
 import { formatBytes } from '../utils';
 import { useT } from '../i18n';
+import { usePolling } from '../hooks/usePolling';
 
 function TrafficChart({ data, color, height }) {
   const canvasRef = useRef(null);
@@ -86,7 +87,6 @@ export default function MonitorPage({ status, showToast }) {
   const [connections, setConnections] = useState([]);
 
   const m = status?.monitor || {};
-  const p = status?.proxy || {};
 
   const loadData = useCallback(async () => {
     const [devs, conns] = await Promise.all([
@@ -98,11 +98,7 @@ export default function MonitorPage({ status, showToast }) {
     if (conns?.connections) setConnections(conns.connections);
   }, []);
 
-  useEffect(() => {
-    loadData();
-    const iv = setInterval(loadData, 5000);
-    return () => clearInterval(iv);
-  }, [loadData]);
+  usePolling(loadData, 5000);
 
   useEffect(() => {
     const dl = m.download_speed || 0;

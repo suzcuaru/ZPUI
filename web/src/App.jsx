@@ -17,6 +17,7 @@ import ProxyPage from './pages/ProxyPage';
 import XboxDnsPage from './pages/XboxDnsPage';
 import { api } from './api';
 import { useT } from './i18n';
+import { usePolling } from './hooks/usePolling';
 import './styles/index.css';
 
 const PAGES = {
@@ -44,7 +45,6 @@ export default function App() {
   const [healthWarn, setHealthWarn] = useState(null);
   const failCountRef = useRef(0);
   const themeInitRef = useRef(false);
-  const statusIntervalRef = useRef(null);
 
   const showToast = useCallback((msg, type) => {
     const id = Date.now() + Math.random();
@@ -55,28 +55,21 @@ export default function App() {
     setToasts(prev => prev.filter(t => t.id !== id));
   }, []);
 
-  const applyTheme = useCallback((mode) => {
-    setThemeMode(mode);
-    let actual = mode;
-    if (mode === 'system') {
-      actual = theme;
-    }
-    document.documentElement.setAttribute('data-theme', actual);
-  }, [theme]);
+  // Единая точка сохранения темы в конфиг бэкенда.
+  const saveThemeConfig = useCallback((themeValue) => {
+    api('POST', '/api/config', { theme: themeValue });
+  }, []);
 
   const toggleTheme = useCallback(() => {
-    setTheme(prev => {
-      const next = prev === 'dark' ? 'light' : 'dark';
-      if (themeMode === 'system') {
-        applyTheme('manual');
-        document.documentElement.setAttribute('data-theme', next);
-      } else {
-        document.documentElement.setAttribute('data-theme', next);
-        api('POST', '/api/config', { theme: next === 'dark' ? 'dark' : 'light' });
-      }
-      return next;
-    });
-  }, [themeMode, applyTheme]);
+    const next = theme === 'dark' ? 'light' : 'dark';
+    setTheme(next);
+    document.documentElement.setAttribute('data-theme', next);
+    // При выходе из режима "system" переходим на явную тему.
+    if (themeMode === 'system') {
+      setThemeMode('manual');
+    }
+    saveThemeConfig(next);
+  }, [theme, themeMode, saveThemeConfig]);
 
   // Theme init — run once after startup
   useEffect(() => {
@@ -98,50 +91,34 @@ export default function App() {
   }, [startupDone, status]);
 
   // Status polling (only after startup)
-  useEffect(() => {
+  const pollStatus = async () => {
     if (!startupDone) return;
-    let alive = true;
-    const poll = async () => {
-      const data = await api('GET', '/api/status');
-      if (!alive) return;
-      if (data) {
-        if (failCountRef.current > 0) console.log('[App] Backend reconnected');
-        failCountRef.current = 0;
-        setBackendOnline(true);
-        setStatus(data);
-      } else {
-        failCountRef.current++;
-        if (failCountRef.current === 3) {
-          setBackendOnline(false);
-        }
+    const data = await api('GET', '/api/status');
+    if (data) {
+      if (failCountRef.current > 0) console.log('[App] Backend reconnected');
+      failCountRef.current = 0;
+      setBackendOnline(true);
+      setStatus(data);
+    } else {
+      failCountRef.current++;
+      if (failCountRef.current === 3) {
+        setBackendOnline(false);
       }
-    };
-    poll();
-    const iv = setInterval(poll, 2000);
-    statusIntervalRef.current = iv;
-    return () => { alive = false; clearInterval(iv); };
-  }, [startupDone]);
+    }
+  };
+  usePolling(pollStatus, startupDone ? 2000 : 0);
 
   // Health check polling
-  useEffect(() => {
+  const pollHealth = async () => {
     if (!startupDone) return;
-    let alive = true;
-    const check = async () => {
-      const h = await api('GET', '/api/health');
-      if (!alive) return;
-      setHealthWarn(h && h.overall && h.overall !== 'healthy' ? h : null);
-    };
-    check();
-    const iv = setInterval(check, 30000);
-    return () => { alive = false; clearInterval(iv); };
-  }, [startupDone]);
+    const h = await api('GET', '/api/health');
+    setHealthWarn(h && h.overall && h.overall !== 'healthy' ? h : null);
+  };
+  usePolling(pollHealth, startupDone ? 30000 : 0);
 
   // Update available notification (from backend startup check)
   useEffect(() => {
     if (!startupDone) return;
-    const unsub = window.go?.main?.App?.EventsOn
-      ? null
-      : null;
     const handler = (data) => {
       if (data?.component && data?.latest) {
         const name = data.component === 'ZPUI' ? 'ZPUI' : t('nav.zapret');

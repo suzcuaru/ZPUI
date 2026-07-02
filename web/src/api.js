@@ -7,6 +7,8 @@
  * Также предоставляет createStream() для замены EventSource (SSE → Wails Events).
  */
 
+import { tr } from './i18n';
+
 // ─── Helpers ──────────────────────────────────────────
 
 function wailsApp() {
@@ -222,7 +224,7 @@ export async function apiCall(fn, successMsg, showToast) {
     if (successMsg && showToast) showToast(successMsg, 'success');
     return true;
   } catch {
-    if (showToast) showToast('Ошибка выполнения запроса', 'error');
+    if (showToast) showToast(tr('toast.requestFailed'), 'error');
     return false;
   }
 }
