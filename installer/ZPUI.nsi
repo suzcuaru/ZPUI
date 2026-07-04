@@ -13,9 +13,12 @@
 !ifndef ICON
   !define ICON "build\windows\icon.ico"
 !endif
+!ifndef OUTDIR
+  !define OUTDIR "..\build"
+!endif
 
 Name "ZPUI"
-OutFile "build\ZPUI-Setup-${VERSION}.exe"
+OutFile "${OUTDIR}\ZPUI-Setup-${VERSION}.exe"
 Unicode True
 RequestExecutionLevel user
 InstallDir "$LOCALAPPDATA\Programs\ZPUI"
