@@ -58,6 +58,10 @@ jobs:
           -ldflags "-s -w -H windowsgui -X main.version=${{ steps.ver.outputs.version }}"
           -trimpath
 
+      - name: Copy Wails output to root
+        shell: pwsh
+        run: Copy-Item build/bin/zpui.exe zpui.exe
+
       - name: Build satellites
         run: |
           $ld = "-s -w -H windowsgui -X main.version=${{ steps.ver.outputs.version }}"
