@@ -97,12 +97,31 @@ jobs:
         shell: pwsh
         run: |
           $v = "${{ steps.ver.outputs.version }}"
-          & "C:\Program Files (x86)\NSIS\makensis.exe" `
-            /DVERSION=$v `
-            /DDIST="$PWD/build/dist" `
-            /DICON="$PWD/build/windows/icon.ico" `
-            installer/ZPUI.nsi
-          Test-Path "build/ZPUI-Setup-$v.exe"
+
+          function Find-Makensis {
+            $paths = @(
+              "C:\Program Files (x86)\NSIS\makensis.exe",
+              "C:\Program Files\NSIS\makensis.exe"
+            )
+            $hit = $paths | Where-Object { Test-Path $_ } | Select-Object -First 1
+            if ($hit) { return $hit }
+            $cmd = Get-Command makensis -ErrorAction SilentlyContinue
+            if ($cmd) { return $cmd.Source }
+            return $null
+          }
+
+          $makensis = Find-Makensis
+          if (-not $makensis) {
+            Write-Host "NSIS not found, installing via Chocolatey..."
+            choco install nsis -y --no-progress
+            $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+            $makensis = Find-Makensis
+          }
+          if (-not $makensis) { Write-Error "makensis not found after install"; exit 1 }
+          Write-Host "Using makensis: $makensis"
+
+          & $makensis /DVERSION=$v /DDIST="$PWD/build/dist" /DICON="$PWD/build/windows/icon.ico" installer/ZPUI.nsi
+          if (-not (Test-Path "build/ZPUI-Setup-$v.exe")) { Write-Error "Installer was not created"; exit 1 }
 
       - name: Build portable zip
         shell: pwsh
