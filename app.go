@@ -144,35 +144,50 @@ func (a *App) startup(ctx context.Context) {
 
 // checkUpdatesOnStartup проверяет обновления ZPUI и zapret через 10с после старта.
 // Эмитит Wails event "update:available" если найдено обновление.
+// Уведомления дедуплицируются: тост показывается один раз на каждую новую версию.
 func (a *App) checkUpdatesOnStartup() {
 	time.Sleep(10 * time.Second)
 
-	if remote, err := updater.FetchRemoteVersions(); err == nil {
-		if remote.ZPUI != "" && remote.ZPUI != a.version {
-			runtime.EventsEmit(a.ctx, "update:available", map[string]interface{}{
-				"component": "ZPUI",
-				"current":   a.version,
-				"latest":    remote.ZPUI,
-			})
-			a.log.Info("updater", fmt.Sprintf("ZPUI update available: %s -> %s", a.version, remote.ZPUI))
+	// --- ZPUI ---
+	remote, err := updater.FetchRemoteVersions()
+	if err != nil {
+		a.log.Warn("updater", "ZPUI update check failed: "+err.Error())
+	} else if remote.ZPUI != "" && updater.IsNewer(a.version, remote.ZPUI) {
+		last := a.cfg.GetLastNotifiedVersion("ZPUI")
+		runtime.EventsEmit(a.ctx, "update:available", map[string]interface{}{
+			"component": "ZPUI",
+			"current":   a.version,
+			"latest":    remote.ZPUI,
+		})
+		a.log.Info("updater", fmt.Sprintf("ZPUI update available: %s -> %s", a.version, remote.ZPUI))
+		if last != remote.ZPUI {
+			a.cfg.SetLastNotifiedVersion("ZPUI", remote.ZPUI)
 			if a.cfg.ShouldNotify("zpui_update") {
 				lang := a.cfg.GetLanguage()
-				notify.Show("ZPUI", tr(lang, "zpui_update", remote.ZPUI))
+				notify.Show("ZPUI", tr(lang, "zpui_update", a.version, remote.ZPUI))
 			}
 		}
 	}
 
+	// --- Zapret ---
 	if !a.cfg.GetZapretSkipped() {
-		if info, err := a.zapret.CheckForUpdates(); err == nil && info != nil && info.UpdateNeeded {
+		info, err := a.zapret.CheckForUpdates()
+		if err != nil {
+			a.log.Warn("updater", "Zapret update check failed: "+err.Error())
+		} else if info != nil && info.UpdateNeeded {
+			last := a.cfg.GetLastNotifiedVersion("zapret")
 			runtime.EventsEmit(a.ctx, "update:available", map[string]interface{}{
 				"component": "zapret",
 				"current":   info.CurrentVersion,
 				"latest":    info.LatestVersion,
 			})
 			a.log.Info("updater", fmt.Sprintf("Zapret update available: %s -> %s", info.CurrentVersion, info.LatestVersion))
-		if a.cfg.ShouldNotify("zapret_update") {
-				lang := a.cfg.GetLanguage()
-				notify.Show("Zapret", tr(lang, "zapret_update", info.LatestVersion))
+			if last != info.LatestVersion {
+				a.cfg.SetLastNotifiedVersion("zapret", info.LatestVersion)
+				if a.cfg.ShouldNotify("zapret_update") {
+					lang := a.cfg.GetLanguage()
+					notify.Show("Zapret", tr(lang, "zapret_update", info.CurrentVersion, info.LatestVersion))
+				}
 			}
 		}
 
@@ -188,7 +203,7 @@ func (a *App) checkUpdatesOnStartup() {
 			runtime.EventsEmit(a.ctx, "zapret:files-missing", map[string]interface{}{
 				"missing": missing,
 			})
-		if a.cfg.ShouldNotify("missing_files") {
+			if a.cfg.ShouldNotify("missing_files") {
 				lang := a.cfg.GetLanguage()
 				notify.Show("Zapret", tr(lang, "missing_files", len(missing)))
 			}

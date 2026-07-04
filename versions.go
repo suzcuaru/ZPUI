@@ -105,7 +105,7 @@ func (a *App) CheckZPUIUpdate() map[string]interface{} {
 			"repo_available": false,
 		}
 	}
-	needed := remote.ZPUI != "" && remote.ZPUI != a.version
+	needed := remote.ZPUI != "" && updater.IsNewer(a.version, remote.ZPUI)
 	return map[string]interface{}{
 		"current":        a.version,
 		"latest":         remote.ZPUI,
@@ -166,11 +166,12 @@ func (a *App) UpdateComponent(name string) map[string]interface{} {
 
 	switch name {
 	case "ZPUI":
+		selfUpdate := filepath.Join(exeDir, "selfupdate.exe")
+		if _, err := os.Stat(selfUpdate); err != nil {
+			return map[string]interface{}{"error": "selfupdate.exe не найден"}
+		}
 		go func() {
-			selfUpdate := filepath.Join(exeDir, "selfupdate.exe")
-			if _, err := os.Stat(selfUpdate); err == nil {
-				executil.HiddenCmd(selfUpdate).Start()
-			}
+			executil.HiddenCmd(selfUpdate).Start()
 		}()
 		return map[string]interface{}{"status": "selfupdate_started"}
 

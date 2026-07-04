@@ -4,8 +4,8 @@ import "fmt"
 
 var notifyTr = map[string]map[string]string{
 	"ru": {
-		"zpui_update":    "Доступно обновление: %s",
-		"zapret_update":  "Доступно обновление: %s",
+		"zpui_update":    "Доступно обновление ZPUI: %s → %s",
+		"zapret_update":  "Доступно обновление Zapret: %s → %s",
 		"missing_files":  "Отсутствует файлов: %d. Откройте Настройки для переустановки.",
 		"resource_drop":  "Доступность ресурсов упала до %d%%",
 		"test_title":     "ZPUI",
@@ -13,8 +13,8 @@ var notifyTr = map[string]map[string]string{
 		"test_complete":  "Тест стратегий завершён",
 	},
 	"en": {
-		"zpui_update":    "Update available: %s",
-		"zapret_update":  "Update available: %s",
+		"zpui_update":    "ZPUI update available: %s → %s",
+		"zapret_update":  "Zapret update available: %s → %s",
 		"missing_files":  "Missing %d file(s). Open Settings to reinstall.",
 		"resource_drop":  "Resource availability dropped to %d%%",
 		"test_title":     "ZPUI",

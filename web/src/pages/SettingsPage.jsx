@@ -56,7 +56,7 @@ export default function SettingsPage({ status, showToast }) {
     setZpuiCheck({ state: 'checking', current: versions?.zpui, latest: null });
     const d = await api('GET', '/api/updates/check/zpui');
     if (d?.error || !d?.repo_available) {
-      setZpuiCheck({ state: 'latest', current: versions?.zpui, latest: versions?.zpui });
+      setZpuiCheck({ state: 'error', current: versions?.zpui, latest: null });
       return;
     }
     setZpuiCheck({
@@ -70,9 +70,9 @@ export default function SettingsPage({ status, showToast }) {
     setZapretCheck({ state: 'checking', current: status?.zapret?.version, latest: null });
     const d = await api('GET', '/api/updates/check/zapret');
     if (d?.error) { setZapretCheck({ state: 'error', current: status?.zapret?.version, latest: null }); return; }
-    const latest = d?.latest_version || d?.version || d?.latest;
-    const hasUpdate = d?.update_available || d?.has_update || (latest && latest !== status?.zapret?.version);
-    setZapretCheck({ state: hasUpdate ? 'available' : 'latest', current: status?.zapret?.version, latest: latest || status?.zapret?.version });
+    const latest = d?.latest_version || d?.latest;
+    const hasUpdate = d?.update_needed === true;
+    setZapretCheck({ state: hasUpdate ? 'available' : 'latest', current: d?.current_version || status?.zapret?.version, latest: latest || status?.zapret?.version });
   };
 
   const handleApplyUpdate = async () => {
@@ -281,19 +281,19 @@ export default function SettingsPage({ status, showToast }) {
           </div>
           {config.notifications_enabled !== false && (
             <div className="set-notif-grid">
-              <CompactNotif label={t('settings.notifZpuiUpdates')} title={t('settings.notifZpuiUpdatesDesc')}
+              <CompactNotif label={t('settings.notifZpuiUpdates')}
                 checked={config.notify_zpui_updates !== false}
                 onChange={() => update({ notify_zpui_updates: !config.notify_zpui_updates })} />
-              <CompactNotif label={t('settings.notifZapretUpdates')} title={t('settings.notifZapretUpdatesDesc')}
+              <CompactNotif label={t('settings.notifZapretUpdates')}
                 checked={config.notify_zapret_updates !== false}
                 onChange={() => update({ notify_zapret_updates: !config.notify_zapret_updates })} />
-              <CompactNotif label={t('settings.notifMissingFiles')} title={t('settings.notifMissingFilesDesc')}
+              <CompactNotif label={t('settings.notifMissingFiles')}
                 checked={config.notify_missing_files !== false}
                 onChange={() => update({ notify_missing_files: !config.notify_missing_files })} />
-              <CompactNotif label={t('settings.notifServiceStatus')} title={t('settings.notifServiceStatusDesc')}
+              <CompactNotif label={t('settings.notifServiceStatus')}
                 checked={config.notify_service_status === true}
                 onChange={() => update({ notify_service_status: !config.notify_service_status })} />
-              <div className={'set-cnotiff-wide' + (config.notify_resource_drop ? '' : ' dimmed')} data-tooltip={t('settings.notifResourceDropDesc')}>
+              <div className={'set-cnotiff-wide' + (config.notify_resource_drop ? '' : ' dimmed')}>
                 <div className="cnotiff-left">
                   <Switch checked={config.notify_resource_drop === true}
                     onChange={() => update({ notify_resource_drop: !config.notify_resource_drop })} />
@@ -324,9 +324,9 @@ function MiniRow({ label, children }) {
   );
 }
 
-function CompactNotif({ label, title, checked, onChange }) {
+function CompactNotif({ label, checked, onChange }) {
   return (
-    <div className="set-cnotiff" data-tooltip={title}>
+    <div className="set-cnotiff">
       <span className="set-cnotiff-label">{label}</span>
       <Switch checked={checked} onChange={onChange} />
     </div>

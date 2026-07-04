@@ -11,7 +11,8 @@ import (
 )
 
 const (
-	versionsURL = "https://api.github.com/repos/suzcuaru/ZPUI/releases/latest"
+	githubAPIURL = "https://api.github.com/repos/suzcuaru/ZPUI/releases/latest"
+	userAgent    = "ZPUI/updater"
 )
 
 type RemoteVersions struct {
@@ -28,54 +29,92 @@ type releaseAsset struct {
 }
 
 type releaseInfo struct {
-	TagName string          `json:"tag_name"`
-	Assets  []releaseAsset  `json:"assets"`
+	TagName string         `json:"tag_name"`
+	Assets  []releaseAsset `json:"assets"`
 }
 
 type ComponentUpdateStatus struct {
-	Name         string `json:"name"`
-	Current      string `json:"current"`
-	Latest       string `json:"latest"`
-	NeedsUpdate  bool   `json:"needs_update"`
-	DownloadURL  string `json:"download_url"`
-	File         string `json:"file"`
+	Name        string `json:"name"`
+	Current     string `json:"current"`
+	Latest      string `json:"latest"`
+	NeedsUpdate bool   `json:"needs_update"`
+	DownloadURL string `json:"download_url"`
+	File        string `json:"file"`
 }
 
-func FetchRemoteVersions() (*RemoteVersions, error) {
-	client := &http.Client{Timeout: 15 * time.Second}
-	req, _ := http.NewRequest("GET", versionsURL, nil)
+func newGitHubRequest(url string) (*http.Request, error) {
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
 	req.Header.Set("Accept", "application/vnd.github+json")
+	req.Header.Set("User-Agent", userAgent)
+	return req, nil
+}
+
+// fetchReleaseInfo получает информацию о последнем релизе с проверкой статуса.
+func fetchReleaseInfo() (*releaseInfo, error) {
+	client := &http.Client{Timeout: 15 * time.Second}
+	req, err := newGitHubRequest(githubAPIURL)
+	if err != nil {
+		return nil, err
+	}
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("github api вернул статус %d", resp.StatusCode)
+	}
+
 	var rel releaseInfo
 	if err := json.NewDecoder(resp.Body).Decode(&rel); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("разбор ответа github: %w", err)
 	}
+	return &rel, nil
+}
 
-	versionsURL := ""
-	for _, a := range rel.Assets {
-		if a.Name == "versions.json" {
-			versionsURL = a.BrowserDownloadURL
-			break
+func findAsset(assets []releaseAsset, name string) string {
+	for _, a := range assets {
+		if a.Name == name {
+			return a.BrowserDownloadURL
 		}
 	}
-	if versionsURL == "" {
-		return nil, fmt.Errorf("versions.json not found in release assets")
-	}
+	return ""
+}
 
-	resp2, err := http.Get(versionsURL)
+func FetchRemoteVersions() (*RemoteVersions, error) {
+	rel, err := fetchReleaseInfo()
 	if err != nil {
 		return nil, err
 	}
-	defer resp2.Body.Close()
+
+	vURL := findAsset(rel.Assets, "versions.json")
+	if vURL == "" {
+		return nil, fmt.Errorf("versions.json не найден в assets релиза %s", rel.TagName)
+	}
+
+	client := &http.Client{Timeout: 15 * time.Second}
+	req, err := http.NewRequest("GET", vURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("User-Agent", userAgent)
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("versions.json: статус %d", resp.StatusCode)
+	}
 
 	var rv RemoteVersions
-	if err := json.NewDecoder(resp2.Body).Decode(&rv); err != nil {
-		return nil, err
+	if err := json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&rv); err != nil {
+		return nil, fmt.Errorf("разбор versions.json: %w", err)
 	}
 	return &rv, nil
 }
@@ -106,19 +145,13 @@ func CheckAllComponents(localVersions map[string]string, exeDir string) ([]Compo
 	var result []ComponentUpdateStatus
 
 	for _, key := range order {
-		current := localVersions[key]
-		latest := remoteMap[key]
-		if current == "" {
-			current = "0.0.0"
-		}
-		if latest == "" {
-			latest = current
-		}
-		needs := latest != current && latest != "0.0.0" && latest != ""
+		current := normalizeVersion(localVersions[key])
+		latest := normalizeVersion(remoteMap[key])
+		needs := latest != "" && IsNewer(current, latest)
 
 		result = append(result, ComponentUpdateStatus{
 			Name:        key,
-			Current:     current,
+			Current:     localVersions[key],
 			Latest:      latest,
 			NeedsUpdate: needs,
 			File:        fileMap[key],
@@ -161,7 +194,11 @@ func ReplaceSatellite(exeDir, name string) error {
 		return fmt.Errorf("no remote version for %s", name)
 	}
 
-	downloadURL := findAssetURL(name, fileName)
+	rel, err := fetchReleaseInfo()
+	if err != nil {
+		return fmt.Errorf("failed to fetch release info: %w", err)
+	}
+	downloadURL := findAsset(rel.Assets, fileName)
 	if downloadURL == "" {
 		return fmt.Errorf("no download URL for %s", fileName)
 	}
@@ -171,7 +208,6 @@ func ReplaceSatellite(exeDir, name string) error {
 		return fmt.Errorf("download failed: %w", err)
 	}
 
-	// Backup current version before replacing
 	bm := NewBackupManager(exeDir)
 	if _, err := os.Stat(targetPath); err == nil {
 		bm.BackupComponent("satellite_"+name, "pre-update", "satellite", []string{targetPath})
@@ -187,40 +223,28 @@ func ReplaceSatellite(exeDir, name string) error {
 	return nil
 }
 
-func findAssetURL(name, fileName string) string {
-	client := &http.Client{Timeout: 15 * time.Second}
-	req, _ := http.NewRequest("GET", versionsURL, nil)
-	req.Header.Set("Accept", "application/vnd.github+json")
-	resp, err := client.Do(req)
-	if err != nil {
-		return ""
-	}
-	defer resp.Body.Close()
-
-	var rel releaseInfo
-	if err := json.NewDecoder(resp.Body).Decode(&rel); err != nil {
-		return ""
-	}
-
-	for _, a := range rel.Assets {
-		if a.Name == fileName {
-			return a.BrowserDownloadURL
-		}
-	}
-	return ""
-}
-
 func downloadFile(url, dest string) error {
-	resp, err := http.Get(url)
+	client := &http.Client{Timeout: 5 * time.Minute}
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("User-Agent", userAgent)
+	resp, err := client.Do(req)
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("статус %d при загрузке %s", resp.StatusCode, filepath.Base(dest))
+	}
+
 	out, err := os.Create(dest)
 	if err != nil {
 		return err
 	}
 	defer out.Close()
-	_, err = io.Copy(out, resp.Body)
+	_, err = io.Copy(out, io.LimitReader(resp.Body, 100<<20))
 	return err
 }

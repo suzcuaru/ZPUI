@@ -70,6 +70,11 @@ type Config struct {
 	NotifyResourceDrop  bool `json:"notify_resource_drop"`
 	ResourceDropPct     int  `json:"resource_drop_pct"`
 
+	// Последняя версия, о которой уже отправлено уведомление (дедупликация
+	// между запусками, чтобы не спамить тостом при каждом старте).
+	LastNotifiedZPUIVersion   string `json:"last_notified_zpui_version"`
+	LastNotifiedZapretVersion string `json:"last_notified_zapret_version"`
+
 	ShowStrategyColors bool `json:"show_strategy_colors"`
 	ShowStrategyModal  bool `json:"show_strategy_modal"`
 	NotifyStrategyTest bool `json:"notify_strategy_test"`
@@ -313,6 +318,35 @@ func (c *Config) SetNotifyFlags(flags map[string]bool) error {
 	}
 	if v, ok := flags["notify_resource_drop"]; ok {
 		c.NotifyResourceDrop = v
+	}
+	return c.save()
+}
+
+// GetLastNotifiedVersion возвращает последнюю версию компонента, о которой
+// уже было отправлено уведомление (или "" если уведомлений не было).
+func (c *Config) GetLastNotifiedVersion(component string) string {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	switch component {
+	case "ZPUI":
+		return c.LastNotifiedZPUIVersion
+	case "zapret":
+		return c.LastNotifiedZapretVersion
+	}
+	return ""
+}
+
+// SetLastNotifiedVersion сохраняет версию, о которой отправлено уведомление.
+func (c *Config) SetLastNotifiedVersion(component, version string) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	switch component {
+	case "ZPUI":
+		c.LastNotifiedZPUIVersion = version
+	case "zapret":
+		c.LastNotifiedZapretVersion = version
+	default:
+		return nil
 	}
 	return c.save()
 }

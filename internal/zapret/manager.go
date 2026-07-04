@@ -251,11 +251,26 @@ func detectZapretVersion(cfg *config.Config) string {
 	lines := strings.Split(string(data), "\n")
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
-		if strings.Contains(line, "LOCAL_VERSION") {
+		if line == "" {
+			continue
+		}
+		// Пропускаем комментарии (.bat): REM, ::, #
+		upper := strings.ToUpper(line)
+		if strings.HasPrefix(upper, "REM ") || strings.HasPrefix(upper, "::") || strings.HasPrefix(line, "#") {
+			continue
+		}
+		if strings.Contains(upper, "LOCAL_VERSION") {
 			parts := strings.SplitN(line, "=", 2)
 			if len(parts) == 2 {
-				v := strings.Trim(strings.TrimSpace(parts[1]), `"`)
-				return v
+				v := strings.TrimSpace(parts[1])
+				// Обрезаем возможный inline-комментарий
+				if idx := strings.IndexAny(v, "&"); idx >= 0 {
+					v = v[:idx]
+				}
+				v = strings.Trim(strings.TrimSpace(v), `"`)
+				if v != "" {
+					return v
+				}
 			}
 		}
 	}

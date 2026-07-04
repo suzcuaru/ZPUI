@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"zpui/internal/executil"
+	"zpui/internal/updater"
 )
 
 type ProgressFn func(downloaded, total int64)
@@ -50,9 +51,15 @@ func (m *Manager) CheckForUpdates() (*UpdateInfo, error) {
 		if resp.StatusCode == 200 {
 			body, _ := io.ReadAll(resp.Body)
 			info.LatestVersion = strings.TrimSpace(string(body))
-			info.UpdateNeeded = info.CurrentVersion != info.LatestVersion
 		}
 		resp.Body.Close()
+	}
+
+	// Решение об обновлении: только семвер-сравнение.
+	// "unknown"/пустая текущая версия — не считаем обновлением, чтобы избежать
+	// ложных уведомлений сразу после неполной/первой установки.
+	if info.LatestVersion != "" && info.CurrentVersion != "" && info.CurrentVersion != "unknown" {
+		info.UpdateNeeded = updater.IsNewer(info.CurrentVersion, info.LatestVersion)
 	}
 
 	// Get actual download URL + fallbacks from GitHub API

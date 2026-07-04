@@ -53,7 +53,7 @@ func CheckModUpdate(id, name, currentVersion, repository string) (*ModUpdateInfo
 		}, nil
 	}
 
-	needsUpdate := latestVer != currentVersion && latestVer != "0.0.0" && latestVer != ""
+	needsUpdate := latestVer != "" && IsNewer(currentVersion, latestVer)
 
 	return &ModUpdateInfo{
 		ID:          id,
