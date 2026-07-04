@@ -54,7 +54,7 @@ jobs:
 
       - name: Build ZPUI core (Wails)
         run: >
-          wails build -Platform windows/amd64 -s -skipbindings -o zpui.exe
+          wails build -platform windows/amd64 -s -skipbindings -o zpui.exe
           -ldflags "-s -w -H windowsgui -X main.version=${{ steps.ver.outputs.version }}"
           -trimpath
 
