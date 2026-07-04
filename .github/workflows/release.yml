@@ -58,10 +58,6 @@ jobs:
           -ldflags "-s -w -H windowsgui -X main.version=${{ steps.ver.outputs.version }}"
           -trimpath
 
-      - name: Copy Wails output to root
-        shell: pwsh
-        run: Copy-Item build/bin/zpui.exe zpui.exe
-
       - name: Build satellites
         run: |
           $ld = "-s -w -H windowsgui -X main.version=${{ steps.ver.outputs.version }}"
@@ -76,7 +72,20 @@ jobs:
           $v = "${{ steps.ver.outputs.version }}"
           $dist = "build/dist"
           New-Item -ItemType Directory -Path $dist -Force | Out-Null
-          Copy-Item zpui.exe, wizard.exe, autoselect.exe, selfupdate.exe, zapretupdate.exe -Destination $dist
+
+          # Wails outputs to build/bin/zpui.exe; copy to root if missing there
+          if (-not (Test-Path zpui.exe) -and (Test-Path build/bin/zpui.exe)) {
+            Copy-Item build/bin/zpui.exe zpui.exe
+          }
+
+          # Verify every required binary exists before packaging
+          $exes = 'zpui.exe','wizard.exe','autoselect.exe','selfupdate.exe','zapretupdate.exe'
+          $missing = @($exes | Where-Object { -not (Test-Path $_) })
+          if ($missing.Count -gt 0) {
+            Write-Error "Missing binaries: $($missing -join ', ')"; exit 1
+          }
+
+          Copy-Item $exes -Destination $dist
           $json = [ordered]@{
             zpui=$v; wizard=$v; autoselect=$v; selfupdate=$v; zapretupdate=$v
           } | ConvertTo-Json
@@ -85,12 +94,15 @@ jobs:
           Get-ChildItem $dist -Recurse | Select-Object FullName
 
       - name: Build installer (NSIS)
+        shell: pwsh
         run: |
+          $v = "${{ steps.ver.outputs.version }}"
           & "C:\Program Files (x86)\NSIS\makensis.exe" `
-            /DVERSION=${{ steps.ver.outputs.version }} `
-            /DDIST=build/dist `
-            /DICON=build/windows/icon.ico `
+            /DVERSION=$v `
+            /DDIST="$PWD/build/dist" `
+            /DICON="$PWD/build/windows/icon.ico" `
             installer/ZPUI.nsi
+          Test-Path "build/ZPUI-Setup-$v.exe"
 
       - name: Build portable zip
         shell: pwsh
