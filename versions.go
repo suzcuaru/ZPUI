@@ -25,6 +25,21 @@ type VersionsManifest struct {
 
 func (a *App) GetVersions() map[string]interface{} {
 	manifest := a.loadVersionsManifest()
+	exeDir := a.getExeDir()
+
+	satFiles := map[string]string{
+		"wizard":       "wizard.exe",
+		"autoselect":   "autoselect.exe",
+		"selfupdate":   "selfupdate.exe",
+		"zapretupdate": "zapretupdate.exe",
+	}
+
+	installed := map[string]bool{}
+	for key, file := range satFiles {
+		_, err := os.Stat(filepath.Join(exeDir, file))
+		installed[key] = err == nil
+	}
+
 	return map[string]interface{}{
 		"components": []ComponentVersion{
 			{Name: "ZPUI", Version: a.version, File: "zpui.exe"},
@@ -38,6 +53,7 @@ func (a *App) GetVersions() map[string]interface{} {
 		"autoselect":   manifest.AutoSelect,
 		"selfupdate":   manifest.SelfUpdate,
 		"zapretupdate": manifest.ZapretUpdate,
+		"installed":    installed,
 	}
 }
 

@@ -58,6 +58,7 @@ func (m *Manager) CheckForUpdates() (*UpdateInfo, error) {
 	// Get actual download URL + fallbacks from GitHub API
 	req, _ := http.NewRequest("GET", githubAPIReleases, nil)
 	req.Header.Set("Accept", "application/json")
+	req.Header.Set("User-Agent", "ZPUI/1.0")
 	if resp, err := client.Do(req); err == nil {
 		if resp.StatusCode == 200 {
 			body, _ := io.ReadAll(resp.Body)
@@ -89,8 +90,8 @@ func (m *Manager) CheckForUpdates() (*UpdateInfo, error) {
 		resp.Body.Close()
 	}
 
-	if info.DownloadURL == "" {
-		return nil, fmt.Errorf("не удалось получить ссылку на скачивание Запрета")
+	if info.LatestVersion == "" {
+		return nil, fmt.Errorf("не удалось получить версию Запрета")
 	}
 
 	return info, nil
@@ -127,10 +128,30 @@ func (m *Manager) PerformUpdate(progress chan<- UpdateProgress) error {
 
 	sendProgress(progress, "Downloading update", 30)
 	tempZip := filepath.Join(os.TempDir(), "zapret-update.zip")
-	if err := downloadFile(info.DownloadURL, tempZip); err != nil {
+	urls := []string{info.DownloadURL}
+	urls = append(urls, info.FallbackURLs...)
+
+	var dlErr error
+	downloaded := false
+	for _, u := range urls {
+		if u == "" {
+			continue
+		}
+		if err := downloadFile(u, tempZip); err != nil {
+			dlErr = err
+			m.log.Warn("updater", "Download failed ("+u[:min(len(u), 60)]+"): "+err.Error())
+			continue
+		}
+		downloaded = true
+		break
+	}
+	if !downloaded {
+		if dlErr == nil {
+			dlErr = fmt.Errorf("нет доступных URL для скачивания")
+		}
 		m.RestoreState(snap)
-		progress <- UpdateProgress{Step: "Error", Error: fmt.Sprintf("Download failed: %v", err)}
-		return err
+		progress <- UpdateProgress{Step: "Error", Error: fmt.Sprintf("Download failed: %v", dlErr)}
+		return dlErr
 	}
 	m.log.Info("updater", "Download complete")
 

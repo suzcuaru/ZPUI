@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { api } from '../api';
 import { formatBytes } from '../utils';
 import { useT } from '../i18n';
@@ -7,18 +7,44 @@ export default function DashboardPage({ status, showToast, onNavigate }) {
   const { t } = useT();
   const [resources, setResources] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [lastCheck, setLastCheck] = useState(null);
+  const [rechecking, setRechecking] = useState(false);
+  const [availStd, setAvailStd] = useState([]);
+  const [availUser, setAvailUser] = useState([]);
 
   const fetchResources = useCallback(async () => {
     const data = await api('GET', '/api/resource-status');
     if (data) setResources(data);
+    setLastCheck(new Date());
     setLoading(false);
+  }, []);
+
+  const fetchAvailHistory = useCallback(async () => {
+    const [std, usr] = await Promise.all([
+      api('GET', '/api/availability/history?hours=24&type=standard'),
+      api('GET', '/api/availability/history?hours=24&type=user'),
+    ]);
+    if (std?.records) setAvailStd(std.records);
+    if (usr?.records) setAvailUser(usr.records);
   }, []);
 
   useEffect(() => {
     fetchResources();
+    fetchAvailHistory();
     const iv = setInterval(fetchResources, 10000);
     return () => clearInterval(iv);
-  }, [fetchResources]);
+  }, [fetchResources, fetchAvailHistory]);
+
+  const handleRecheck = async () => {
+    setRechecking(true);
+    await fetchResources();
+    setRechecking(false);
+  };
+
+  const fmtTime = (d) => {
+    if (!d) return '—';
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  };
 
   const zRun = status?.zapret?.status === 'running';
   const pRun = status?.proxy?.running === true;
@@ -44,6 +70,7 @@ export default function DashboardPage({ status, showToast, onNavigate }) {
 
   return (
     <>
+      <div className="page-title">{t('dashboard.title')}</div>
       <div className="page-grid-3">
         <div className={'svc-card' + (zRun ? ' on' : '')} onClick={() => onNavigate('zapret')}>
           <div className="svc-card-icon">
@@ -63,8 +90,8 @@ export default function DashboardPage({ status, showToast, onNavigate }) {
           </div>
           <div className="svc-card-body">
             <span className="svc-card-name">{t('nav.proxy')}</span>
-            <span className={'svc-card-state ' + (pRun ? 'on' : 'off')}>{pRun ? ':' + (status?.proxy?.port || '') : t('status.stopped')}</span>
-            <span className="svc-card-sub">{pRun ? `${status?.proxy?.devices || 0} ${t('proxy.devicesSuffix')}` : '—'}</span>
+            <span className={'svc-card-state ' + (pRun ? 'on' : 'off')}>{pRun ? t('status.running') : t('status.stopped')}</span>
+            <span className="svc-card-sub mono">{pRun ? ':' + (status?.proxy?.port || '') : '—'}</span>
           </div>
           <span className={'svc-card-dot ' + (pRun ? 'on' : 'off')} />
         </div>
@@ -83,7 +110,17 @@ export default function DashboardPage({ status, showToast, onNavigate }) {
       </div>
 
       <div className="card-section">
-        <div className="card-section-title">{t('dashboard.resourceAvailability')}</div>
+        <div className="db-res-head">
+          <span className="card-section-title">{t('dashboard.resourceAvailability')}</span>
+          <div className="db-res-meta">
+            <span className="db-res-time">{t('dashboard.lastCheck')}: {fmtTime(lastCheck)}</span>
+            <button className={'db-res-recheck' + (rechecking ? ' spinning' : '')} onClick={handleRecheck} disabled={rechecking}>
+              {rechecking ? <span className="mini-spin" /> : (
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+              )}
+            </button>
+          </div>
+        </div>
         <div className="db-resource-row">
           <div className="db-resource-item">
             <span className="db-resource-pct" style={{ color: defPct >= 80 ? 'var(--success)' : defPct >= 50 ? 'var(--warning)' : 'var(--danger)' }}>
@@ -100,6 +137,10 @@ export default function DashboardPage({ status, showToast, onNavigate }) {
             <span className="db-resource-label">{t('dashboard.custom')}</span>
             <span className="db-resource-sub">{userOk}/{userRes.length}</span>
           </div>
+        </div>
+        <div className="db-mini-charts">
+          <MiniSpark records={availStd} color="var(--accent)" />
+          <MiniSpark records={availUser} color="var(--success)" />
         </div>
       </div>
 
@@ -123,12 +164,37 @@ export default function DashboardPage({ status, showToast, onNavigate }) {
 
       {!allOk && !loading && (
         <div className="card-section" style={{ gap: 6 }}>
-          {fails.slice(0, 20).map((r, i) => (
-            <span key={i} className="db-fail-tag">{r.name}</span>
-          ))}
+          <div className="db-fail-grid">
+            {fails.slice(0, 20).map((r, i) => (
+              <span key={i} className="db-fail-tag">{r.name}</span>
+            ))}
+          </div>
           {fails.length > 20 && <span className="db-fail-more">+{fails.length - 20}</span>}
         </div>
       )}
     </>
+  );
+}
+
+function MiniSpark({ records, color }) {
+  const path = useMemo(() => {
+    if (records.length < 2) return null;
+    const w = 140, h = 28;
+    const pts = records.map((r, i) => {
+      const x = (i / (records.length - 1)) * w;
+      const y = h - (r.pct / 100) * (h - 4) - 2;
+      return `${x},${y}`;
+    });
+    return { line: pts.join(' '), fill: `M0,${h} L${pts.join(' L')} L${w},${h} Z` };
+  }, [records]);
+
+  if (!path) return <div className="mini-spark-wrap" />;
+  return (
+    <div className="mini-spark-wrap">
+      <svg width="140" height="28" viewBox="0 0 140 28" className="mini-spark">
+        <path d={path.fill} fill={color} fillOpacity="0.1" />
+        <polyline points={path.line} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    </div>
   );
 }

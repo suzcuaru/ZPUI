@@ -138,119 +138,131 @@ export default function StartupScreen({ onComplete }) {
     })) return;
     setProgress(STEP_PROGRESS.health);
 
-    // 3. Решение по службе + локальной копии
-    const hasService = await api('GET', '/api/zapret/system-service');
-    const hasLocal = await api('GET', '/api/zapret/local');
+    // 3-7. Запрет (пропускаем если zapret_skipped=true)
+    const zapretSkipped = cfg?.zapret_skipped === true;
+    let userSkipped = false;
 
-    if (hasService === true || hasService?.result === true) {
-      if (!(hasLocal === true || hasLocal?.result === true)) {
-        // Служба есть, локальной папки нет → предложить удалить
-        if (!await go('decide-service', async () => {
+    if (!zapretSkipped) {
+      // 3. Решение по службе + локальной копии
+      const hasService = await api('GET', '/api/zapret/system-service');
+      const hasLocal = await api('GET', '/api/zapret/local');
+
+      if (hasService === true || hasService?.result === true) {
+        if (!(hasLocal === true || hasLocal?.result === true)) {
+          setCurrentStep('decide-service');
+          setStepDone(false);
           setRemoveServicePrompt(true);
-          await waitForAction();
-        })) return;
-        setProgress(STEP_PROGRESS['decide-service']);
+          const removed = await waitForAction();
+          if (!aliveRef.current) return;
+          if (!removed) {
+            await api('POST', '/api/config', { zapret_skipped: true }).catch(() => null);
+            userSkipped = true;
+          }
+          setStepDone(true);
+        }
       }
-      // иначе (служба есть И локальная папка есть) — не трогаем службу
-    }
+      setProgress(STEP_PROGRESS['decide-service']);
 
-    // 4. Скачивание/установка локальной копии
-    if (!(hasLocal === true || hasLocal?.result === true)) {
-      if (!await go('install', async () => {
-        setDownloadProgress(null);
-        const rt = window.runtime;
-        let cleanup = null;
-        if (rt) {
-          const handler = (data) => setDownloadProgress(data);
-          rt.EventsOn('download:progress', handler);
-          cleanup = () => { try { rt.EventsOff('download:progress'); } catch {} };
-          eventsCleanupRef.current = cleanup;
+      if (!userSkipped) {
+        // 4. Скачивание/установка локальной копии
+        const hasLocal2 = await api('GET', '/api/zapret/local');
+        if (!(hasLocal2 === true || hasLocal2?.result === true)) {
+          if (!await go('install', async () => {
+            setDownloadProgress(null);
+            const rt = window.runtime;
+            let cleanup = null;
+            if (rt) {
+              const handler = (data) => setDownloadProgress(data);
+              rt.EventsOn('download:progress', handler);
+              cleanup = () => { try { rt.EventsOff('download:progress'); } catch {} };
+              eventsCleanupRef.current = cleanup;
+            }
+            const r = await api('POST', '/api/zapret/auto-install');
+            if (cleanup) cleanup();
+            eventsCleanupRef.current = null;
+            if (r?.error) throw new Error(r.error);
+            if (r?.start_error) throw new Error(tRef.current('startup.errors.zapretFailed', { error: r.start_error }));
+            installedNowRef.current = true;
+            setStepDone(true);
+          })) return;
         }
-        const r = await api('POST', '/api/zapret/auto-install');
-        if (cleanup) cleanup();
-        eventsCleanupRef.current = null;
-        if (r?.error) throw new Error(r.error);
-        if (r?.start_error) throw new Error(tRef.current('startup.errors.zapretFailed', { error: r.start_error }));
-        installedNowRef.current = true;
-        setStepDone(true);
-      })) return;
-    }
-    setProgress(STEP_PROGRESS['check-local']);
+        setProgress(STEP_PROGRESS['check-local']);
 
-    // 5. Установка службы с логом (если служба не установлена)
-    const serviceInstalledNow = await api('GET', '/api/zapret/system-service');
-    if (!(serviceInstalledNow === true || serviceInstalledNow?.result === true)) {
-      if (!await go('install-service', async () => {
-        const def = await api('GET', '/api/zapret/default-strategy').catch(() => null);
-        const strategy = def?.strategy || 'general (ALT).bat';
-        const r = await api('POST', '/api/zapret/install-service-logged', { strategy });
-        if (r?.error) {
-          const log = await api('GET', '/api/zapret/install-log');
-          setErrorLog(log?.lines || null);
-          throw new Error(tRef.current('startup.errors.serviceInstallFailed', { error: r.error }));
+        // 5. Установка службы с логом
+        const serviceInstalledNow = await api('GET', '/api/zapret/system-service');
+        if (!(serviceInstalledNow === true || serviceInstalledNow?.result === true)) {
+          if (!await go('install-service', async () => {
+            const def = await api('GET', '/api/zapret/default-strategy').catch(() => null);
+            const strategy = def?.strategy || 'general (ALT).bat';
+            const r = await api('POST', '/api/zapret/install-service-logged', { strategy });
+            if (r?.error) {
+              const log = await api('GET', '/api/zapret/install-log');
+              setErrorLog(log?.lines || null);
+              throw new Error(tRef.current('startup.errors.serviceInstallFailed', { error: r.error }));
+            }
+            if (r?.errors?.length) {
+              const log = await api('GET', '/api/zapret/install-log');
+              setErrorLog(log?.lines || null);
+              throw new Error(r.errors.join('\n'));
+            }
+            if (r && r.success === false) {
+              const log = await api('GET', '/api/zapret/install-log');
+              setErrorLog(log?.lines || null);
+              throw new Error(tRef.current('startup.errors.serviceInstallFailedLog'));
+            }
+            if (r && r.running === false) {
+              console.warn('[startup] service created but not running');
+            }
+            installedServiceRef.current = true;
+          })) return;
         }
-        if (r?.errors?.length) {
-          const log = await api('GET', '/api/zapret/install-log');
-          setErrorLog(log?.lines || null);
-          throw new Error(r.errors.join('\n'));
-        }
-        if (r && r.success === false) {
-          const log = await api('GET', '/api/zapret/install-log');
-          setErrorLog(log?.lines || null);
-          throw new Error(tRef.current('startup.errors.serviceInstallFailedLog'));
-        }
-        if (r && r.running === false) {
-          // Служба создана, но не отвечает — не критично, продолжим, но предупредим
-          console.warn('[startup] service created but not running');
-        }
-        installedServiceRef.current = true;
-      })) return;
-    }
-    setProgress(STEP_PROGRESS['install-service']);
+        setProgress(STEP_PROGRESS['install-service']);
 
-    // 6. Модалка "Запрет установлен vX" (только при первом запуске / если устанавливали сейчас)
-    const firstRun = !cfg?.first_run_done;
-    if (firstRun || installedNowRef.current || installedServiceRef.current) {
-      const status = await api('GET', '/api/status').catch(() => null);
-      const version = status?.zapret?.version || '—';
-      const strategy = status?.zapret?.strategy || 'general (ALT).bat';
+        // 6. Модалка "Запрет установлен vX"
+        const firstRun = !cfg?.first_run_done;
+        if (firstRun || installedNowRef.current || installedServiceRef.current) {
+          const status = await api('GET', '/api/status').catch(() => null);
+          const version = status?.zapret?.version || '—';
+          const strategy = status?.zapret?.strategy || 'general (ALT).bat';
 
-      // Показываем модалку и ждём решение пользователя
-      setCurrentStep('strategy-prompt');
-      setStepDone(false);
-      setInstallPrompt({ version, strategy });
-      const decision = await waitForAction();
-      setInstallPrompt(null);
-      if (!aliveRef.current) return;
-      setStepDone(true);
+          setCurrentStep('strategy-prompt');
+          setStepDone(false);
+          setInstallPrompt({ version, strategy });
+          const decision = await waitForAction();
+          setInstallPrompt(null);
+          if (!aliveRef.current) return;
+          setStepDone(true);
 
-      if (decision === 'strategy') {
-        // 7. Авто-подбор лучшей стратегии
-        if (!await go('auto-strategy', async () => {
-          await new Promise((resolve, reject) => {
-            const es = createStream('/api/autoselect/stream');
-            es.onmessage = (e) => {
-              const d = JSON.parse(e.data);
-              if (d.type === 'progress') {
-                setAutoSelect({ current: d.current, total: d.total, strategy: d.strategy, phase: d.phase });
-              } else if (d.type === 'result') {
-                setAutoSelect(prev => ({ ...prev, lastResult: d }));
-              } else if (d.type === 'done') {
-                es.close();
-                if (d.error) reject(new Error(d.error));
-                else resolve();
-              }
-            };
-            es.onerror = (err) => { es.close(); reject(err); };
-          });
-        })) return;
-        setAutoSelect(null);
+          if (decision === 'strategy') {
+            // 7. Авто-подбор
+            if (!await go('auto-strategy', async () => {
+              await new Promise((resolve, reject) => {
+                const es = createStream('/api/autoselect/stream');
+                es.onmessage = (e) => {
+                  const d = JSON.parse(e.data);
+                  if (d.type === 'progress') {
+                    setAutoSelect({ current: d.current, total: d.total, strategy: d.strategy, phase: d.phase });
+                  } else if (d.type === 'result') {
+                    setAutoSelect(prev => ({ ...prev, lastResult: d }));
+                  } else if (d.type === 'done') {
+                    es.close();
+                    if (d.error) reject(new Error(d.error));
+                    else resolve();
+                  }
+                };
+                es.onerror = (err) => { es.close(); reject(err); };
+              });
+            })) return;
+            setAutoSelect(null);
+          }
+
+          await api('POST', '/api/config', { first_run_done: true }).catch(() => null);
+        }
+        setProgress(STEP_PROGRESS['strategy-prompt']);
       }
-
-      // Отмечаем первый запуск выполненным
-      await api('POST', '/api/config', { first_run_done: true }).catch(() => null);
+    } else {
+      setProgress(STEP_PROGRESS['strategy-prompt']);
     }
-    setProgress(STEP_PROGRESS['strategy-prompt']);
 
     // 8. Готово
     if (!await go('done', async () => { await sleep(400); })) return;
@@ -306,9 +318,10 @@ export default function StartupScreen({ onComplete }) {
           <div className="startup-modal">
             <strong>{t('startup.serviceConflict.title')}</strong>
             <p>{t('startup.serviceConflict.desc')}</p>
+            <p style={{ fontSize: 11, opacity: 0.7 }}>{t('startup.serviceConflict.skipHint')}</p>
             <div className="startup-modal-actions">
               <button className="btn btn-danger btn-sm" onClick={handleRemoveService}>{t('startup.serviceConflict.remove')}</button>
-              <button className="btn btn-ghost btn-sm" onClick={handleSkipService}>{t('common.skip')}</button>
+              <button className="btn btn-ghost btn-sm" onClick={handleSkipService}>{t('startup.serviceConflict.workWithout')}</button>
             </div>
           </div>
         </div>

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { openExternal } from '../../api';
+import { useT } from '../../i18n';
 
 const DURATIONS = { success: 3000, info: 4000, error: 0 };
 const MAX_VISIBLE = 5;
@@ -24,6 +25,7 @@ function IconBug() {
 }
 
 function ToastItem({ toast, onRemove, version }) {
+  const { t } = useT();
   const [exiting, setExiting] = useState(false);
   const [progress, setProgress] = useState(100);
   const startRef = useRef(Date.now());
@@ -79,8 +81,8 @@ function ToastItem({ toast, onRemove, version }) {
         <div className="toast-msg">{toast.msg}</div>
         {toast.type === 'error' && (
           <div className="toast-actions">
-            <button className="toast-btn" title="Copy" onClick={copyText}><IconClip /></button>
-            <button className="toast-btn" title="Report bug" onClick={reportBug}><IconBug /></button>
+            <button className="toast-btn" data-tooltip={t('common.copy')} onClick={copyText}><IconClip /></button>
+            <button className="toast-btn" data-tooltip={t('toast.reportBug')} onClick={reportBug}><IconBug /></button>
           </div>
         )}
       </div>

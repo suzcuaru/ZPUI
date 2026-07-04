@@ -47,7 +47,9 @@ type Config struct {
 	ModRepoURL      string        `json:"mod_repo_url"`
 
 	Theme        string `json:"theme"`
+	Language     string `json:"language"`
 	FirstRunDone bool   `json:"first_run_done"`
+	ZapretSkipped bool  `json:"zapret_skipped"`
 	StartMinimized bool  `json:"start_minimized"`
 	CloseToTray    bool  `json:"close_to_tray"`
 
@@ -58,6 +60,19 @@ type Config struct {
 	AutoStartZapret  bool `json:"auto_start_zapret"`
 	AutoStartProxy   bool `json:"auto_start_proxy"`
 	AutoStartXboxDns bool `json:"auto_start_xbox_dns"`
+
+	NotificationsEnabled bool `json:"notifications_enabled"`
+
+	NotifyZPUIUpdates   bool `json:"notify_zpui_updates"`
+	NotifyZapretUpdates bool `json:"notify_zapret_updates"`
+	NotifyMissingFiles  bool `json:"notify_missing_files"`
+	NotifyServiceStatus bool `json:"notify_service_status"`
+	NotifyResourceDrop  bool `json:"notify_resource_drop"`
+	ResourceDropPct     int  `json:"resource_drop_pct"`
+
+	ShowStrategyColors bool `json:"show_strategy_colors"`
+	ShowStrategyModal  bool `json:"show_strategy_modal"`
+	NotifyStrategyTest bool `json:"notify_strategy_test"`
 
 	DisabledMods []string `json:"disabled_mods"`
 
@@ -90,8 +105,21 @@ func defaultConfig(zapretDir string) *Config {
 		ModRepoURL:      "https://github.com/bol-van/zapret",
 
 		Theme:        "system",
+		Language:     "ru",
 		FirstRunDone: false,
 		CloseToTray:  true,
+
+		NotificationsEnabled: true,
+
+		ShowStrategyColors: true,
+		NotifyStrategyTest: false,
+
+		NotifyZPUIUpdates:   true,
+		NotifyZapretUpdates: true,
+		NotifyMissingFiles:  true,
+		NotifyServiceStatus: false,
+		NotifyResourceDrop:  false,
+		ResourceDropPct:     70,
 	}
 }
 
@@ -164,6 +192,19 @@ func (c *Config) SetCurrentStrategy(strategy string) error {
 	return c.save()
 }
 
+func (c *Config) GetZapretSkipped() bool {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.ZapretSkipped
+}
+
+func (c *Config) SetZapretSkipped(skipped bool) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.ZapretSkipped = skipped
+	return c.save()
+}
+
 func (c *Config) GetProxyConfig() ProxyConfig {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -196,6 +237,93 @@ func (c *Config) GetTheme() string {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.Theme
+}
+
+func (c *Config) GetNotificationsEnabled() bool {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.NotificationsEnabled
+}
+
+func (c *Config) SetNotificationsEnabled(enabled bool) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.NotificationsEnabled = enabled
+	return c.save()
+}
+
+func (c *Config) ShouldNotify(event string) bool {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	if !c.NotificationsEnabled {
+		return false
+	}
+	switch event {
+	case "zpui_update":
+		return c.NotifyZPUIUpdates
+	case "zapret_update":
+		return c.NotifyZapretUpdates
+	case "missing_files":
+		return c.NotifyMissingFiles
+	case "service_status":
+		return c.NotifyServiceStatus
+	case "resource_drop":
+		return c.NotifyResourceDrop
+	default:
+		return false
+	}
+}
+
+func (c *Config) GetResourceDropPct() int {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	if c.ResourceDropPct <= 0 {
+		return 70
+	}
+	return c.ResourceDropPct
+}
+
+func (c *Config) SetResourceDropPct(pct int) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if pct < 10 {
+		pct = 10
+	}
+	if pct > 100 {
+		pct = 100
+	}
+	c.ResourceDropPct = pct
+	return c.save()
+}
+
+func (c *Config) SetNotifyFlags(flags map[string]bool) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if v, ok := flags["notify_zpui_updates"]; ok {
+		c.NotifyZPUIUpdates = v
+	}
+	if v, ok := flags["notify_zapret_updates"]; ok {
+		c.NotifyZapretUpdates = v
+	}
+	if v, ok := flags["notify_missing_files"]; ok {
+		c.NotifyMissingFiles = v
+	}
+	if v, ok := flags["notify_service_status"]; ok {
+		c.NotifyServiceStatus = v
+	}
+	if v, ok := flags["notify_resource_drop"]; ok {
+		c.NotifyResourceDrop = v
+	}
+	return c.save()
+}
+
+func (c *Config) GetLanguage() string {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	if c.Language == "" {
+		return "ru"
+	}
+	return c.Language
 }
 
 func (c *Config) GetCloseToTray() bool {

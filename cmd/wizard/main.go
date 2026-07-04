@@ -94,7 +94,14 @@ func main() {
 	completed := 0
 	total := len(strategies)
 	var bestStrategy string
-	var bestScore float64
+	type wResult struct {
+		Strategy    string
+		ResourcesN  int
+		ResourcesOK int
+		ResponseMs  int64
+		Score       float64
+	}
+	var results []wResult
 
 	for {
 		select {
@@ -102,35 +109,40 @@ func main() {
 			if !ok {
 				continue
 			}
-			if r.Type == "progress" {
+			if r.Type == "result" && r.Strategy != "" && r.ResourcesN > 0 {
 				completed++
 				pct := completed * 100 / total
-				fmt.Printf("\r[autotest] %s (%d%%) — Discord:%v YouTube:%v %dms   ",
-					r.Strategy, pct, r.DiscordOK, r.YouTubeOK, r.ResponseMs)
+				fmt.Printf("\r[autotest] %s (%d%%) — %d/%d %dms   ",
+					r.Strategy, pct, r.ResourcesOK, r.ResourcesN, r.ResponseMs)
 
-				score := 0.0
-				if r.DiscordOK {
-					score += 0.5
-				}
-				if r.YouTubeOK {
-					score += 0.5
-				}
-				if r.ResourcesN > 0 {
-					score += float64(r.ResourcesOK) / float64(r.ResourcesN) * 0.3
-				}
+				score := float64(r.ResourcesOK) / float64(r.ResourcesN)
 				if r.ResponseMs > 0 {
 					score -= float64(r.ResponseMs) / 10000.0
 				}
-				if score > bestScore {
-					bestScore = score
-					bestStrategy = r.Strategy
-				}
+				results = append(results, wResult{
+					Strategy:    r.Strategy,
+					ResourcesN:  r.ResourcesN,
+					ResourcesOK: r.ResourcesOK,
+					ResponseMs:  r.ResponseMs,
+					Score:       score,
+				})
 			}
 		case <-doneCh:
 			fmt.Println()
+			var bestScore float64
+			if len(results) > 0 {
+				best := results[0]
+				for _, r := range results[1:] {
+					if r.Score > best.Score {
+						best = r
+					}
+				}
+				bestStrategy = best.Strategy
+				bestScore = best.Score
+			}
 			if bestStrategy != "" {
-				log("autotest", "Best strategy: "+bestStrategy)
-				cfg.SetCurrentStrategy(bestStrategy + ".bat")
+				log("autotest", fmt.Sprintf("Best strategy: %s (%.2f)", bestStrategy, bestScore))
+				cfg.SetCurrentStrategy(bestStrategy)
 				cfg.Save()
 			} else {
 				log("autotest", "No working strategy found")

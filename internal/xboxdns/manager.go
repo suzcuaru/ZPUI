@@ -53,19 +53,31 @@ func (m *Manager) Enable() error {
 	}
 
 	m.originalDNS = make([]string, 0)
+	var errs []string
 	for _, adapter := range adapters {
 		orig := getCurrentDNS(adapter)
 		m.originalDNS = append(m.originalDNS, adapter+"|"+orig)
 
-		executil.HiddenCmd("netsh", "interface", "ip", "set", "dns",
-			adapter, "static", m.primary).Run()
+		if err := executil.HiddenCmd("netsh", "interface", "ip", "set", "dns",
+			adapter, "static", m.primary).Run(); err != nil {
+			errs = append(errs, fmt.Sprintf("%s: %v", adapter, err))
+			m.log.Error("xboxdns", fmt.Sprintf("Failed to set %s primary DNS: %v", adapter, err))
+			continue
+		}
 		m.log.Info("xboxdns", fmt.Sprintf("Set %s primary DNS: %s", adapter, m.primary))
 
 		if m.secondary != "" {
-			executil.HiddenCmd("netsh", "interface", "ip", "add", "dns",
-				adapter, m.secondary, "index=2").Run()
-			m.log.Info("xboxdns", fmt.Sprintf("Set %s secondary DNS: %s", adapter, m.secondary))
+			if err := executil.HiddenCmd("netsh", "interface", "ip", "add", "dns",
+				adapter, m.secondary, "index=2").Run(); err != nil {
+				m.log.Warn("xboxdns", fmt.Sprintf("Failed to set %s secondary DNS: %v", adapter, err))
+			} else {
+				m.log.Info("xboxdns", fmt.Sprintf("Set %s secondary DNS: %s", adapter, m.secondary))
+			}
 		}
+	}
+
+	if len(errs) == len(adapters) {
+		return fmt.Errorf("failed to set DNS on all adapters: %s", strings.Join(errs, "; "))
 	}
 
 	m.enabled = true
@@ -79,6 +91,13 @@ func (m *Manager) Disable() error {
 
 	m.log.Info("xboxdns", "Disabling Xbox DNS, restoring original DNS")
 
+	if len(m.originalDNS) == 0 {
+		m.enabled = false
+		m.log.Info("xboxdns", "No original DNS to restore, marking as disabled")
+		return nil
+	}
+
+	var errs []string
 	for _, entry := range m.originalDNS {
 		parts := strings.SplitN(entry, "|", 2)
 		if len(parts) != 2 {
@@ -87,20 +106,35 @@ func (m *Manager) Disable() error {
 		adapter := parts[0]
 		origDNS := parts[1]
 
+		var err error
 		if origDNS == "" || origDNS == "dhcp" {
-			executil.HiddenCmd("netsh", "interface", "ip", "set", "dns",
+			err = executil.HiddenCmd("netsh", "interface", "ip", "set", "dns",
 				adapter, "source=dhcp").Run()
-			m.log.Info("xboxdns", fmt.Sprintf("Restored %s DNS to DHCP", adapter))
+			if err != nil {
+				m.log.Error("xboxdns", fmt.Sprintf("Failed to restore %s to DHCP: %v", adapter, err))
+			} else {
+				m.log.Info("xboxdns", fmt.Sprintf("Restored %s DNS to DHCP", adapter))
+			}
 		} else {
-			executil.HiddenCmd("netsh", "interface", "ip", "set", "dns",
+			err = executil.HiddenCmd("netsh", "interface", "ip", "set", "dns",
 				adapter, "static", origDNS).Run()
-			m.log.Info("xboxdns", fmt.Sprintf("Restored %s DNS to %s", adapter, origDNS))
+			if err != nil {
+				m.log.Error("xboxdns", fmt.Sprintf("Failed to restore %s DNS to %s: %v", adapter, origDNS, err))
+			} else {
+				m.log.Info("xboxdns", fmt.Sprintf("Restored %s DNS to %s", adapter, origDNS))
+			}
+		}
+		if err != nil {
+			errs = append(errs, fmt.Sprintf("%s: %v", adapter, err))
 		}
 	}
 
 	m.originalDNS = nil
 	m.enabled = false
 	m.log.Info("xboxdns", "Xbox DNS disabled")
+	if len(errs) > 0 {
+		return fmt.Errorf("partial restore errors: %s", strings.Join(errs, "; "))
+	}
 	return nil
 }
 

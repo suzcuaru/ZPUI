@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { api } from '../../api';
 import { useT } from '../../i18n';
 
@@ -43,7 +43,6 @@ export default function LogDrawer({ open, onClose }) {
   };
   const [tab, setTab] = useState('live');
   const [cat, setCat] = useState('all');
-  const [search, setSearch] = useState('');
   const [raw, setRaw] = useState([]);
   const [errorFiles, setErrorFiles] = useState([]);
   const [selectedError, setSelectedError] = useState(null);
@@ -107,11 +106,7 @@ export default function LogDrawer({ open, onClose }) {
     if (d?.content) setArchiveContent(d.content);
   };
 
-  const filtered = useMemo(() => {
-    if (tab !== 'live' || !search) return raw;
-    const s = search.toLowerCase();
-    return raw.filter(l => (l.message || '').toLowerCase().includes(s));
-  }, [raw, search, tab]);
+  const filtered = raw;
 
   useEffect(() => {
     const el = bodyRef.current;
@@ -154,7 +149,7 @@ export default function LogDrawer({ open, onClose }) {
             </button>
           </div>
           <div className="lg-spacer" />
-          <button className="lg-btn" onClick={copyAll} title={t('common.copy')}>⎘</button>
+          <button className="lg-btn" onClick={copyAll} data-tooltip={t('common.copy')}>⎘</button>
           <button className="lg-btn lg-close" onClick={onClose}>✕</button>
         </div>
 
@@ -163,7 +158,6 @@ export default function LogDrawer({ open, onClose }) {
             {CATS.map(c => (
               <button key={c} className={'lg-chip' + (cat === c ? ' on' : '')} onClick={() => setCat(c)}>{CAT_LABELS[c]}</button>
             ))}
-            <input className="lg-search" placeholder={t('logs.searchPlaceholder')} value={search} onChange={e => setSearch(e.target.value)} />
             {errCount > 0 && <span className="lg-err">{errCount} err</span>}
             <button className="lg-btn" onClick={async () => {
               sessionStorage.removeItem(FE_KEY);
@@ -185,7 +179,7 @@ export default function LogDrawer({ open, onClose }) {
                   <span className="lg-msg">{l.message || ''}</span>
                 </div>
               );
-            }) : <div className="lg-empty">{search ? t('logs.nothingFound') : t('logs.noLogs')}</div>
+            }) : <div className="lg-empty">{t('logs.noLogs')}</div>
           )}
 
           {tab === 'errors' && (

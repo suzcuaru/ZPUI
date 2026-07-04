@@ -8,6 +8,7 @@ import (
 	"strings"
 	"zpui/internal/database"
 	"zpui/internal/executil"
+	"zpui/internal/notify"
 	"zpui/internal/zapret"
 )
 
@@ -16,20 +17,29 @@ import (
 // ============================================================
 
 func (a *App) ZapretStart() map[string]interface{} {
-	if err := a.zapret.Start(); err != nil {
-		return map[string]interface{}{"error": err.Error()}
+	if a.zapret.IsAutoTestRunning() {
+		return errResp("strategy test in progress")
 	}
-	return map[string]interface{}{"status": "started"}
+	if err := a.zapret.Start(); err != nil {
+		return errResp(err.Error())
+	}
+	return okResp()
 }
 
 func (a *App) ZapretStop() map[string]interface{} {
+	if a.zapret.IsAutoTestRunning() {
+		return errResp("strategy test in progress")
+	}
 	a.zapret.Stop()
-	return map[string]interface{}{"status": "stopped"}
+	return okResp()
 }
 
 func (a *App) ZapretRestart() map[string]interface{} {
+	if a.zapret.IsAutoTestRunning() {
+		return errResp("strategy test in progress")
+	}
 	if err := a.zapret.Restart(); err != nil {
-		return map[string]interface{}{"error": err.Error()}
+		return errResp(err.Error())
 	}
 	return map[string]interface{}{"status": "restarted"}
 }
@@ -44,10 +54,13 @@ func (a *App) GetStrategies() map[string]interface{} {
 
 func (a *App) SetStrategy(filename string) map[string]interface{} {
 	if filename == "" {
-		return map[string]interface{}{"error": "filename required"}
+		return errResp("filename required")
+	}
+	if a.zapret.IsAutoTestRunning() {
+		return errResp("strategy test in progress")
 	}
 	if err := a.zapret.SetStrategy(filename); err != nil {
-		return map[string]interface{}{"error": err.Error()}
+		return errResp(err.Error())
 	}
 	return map[string]interface{}{"status": "ok", "strategy": filename}
 }
@@ -319,4 +332,24 @@ func (a *App) RunWizard() map[string]interface{} {
 
 func (a *App) CheckWizardDone() bool {
 	return a.HasLocalZapret()
+}
+
+func (a *App) VerifyZapretFiles() map[string]interface{} {
+	vr := a.zapret.VerifyFiles()
+	return map[string]interface{}{
+		"all_present": vr.AllPresent,
+		"version":     vr.Version,
+		"files":       vr.Files,
+	}
+}
+
+func (a *App) SendTestNotification() map[string]interface{} {
+	if !a.cfg.GetNotificationsEnabled() {
+		return errResp("notifications disabled")
+	}
+	lang := a.cfg.GetLanguage()
+	if err := notify.Show(tr(lang, "test_title"), tr(lang, "test_body")); err != nil {
+		return errResp(err.Error())
+	}
+	return okResp()
 }

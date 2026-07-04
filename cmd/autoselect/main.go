@@ -64,13 +64,11 @@ func main() {
 	completed := 0
 	total := len(strategies)
 	type result struct {
-		Strategy   string
-		DiscordOK  bool
-		YouTubeOK  bool
-		ResourcesN int
+		Strategy    string
+		ResourcesN  int
 		ResourcesOK int
-		ResponseMs int64
-		Score      float64
+		ResponseMs  int64
+		Score       float64
 	}
 	var results []result
 
@@ -80,29 +78,22 @@ func main() {
 			if !ok {
 				continue
 			}
-			if r.Type == "progress" {
+			if r.Type == "result" && r.Strategy != "" && r.ResourcesN > 0 {
 				completed++
 				pct := completed * 100 / total
-				fmt.Printf("\r[%3d%%] %-40s D:%v Y:%v  %dms   ",
-					pct, r.Strategy, r.DiscordOK, r.YouTubeOK, r.ResponseMs)
+				fmt.Printf("\r[%3d%%] %-40s %d/%d  %dms   ",
+					pct, r.Strategy, r.ResourcesOK, r.ResourcesN, r.ResponseMs)
 
-				score := 0.0
-				if r.DiscordOK {
-					score += 0.5
-				}
-				if r.YouTubeOK {
-					score += 0.5
-				}
-				if r.ResourcesN > 0 {
-					score += float64(r.ResourcesOK) / float64(r.ResourcesN) * 0.3
-				}
+				score := float64(r.ResourcesOK) / float64(r.ResourcesN)
 				if r.ResponseMs > 0 {
 					score -= float64(r.ResponseMs) / 10000.0
 				}
 				results = append(results, result{
-					Strategy: r.Strategy, DiscordOK: r.DiscordOK, YouTubeOK: r.YouTubeOK,
-					ResourcesN: r.ResourcesN, ResourcesOK: r.ResourcesOK,
-					ResponseMs: r.ResponseMs, Score: score,
+					Strategy:    r.Strategy,
+					ResourcesN:  r.ResourcesN,
+					ResourcesOK: r.ResourcesOK,
+					ResponseMs:  r.ResponseMs,
+					Score:       score,
 				})
 			}
 		case <-doneCh:
@@ -128,11 +119,11 @@ done:
 		}
 	}
 
-	log(fmt.Sprintf("Best: %s (D:%v Y:%v %dms score:%.2f)", best.Strategy, best.DiscordOK, best.YouTubeOK, best.ResponseMs, best.Score))
+	log(fmt.Sprintf("Best: %s (%d/%d resources, %dms score:%.2f)", best.Strategy, best.ResourcesOK, best.ResourcesN, best.ResponseMs, best.Score))
 
-	cfg.SetCurrentStrategy(best.Strategy + ".bat")
+	cfg.SetCurrentStrategy(best.Strategy)
 	cfg.Save()
-	log("Strategy saved: " + best.Strategy + ".bat")
+	log("Strategy saved: " + best.Strategy)
 
 	fmt.Println("\n=== Results ===")
 	for i, r := range results {
@@ -140,7 +131,7 @@ done:
 		if r.Strategy == best.Strategy {
 			marker = " *"
 		}
-		fmt.Printf("%2d. %-40s D:%-5v Y:%-5v  %4dms  %.2f%s\n",
-			i+1, r.Strategy, r.DiscordOK, r.YouTubeOK, r.ResponseMs, r.Score, marker)
+		fmt.Printf("%2d. %-40s %d/%-3d  %4dms  %.2f%s\n",
+			i+1, r.Strategy, r.ResourcesOK, r.ResourcesN, r.ResponseMs, r.Score, marker)
 	}
 }

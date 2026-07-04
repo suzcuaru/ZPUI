@@ -14,10 +14,10 @@ func (a *App) SetXboxDnsConfig(opts map[string]interface{}) map[string]interface
 	if v, ok := opts["enabled"].(bool); ok {
 		cfg.Enabled = v
 	}
-	if v, ok := opts["primary_dns"].(string); ok {
+	if v, ok := opts["primary_dns"].(string); ok && v != "" {
 		cfg.PrimaryDNS = v
 	}
-	if v, ok := opts["secondary_dns"].(string); ok {
+	if v, ok := opts["secondary_dns"].(string); ok && v != "" {
 		cfg.SecondaryDNS = v
 	}
 	a.cfg.SetXboxDnsConfig(cfg)
@@ -25,20 +25,20 @@ func (a *App) SetXboxDnsConfig(opts map[string]interface{}) map[string]interface
 
 	if cfg.Enabled && !wasEnabled {
 		a.xboxDns.Configure(cfg.PrimaryDNS, cfg.SecondaryDNS)
-		go func() {
-			if err := a.xboxDns.Enable(); err != nil {
-				a.log.Error("xbox_dns", "Enable failed: "+err.Error())
-			}
-		}()
+		if err := a.xboxDns.Enable(); err != nil {
+			a.log.Error("xbox_dns", "Enable failed: "+err.Error())
+			cfg.Enabled = false
+			a.cfg.SetXboxDnsConfig(cfg)
+			return errResp("Xbox DNS enable failed: " + err.Error())
+		}
 	} else if !cfg.Enabled && wasEnabled {
-		go func() {
-			if err := a.xboxDns.Disable(); err != nil {
-				a.log.Error("xbox_dns", "Disable failed: "+err.Error())
-			}
-		}()
+		if err := a.xboxDns.Disable(); err != nil {
+			a.log.Error("xbox_dns", "Disable failed: "+err.Error())
+			return errResp("Xbox DNS disable failed: " + err.Error())
+		}
 	}
 
-	return map[string]interface{}{"status": "ok"}
+	return okResp()
 }
 
 func (a *App) ToggleXboxDns(enabled bool) map[string]interface{} {
@@ -49,19 +49,19 @@ func (a *App) ToggleXboxDns(enabled bool) map[string]interface{} {
 
 	if enabled && !wasEnabled {
 		a.xboxDns.Configure(cfg.PrimaryDNS, cfg.SecondaryDNS)
-		go func() {
-			if err := a.xboxDns.Enable(); err != nil {
-				a.log.Error("xbox_dns", "Enable failed: "+err.Error())
-			}
-		}()
-		return map[string]interface{}{"status": "starting"}
+		if err := a.xboxDns.Enable(); err != nil {
+			a.log.Error("xbox_dns", "Enable failed: "+err.Error())
+			cfg.Enabled = false
+			a.cfg.SetXboxDnsConfig(cfg)
+			return errResp("Xbox DNS enable failed: " + err.Error())
+		}
+		return map[string]interface{}{"status": "ok"}
 	} else if !enabled && wasEnabled {
-		go func() {
-			if err := a.xboxDns.Disable(); err != nil {
-				a.log.Error("xbox_dns", "Disable failed: "+err.Error())
-			}
-		}()
-		return map[string]interface{}{"status": "stopping"}
+		if err := a.xboxDns.Disable(); err != nil {
+			a.log.Error("xbox_dns", "Disable failed: "+err.Error())
+			return errResp("Xbox DNS disable failed: " + err.Error())
+		}
+		return map[string]interface{}{"status": "ok"}
 	}
 	return map[string]interface{}{"status": "nochange"}
 }

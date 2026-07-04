@@ -71,10 +71,11 @@ func (a *App) GetStatus() map[string]interface{} {
 
 	return map[string]interface{}{
 		"zapret": map[string]interface{}{
-			"status":    zapretStatus,
-			"version":   a.zapret.GetVersion(),
-			"strategy":  strategy,
-			"zapretDir": a.cfg.GetZapretPath(),
+			"status":           zapretStatus,
+			"version":          a.zapret.GetVersion(),
+			"strategy":         strategy,
+			"zapretDir":        a.cfg.GetZapretPath(),
+			"auto_test_running": a.zapret.IsAutoTestRunning(),
 		},
 		"proxy": map[string]interface{}{
 			"running": a.proxy.IsRunning(),
@@ -113,6 +114,28 @@ func (a *App) GetStatus() map[string]interface{} {
 			"ips":      ips,
 		},
 	}
+}
+
+// ============================================================
+// RESTART
+// ============================================================
+
+func (a *App) RestartApp() map[string]interface{} {
+	a.log.Info("app", "RestartApp called")
+	exePath := getExePath()
+	a.cfg.SetZapretSkipped(false)
+	a.cfg.FirstRunDone = false
+	a.cfg.LastZapretState = false
+	if err := a.cfg.Save(); err != nil {
+		a.log.Error("app", "RestartApp config save error: "+err.Error())
+	}
+	psScript := fmt.Sprintf("Start-Sleep -Seconds 2; Start-Process -FilePath '%s'", exePath)
+	if err := executil.HiddenCmd("powershell", "-NoProfile", "-Command", psScript).Start(); err != nil {
+		a.log.Error("app", "RestartApp spawn error: "+err.Error())
+		return map[string]interface{}{"error": err.Error()}
+	}
+	go a.Quit()
+	return map[string]interface{}{"status": "ok"}
 }
 
 // ============================================================

@@ -15,6 +15,7 @@ import (
 	"zpui/internal/executil"
 	"zpui/internal/logger"
 	"zpui/internal/monitor"
+	"zpui/internal/notify"
 	"zpui/internal/proxy"
 	"zpui/internal/updater"
 	"zpui/internal/xboxdns"
@@ -107,6 +108,7 @@ func (a *App) startup(ctx context.Context) {
 	a.safeGo(a.startDeviceTracker)
 	a.safeGo(a.startTrafficSnapshots)
 	a.safeGo(a.startDataRotation)
+	a.safeGo(a.startResourceMonitor)
 
 	if a.cfg.AutoStartProxy || a.cfg.LastProxyState {
 		a.safeGo(func() {
@@ -116,7 +118,7 @@ func (a *App) startup(ctx context.Context) {
 		})
 	}
 
-	if a.cfg.LastZapretState && !needAutoStart {
+	if a.cfg.LastZapretState && !needAutoStart && !a.cfg.GetZapretSkipped() {
 		a.safeGo(func() {
 			time.Sleep(1 * time.Second)
 			if err := a.zapret.Start(); err != nil {
@@ -153,16 +155,112 @@ func (a *App) checkUpdatesOnStartup() {
 				"latest":    remote.ZPUI,
 			})
 			a.log.Info("updater", fmt.Sprintf("ZPUI update available: %s -> %s", a.version, remote.ZPUI))
+			if a.cfg.ShouldNotify("zpui_update") {
+				lang := a.cfg.GetLanguage()
+				notify.Show("ZPUI", tr(lang, "zpui_update", remote.ZPUI))
+			}
 		}
 	}
 
-	if info, err := a.zapret.CheckForUpdates(); err == nil && info != nil && info.UpdateNeeded {
-		runtime.EventsEmit(a.ctx, "update:available", map[string]interface{}{
-			"component": "zapret",
-			"current":   info.CurrentVersion,
-			"latest":    info.LatestVersion,
-		})
-		a.log.Info("updater", fmt.Sprintf("Zapret update available: %s -> %s", info.CurrentVersion, info.LatestVersion))
+	if !a.cfg.GetZapretSkipped() {
+		if info, err := a.zapret.CheckForUpdates(); err == nil && info != nil && info.UpdateNeeded {
+			runtime.EventsEmit(a.ctx, "update:available", map[string]interface{}{
+				"component": "zapret",
+				"current":   info.CurrentVersion,
+				"latest":    info.LatestVersion,
+			})
+			a.log.Info("updater", fmt.Sprintf("Zapret update available: %s -> %s", info.CurrentVersion, info.LatestVersion))
+		if a.cfg.ShouldNotify("zapret_update") {
+				lang := a.cfg.GetLanguage()
+				notify.Show("Zapret", tr(lang, "zapret_update", info.LatestVersion))
+			}
+		}
+
+		vr := a.zapret.VerifyFiles()
+		if !vr.AllPresent {
+			missing := []string{}
+			for _, f := range vr.Files {
+				if !f.Exists {
+					missing = append(missing, f.Path)
+				}
+			}
+			a.log.Warn("zapret", fmt.Sprintf("Missing files: %v", missing))
+			runtime.EventsEmit(a.ctx, "zapret:files-missing", map[string]interface{}{
+				"missing": missing,
+			})
+		if a.cfg.ShouldNotify("missing_files") {
+				lang := a.cfg.GetLanguage()
+				notify.Show("Zapret", tr(lang, "missing_files", len(missing)))
+			}
+		}
+	}
+}
+
+func (a *App) startResourceMonitor() {
+	time.Sleep(30 * time.Second)
+	ticker := time.NewTicker(60 * time.Second)
+	defer ticker.Stop()
+
+	notified := false
+	for {
+		select {
+		case <-a.stopCh:
+			return
+		case <-ticker.C:
+			data := a.GetResourceStatus()
+			defRes, _ := data["default"].([]map[string]interface{})
+			userRes, _ := data["user"].([]map[string]interface{})
+			all := append(defRes, userRes...)
+			if len(all) == 0 {
+				continue
+			}
+
+			saveSet := func(typ string, res []map[string]interface{}) {
+				if len(res) == 0 {
+					return
+				}
+				ok := 0
+				for _, r := range res {
+					if r["ok"] == true {
+						ok++
+					}
+				}
+				pct := ok * 100 / len(res)
+				database.InsertAvailabilitySnapshot(&database.AvailabilityRecord{
+					Timestamp:      time.Now(),
+					Type:           typ,
+					TotalResources: len(res),
+					OKResources:    ok,
+					Pct:            float64(pct),
+				})
+			}
+			saveSet("standard", defRes)
+			saveSet("user", userRes)
+
+			ok := 0
+			for _, r := range all {
+				if r["ok"] == true {
+					ok++
+				}
+			}
+			pct := ok * 100 / len(all)
+
+			if a.cfg.ShouldNotify("resource_drop") {
+				threshold := a.cfg.GetResourceDropPct()
+				if pct < threshold {
+					if !notified {
+						notified = true
+						lang := a.cfg.GetLanguage()
+						notify.Show("ZPUI", tr(lang, "resource_drop", pct))
+						a.log.Warn("notify", fmt.Sprintf("Resource availability %d%% < threshold %d%%", pct, threshold))
+					}
+				} else {
+					notified = false
+				}
+			} else {
+				notified = false
+			}
+		}
 	}
 }
 
@@ -374,6 +472,7 @@ func (a *App) startDataRotation() {
 		case <-ticker.C:
 			cleanOldSnapshots(24 * time.Hour)
 			cleanOldConnections(7 * 24 * time.Hour)
+			database.CleanOldAvailability(30 * 24 * time.Hour)
 		case <-a.stopCh:
 			return
 		}

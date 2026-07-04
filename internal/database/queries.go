@@ -269,6 +269,54 @@ func BatchInsertActionLogs(logs []ActionLog) error {
 	return tx.Commit()
 }
 
+// === Availability History ===
+
+// InsertAvailabilitySnapshot сохраняет запись о доступности ресурсов
+func InsertAvailabilitySnapshot(r *AvailabilityRecord) error {
+	if r.ID == "" {
+		r.ID = uuid.New().String()
+	}
+	if r.Timestamp.IsZero() {
+		r.Timestamp = time.Now()
+	}
+	_, err := DB().Exec(`
+		INSERT INTO availability_history (id, timestamp, type, total_resources, ok_resources, pct)
+		VALUES (?, ?, ?, ?, ?, ?)
+	`, r.ID, r.Timestamp, r.Type, r.TotalResources, r.OKResources, r.Pct)
+	return err
+}
+
+// GetAvailabilityHistory возвращает записи доступности за указанный период, агрегированные по часам
+func GetAvailabilityHistory(since time.Time) ([]AvailabilityRecord, error) {
+	rows, err := DB().Query(`
+		SELECT id, timestamp, type, total_resources, ok_resources, pct
+		FROM availability_history
+		WHERE timestamp >= ?
+		ORDER BY timestamp ASC
+	`, since)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var records []AvailabilityRecord
+	for rows.Next() {
+		var r AvailabilityRecord
+		if err := rows.Scan(&r.ID, &r.Timestamp, &r.Type, &r.TotalResources, &r.OKResources, &r.Pct); err != nil {
+			return nil, err
+		}
+		records = append(records, r)
+	}
+	return records, rows.Err()
+}
+
+// CleanOldAvailability удаляет записи доступности старше duration
+func CleanOldAvailability(maxAge time.Duration) error {
+	cutoff := time.Now().Add(-maxAge)
+	_, err := DB().Exec(`DELETE FROM availability_history WHERE timestamp < ?`, cutoff)
+	return err
+}
+
 // === Zapret Backup ===
 
 // SaveZapretBackup сохраняет JSON-слепок состояния zapret (перезапись).

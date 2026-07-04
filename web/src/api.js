@@ -77,6 +77,7 @@ const GET_ROUTES = {
   '/api/updates/check/zpui': (app) => app.CheckZPUIUpdate(),
   '/api/updates/check/zapret': (app) => app.CheckForUpdates(),
   '/api/zapret/local': (app) => app.HasLocalZapret(),
+  '/api/zapret/verify-files': (app) => app.VerifyZapretFiles(),
   '/api/zapret/system-service': (app) => app.HasSystemZapretService(),
   '/api/zapret/install-log': (app) => app.GetInstallLog(),
   '/api/zapret/default-strategy': (app) => app.DefaultStrategy(),
@@ -85,6 +86,7 @@ const GET_ROUTES = {
   '/api/components/check': (app) => app.CheckComponentUpdates(),
   '/api/health': (app) => app.HealthCheck(),
   '/api/network-info': (app) => app.GetNetworkInfo(),
+  '/api/availability/history': (app, p) => app.GetAvailabilityHistory(parseInt(p.hours) || 24, p.type || ''),
   '/api/backups': (app, p) => app.GetBackups(p.component || ''),
   '/api/ignored-versions': (app) => app.GetIgnoredVersions(),
   '/api/logs/errors': (app) => app.GetErrorSnapshots(),
@@ -125,6 +127,7 @@ const POST_ROUTES = {
   '/api/strategy/cancel': (app) => app.CancelAutoTest(),
   '/api/autostart/enable': (app) => app.EnableAutostart(),
   '/api/autostart/disable': (app) => app.DisableAutostart(),
+  '/api/app/restart': (app) => app.RestartApp(),
   '/api/logs/frontend': (app, b) => app.FrontendLogs(b.events || []),
   '/api/config': (app, b) => app.SetConfig(b || {}),
   '/api/external': (app, b) => app.OpenExternal(b.url || ''),
@@ -138,6 +141,7 @@ const POST_ROUTES = {
   '/api/zapret/install-service-logged': (app, b) => app.InstallServiceLogged(b.strategy || ''),
   '/api/zapret/autoselect': (app) => app.RunAutoSelectStream(),
   '/api/logs/clear': (app) => app.ClearLogs(),
+  '/api/test-notification': (app) => app.SendTestNotification(),
 };
 
 const DELETE_ROUTES = {
@@ -297,7 +301,7 @@ export function createStream(path) {
 
         rt.EventsOn('update:done', (data) => {
           // Эмитим финальное сообщение с percent=100
-          if (this._onmessage) this._onmessage({ data: JSON.stringify({ percent: 100, step: 'Завершено' }) });
+          if (this._onmessage) this._onmessage({ data: JSON.stringify({ percent: 100, step: tr('common.completed') }) });
         });
         this._eventNames.push('update:done');
 

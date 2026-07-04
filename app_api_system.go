@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 	"zpui/internal/blockcheck"
+	"zpui/internal/database"
 	"zpui/internal/executil"
 	"zpui/internal/monitor"
 	"zpui/internal/sysinfo"
@@ -135,6 +136,35 @@ func (a *App) GetResourceStatus() map[string]interface{} {
 	return map[string]interface{}{
 		"default": defaultResults,
 		"user":    userResults,
+	}
+}
+
+// ============================================================
+// AVAILABILITY HISTORY
+// ============================================================
+
+func (a *App) GetAvailabilityHistory(hours int, typ string) map[string]interface{} {
+	if hours <= 0 {
+		hours = 24
+	}
+	since := time.Now().Add(-time.Duration(hours) * time.Hour)
+	all, err := database.GetAvailabilityHistory(since)
+	if err != nil {
+		return map[string]interface{}{"error": err.Error()}
+	}
+	if all == nil {
+		all = []database.AvailabilityRecord{}
+	}
+	// Фильтр по типу
+	var records []database.AvailabilityRecord
+	for _, r := range all {
+		if typ == "" || typ == "all" || r.Type == typ {
+			records = append(records, r)
+		}
+	}
+	return map[string]interface{}{
+		"records": records,
+		"count":   len(records),
 	}
 }
 

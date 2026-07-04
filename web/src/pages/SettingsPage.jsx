@@ -32,6 +32,11 @@ export default function SettingsPage({ status, showToast }) {
     if (config) saveConfig(patch, config);
   }, [saveConfig, config]);
 
+  const handleLanguage = (newLang) => {
+    changeLang(newLang);
+    update({ language: newLang });
+  };
+
   const handleTheme = async (theme) => {
     update({ theme });
     if (theme === 'system') {
@@ -110,120 +115,201 @@ export default function SettingsPage({ status, showToast }) {
 
   return (
     <div className="settings-page">
+      <div className="page-title">{t('settings.title')}</div>
       <div className="set-columns">
-        <div className="set-col">
-          <div className="section">
-            <div className="section-title">{t('settings.appearance')}</div>
-            <div className="set-row">
-              <div className="set-row-info"><span className="set-row-title">{t('settings.theme')}</span></div>
-              <div className="set-theme-row">
-                <button className={'set-theme-btn sm' + (config.theme === 'system' ? ' active' : '')} onClick={() => handleTheme('system')}>{t('settings.systemTheme')}</button>
-                <button className={'set-theme-btn sm' + (config.theme === 'light' ? ' active' : '')} onClick={() => handleTheme('light')}>{t('settings.lightTheme')}</button>
-                <button className={'set-theme-btn sm' + (config.theme === 'dark' ? ' active' : '')} onClick={() => handleTheme('dark')}>{t('settings.darkTheme')}</button>
-              </div>
-            </div>
-            <div className="set-row">
-              <div className="set-row-info"><span className="set-row-title">{t('settings.language')}</span></div>
-              <div className="set-theme-row">
-                <button className={'set-theme-btn sm' + (lang === 'ru' ? ' active' : '')} onClick={() => changeLang('ru')}>RU</button>
-                <button className={'set-theme-btn sm' + (lang === 'en' ? ' active' : '')} onClick={() => changeLang('en')}>EN</button>
-              </div>
-            </div>
-            <MiniRow label={t('settings.autoStartWindows')}><Switch checked={config.autostart || false} onChange={() => handleAutostart(!config.autostart)} /></MiniRow>
-            <MiniRow label={t('settings.startMinimized')}><Switch checked={config.start_minimized || false} onChange={() => update({ start_minimized: !config.start_minimized })} /></MiniRow>
-            <MiniRow label={t('settings.closeToTray')}><Switch checked={config.close_to_tray !== false} onChange={() => update({ close_to_tray: !config.close_to_tray })} /></MiniRow>
-            <MiniRow label={t('settings.updateCheck')}><Switch checked={config.auto_update_check !== false} onChange={() => update({ auto_update_check: !config.auto_update_check })} /></MiniRow>
-          </div>
 
-          <div className="section">
-            <div className="section-title">Zapret</div>
-            <div className="set-row" style={{ padding: '3px 0' }}>
-              <div className="set-row-info"><span className="set-row-title">{t('settings.localInstall')}</span></div>
-              <span className="set-static mono" style={{ fontSize: 10 }}>{'<app>\\zapret\\'}</span>
-            </div>
-            <div className="set-row" style={{ padding: '3px 0' }}>
-              <div className="set-row-info"><span className="set-row-title">{t('settings.status')}</span></div>
-              <span className={'set-static ' + (status?.zapret?.status === 'running' ? 'ok' : 'err')} style={{ fontSize: 10 }}>
-                {status?.zapret?.status === 'running' ? t('status.running') : t('status.stopped')}
-              </span>
-            </div>
-            <div className="set-row" style={{ padding: '3px 0' }}>
-              <div className="set-row-info">
-                <span className="set-row-title">{t('settings.removeService')}</span>
-                <span className="set-row-desc">{t('settings.removeServiceDesc')}</span>
-              </div>
-              <button className="btn btn-danger btn-xs" onClick={() => {
-                if (window.confirm(t('settings.removeServiceConfirm'))) {
-                  apiCall(async () => api('POST', '/api/zapret/service/remove'), t('settings.serviceRemoved'), showToast);
-                }
-              }}>
-                {t('settings.removeServiceBtn')}
-              </button>
+        <div className="section">
+          <div className="section-title">{t('settings.appearance')}</div>
+          <div className="set-row">
+            <div className="set-row-info"><span className="set-row-title">{t('settings.theme')}</span></div>
+            <div className="set-theme-row">
+              <button className={'set-theme-btn sm' + (config.theme === 'system' ? ' active' : '')} onClick={() => handleTheme('system')}>{t('settings.systemTheme')}</button>
+              <button className={'set-theme-btn sm' + (config.theme === 'light' ? ' active' : '')} onClick={() => handleTheme('light')}>{t('settings.lightTheme')}</button>
+              <button className={'set-theme-btn sm' + (config.theme === 'dark' ? ' active' : '')} onClick={() => handleTheme('dark')}>{t('settings.darkTheme')}</button>
             </div>
           </div>
+          <div className="set-row">
+            <div className="set-row-info"><span className="set-row-title">{t('settings.language')}</span></div>
+            <div className="set-lang-row">
+              <button className="set-lang-arrow" onClick={() => {
+                const langs = ['ru', 'en'];
+                const idx = langs.indexOf(lang);
+                const prev = langs[(idx - 1 + langs.length) % langs.length];
+                handleLanguage(prev);
+              }} data-tooltip={t('settings.prevLang')}>‹</button>
+              <button className={'set-theme-btn sm' + (lang === 'ru' ? ' active' : '')} onClick={() => handleLanguage('ru')}>RU</button>
+              <button className={'set-theme-btn sm' + (lang === 'en' ? ' active' : '')} onClick={() => handleLanguage('en')}>EN</button>
+              <button className="set-lang-arrow" onClick={() => {
+                const langs = ['ru', 'en'];
+                const idx = langs.indexOf(lang);
+                const next = langs[(idx + 1) % langs.length];
+                handleLanguage(next);
+              }} data-tooltip={t('settings.nextLang')}>›</button>
+            </div>
+          </div>
+          <MiniRow label={t('settings.autoStartWindows')}><Switch checked={config.autostart || false} onChange={() => handleAutostart(!config.autostart)} /></MiniRow>
+          <MiniRow label={t('settings.startMinimized')}><Switch checked={config.start_minimized || false} onChange={() => update({ start_minimized: !config.start_minimized })} /></MiniRow>
+          <MiniRow label={t('settings.closeToTray')}><Switch checked={config.close_to_tray !== false} onChange={() => update({ close_to_tray: !config.close_to_tray })} /></MiniRow>
+          <MiniRow label={t('settings.updateCheck')}><Switch checked={config.auto_update_check !== false} onChange={() => update({ auto_update_check: !config.auto_update_check })} /></MiniRow>
+          <MiniRow label={t('settings.showStrategyColors')}><Switch checked={config.show_strategy_colors !== false} onChange={() => update({ show_strategy_colors: !config.show_strategy_colors })} /></MiniRow>
+          <MiniRow label={t('settings.notifyStrategyTest')}><Switch checked={config.notify_strategy_test === true} onChange={() => update({ notify_strategy_test: !config.notify_strategy_test })} /></MiniRow>
         </div>
 
-        <div className="set-col">
-          <div className="section">
-            <div className="section-title">{t('settings.componentsUpdates')}</div>
-            <div className="upd-card" style={{ padding: '8px 10px' }}>
-              <div className="upd-info">
-                <span className="upd-name">ZPUI</span>
-                <div className="upd-ver-row">
-                  <span className="upd-ver">v{zpuiCheck.current || versions?.zpui || '—'}</span>
-                  {zpuiCheck.state === 'available' && zpuiCheck.latest && (
-                    <span className="upd-ver-new">→ v{zpuiCheck.latest}</span>
-                  )}
-                  {zpuiCheck.state !== 'idle' && zpuiCheck.state !== 'checking' && (
-                    <span className={'upd-status ' + zpuiCheck.state} style={{ fontSize: 9, padding: '1px 6px' }}>{st(zpuiCheck.state)}</span>
-                  )}
-                </div>
+        <div className="section">
+          <div className="section-title">{t('settings.componentsUpdates')}</div>
+          <div className="upd-card" style={{ padding: '8px 10px' }}>
+            <div className="upd-info">
+              <span className="upd-name">ZPUI</span>
+              <div className="upd-ver-row">
+                <span className="upd-ver">v{zpuiCheck.current || versions?.zpui || '—'}</span>
+                {zpuiCheck.state === 'available' && zpuiCheck.latest && (
+                  <span className="upd-ver-new">→ v{zpuiCheck.latest}</span>
+                )}
+                {zpuiCheck.state !== 'idle' && zpuiCheck.state !== 'checking' && (
+                  <span className={'upd-status ' + zpuiCheck.state} style={{ fontSize: 9, padding: '1px 6px' }}>{st(zpuiCheck.state)}</span>
+                )}
               </div>
-              {zpuiCheck.state === 'available' ? (
-                <button className="upd-btn-check" onClick={handleApplyUpdate} style={{ borderColor: 'var(--warning)', color: 'var(--warning)', height: 22, fontSize: 10 }}>
-                  {t('common.update')}
-                </button>
-              ) : (
-                <button className={'upd-btn-check' + (zpuiCheck.state === 'checking' ? ' checking' : '')} onClick={checkZpuiUpdate} style={{ height: 22, fontSize: 10 }}>
-                  {zpuiCheck.state === 'checking' ? <span className="mini-spin" /> : t('common.check')}
-                </button>
-              )}
             </div>
-            <div className="upd-card" style={{ padding: '8px 10px' }}>
-              <div className="upd-info">
-                <span className="upd-name">Zapret</span>
-                <div className="upd-ver-row">
-                  <span className="upd-ver">v{zapretCheck.current || status?.zapret?.version || '—'}</span>
-                  {zapretCheck.state === 'available' && zapretCheck.latest && (
-                    <span className="upd-ver-new">→ v{zapretCheck.latest}</span>
-                  )}
-                  {zapretCheck.state !== 'idle' && zapretCheck.state !== 'checking' && (
-                    <span className={'upd-status ' + zapretCheck.state} style={{ fontSize: 9, padding: '1px 6px' }}>{st(zapretCheck.state)}</span>
-                  )}
-                </div>
+            {zpuiCheck.state === 'available' ? (
+              <button className="upd-btn-check" onClick={handleApplyUpdate} style={{ borderColor: 'var(--warning)', color: 'var(--warning)', height: 22, fontSize: 10 }}>
+                {t('common.update')}
+              </button>
+            ) : (
+              <button className={'upd-btn-check' + (zpuiCheck.state === 'checking' ? ' checking' : '')} onClick={checkZpuiUpdate} style={{ height: 22, fontSize: 10 }}>
+                {zpuiCheck.state === 'checking' ? <span className="mini-spin" /> : t('common.check')}
+              </button>
+            )}
+          </div>
+          <div className="upd-card" style={{ padding: '8px 10px' }}>
+            <div className="upd-info">
+              <span className="upd-name">Zapret</span>
+              <div className="upd-ver-row">
+                <span className="upd-ver">v{zapretCheck.current || status?.zapret?.version || '—'}</span>
+                {zapretCheck.state === 'available' && zapretCheck.latest && (
+                  <span className="upd-ver-new">→ v{zapretCheck.latest}</span>
+                )}
+                {zapretCheck.state !== 'idle' && zapretCheck.state !== 'checking' && (
+                  <span className={'upd-status ' + zapretCheck.state} style={{ fontSize: 9, padding: '1px 6px' }}>{st(zapretCheck.state)}</span>
+                )}
               </div>
-              {zapretCheck.state === 'available' ? (
-                <button className="upd-btn-check" onClick={() => handleComponentUpdate('Zapret')} style={{ borderColor: 'var(--warning)', color: 'var(--warning)', height: 22, fontSize: 10 }}>
-                  {t('common.update')}
-                </button>
-              ) : (
-                <button className={'upd-btn-check' + (zapretCheck.state === 'checking' ? ' checking' : '')} onClick={checkZapretUpdate} style={{ height: 22, fontSize: 10 }}>
-                  {zapretCheck.state === 'checking' ? <span className="mini-spin" /> : t('common.check')}
-                </button>
-              )}
             </div>
-            <div className="section-title" style={{ marginTop: 8, fontSize: 10 }}>{t('settings.satellites')}</div>
-            <div className="sat-grid">
-              {satellites.map(s => (
+            {zapretCheck.state === 'available' ? (
+              <button className="upd-btn-check" onClick={() => handleComponentUpdate('Zapret')} style={{ borderColor: 'var(--warning)', color: 'var(--warning)', height: 22, fontSize: 10 }}>
+                {t('common.update')}
+              </button>
+            ) : (
+              <button className={'upd-btn-check' + (zapretCheck.state === 'checking' ? ' checking' : '')} onClick={checkZapretUpdate} style={{ height: 22, fontSize: 10 }}>
+                {zapretCheck.state === 'checking' ? <span className="mini-spin" /> : t('common.check')}
+              </button>
+            )}
+          </div>
+          <div className="section-title" style={{ marginTop: 8, fontSize: 10 }}>{t('settings.satellites')}</div>
+          <div className="sat-grid">
+            {satellites.map(s => {
+              const isInstalled = versions?.installed?.[s.key] !== false;
+              const ver = versions?.[s.key];
+              return (
                 <div key={s.key} className="sat-card" style={{ padding: '5px 8px' }}>
                   <span className="sat-name" style={{ fontSize: 10, minWidth: 65 }}>{s.name}</span>
-                  <span className="sat-ver" style={{ fontSize: 9 }}>v{versions?.[s.key] || '—'}</span>
+                  <span className="sat-ver" style={{ fontSize: 9, color: isInstalled ? 'var(--text-secondary)' : 'var(--text-tertiary)' }}>
+                    {!isInstalled ? '—' : ver && ver !== '0.0.0' ? 'v' + ver : '—'}
+                  </span>
                   <span className="sat-file" style={{ fontSize: 8 }}>{s.file}</span>
                 </div>
-              ))}
-            </div>
+              );
+            })}
           </div>
         </div>
+
+        <div className="section">
+          <div className="section-title">{t('settings.zapretSection')}</div>
+          <div className="set-row" style={{ padding: '3px 0' }}>
+            <div className="set-row-info"><span className="set-row-title">{t('settings.localInstall')}</span></div>
+            <span className="set-static mono" style={{ fontSize: 10 }}>{'<app>\\zapret\\'}</span>
+          </div>
+          <div className="set-row" style={{ padding: '3px 0' }}>
+            <div className="set-row-info"><span className="set-row-title">{t('settings.status')}</span></div>
+            <span className={'set-static ' + (config.zapret_skipped ? 'warn' : status?.zapret?.status === 'running' ? 'ok' : 'err')} style={{ fontSize: 10 }}>
+              {config.zapret_skipped ? t('zapret.skippedStatus') : status?.zapret?.status === 'running' ? t('status.running') : t('status.stopped')}
+            </span>
+          </div>
+          <div className="set-row" style={{ padding: '3px 0' }}>
+            <div className="set-row-info">
+              <span className="set-row-title">{t('settings.removeService')}</span>
+              <span className="set-row-desc">{t('settings.removeServiceDesc')}</span>
+            </div>
+            <button className="btn btn-danger btn-xs" onClick={() => {
+              if (window.confirm(t('settings.removeServiceConfirm'))) {
+                apiCall(async () => api('POST', '/api/zapret/service/remove'), t('settings.serviceRemoved'), showToast);
+              }
+            }}>
+              {t('settings.removeServiceBtn')}
+            </button>
+          </div>
+          {config.zapret_skipped && (
+            <div className="set-row" style={{ padding: '3px 0' }}>
+              <div className="set-row-info">
+                <span className="set-row-title">{t('settings.installZapret')}</span>
+                <span className="set-row-desc">{t('settings.installZapretDesc')}</span>
+              </div>
+              <button className="btn btn-accent btn-xs" onClick={() => {
+                if (window.confirm(t('settings.installZapretConfirm'))) {
+                  api('POST', '/api/app/restart');
+                }
+              }}>
+                {t('settings.installZapretBtn')}
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div className="section set-notif-section">
+          <div className="set-notif-head">
+            <span className="section-title">{t('settings.notifications')}</span>
+            <div className="set-notif-actions">
+              <Switch checked={config.notifications_enabled !== false} onChange={() => update({ notifications_enabled: !config.notifications_enabled })} />
+              {config.notifications_enabled !== false && (
+                <button className="btn btn-ghost btn-xs" onClick={async () => {
+                  const d = await api('POST', '/api/test-notification');
+                  if (d?.error) showToast(d.error, 'error');
+                  else showToast(t('settings.testNotificationSent'), 'success');
+                }}>
+                  {t('settings.test')}
+                </button>
+              )}
+            </div>
+          </div>
+          {config.notifications_enabled !== false && (
+            <div className="set-notif-grid">
+              <CompactNotif label={t('settings.notifZpuiUpdates')} title={t('settings.notifZpuiUpdatesDesc')}
+                checked={config.notify_zpui_updates !== false}
+                onChange={() => update({ notify_zpui_updates: !config.notify_zpui_updates })} />
+              <CompactNotif label={t('settings.notifZapretUpdates')} title={t('settings.notifZapretUpdatesDesc')}
+                checked={config.notify_zapret_updates !== false}
+                onChange={() => update({ notify_zapret_updates: !config.notify_zapret_updates })} />
+              <CompactNotif label={t('settings.notifMissingFiles')} title={t('settings.notifMissingFilesDesc')}
+                checked={config.notify_missing_files !== false}
+                onChange={() => update({ notify_missing_files: !config.notify_missing_files })} />
+              <CompactNotif label={t('settings.notifServiceStatus')} title={t('settings.notifServiceStatusDesc')}
+                checked={config.notify_service_status === true}
+                onChange={() => update({ notify_service_status: !config.notify_service_status })} />
+              <div className={'set-cnotiff-wide' + (config.notify_resource_drop ? '' : ' dimmed')} data-tooltip={t('settings.notifResourceDropDesc')}>
+                <div className="cnotiff-left">
+                  <Switch checked={config.notify_resource_drop === true}
+                    onChange={() => update({ notify_resource_drop: !config.notify_resource_drop })} />
+                  <span className="set-cnotiff-label">{t('settings.notifResourceDrop')}</span>
+                </div>
+                <div className="cnotiff-right">
+                  <input type="range" min="10" max="100" step="5" value={config.resource_drop_pct || 70}
+                    onChange={e => update({ resource_drop_pct: parseInt(e.target.value) })}
+                    className="set-threshold-slider" />
+                  <span className="set-threshold-val">{config.resource_drop_pct || 70}%</span>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
       </div>
     </div>
   );
@@ -234,6 +320,15 @@ function MiniRow({ label, children }) {
     <div className="set-row" style={{ padding: '3px 0' }}>
       <div className="set-row-info"><span className="set-row-title">{label}</span></div>
       {children}
+    </div>
+  );
+}
+
+function CompactNotif({ label, title, checked, onChange }) {
+  return (
+    <div className="set-cnotiff" data-tooltip={title}>
+      <span className="set-cnotiff-label">{label}</span>
+      <Switch checked={checked} onChange={onChange} />
     </div>
   );
 }

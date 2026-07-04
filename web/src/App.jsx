@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import Header from './components/layout/Header';
 import Sidebar from './components/layout/Sidebar';
 import Footer from './components/layout/Footer';
 import Toast from './components/feedback/Toast';
@@ -125,12 +124,19 @@ export default function App() {
         showToast(t('toast.updateAvailable', { name, version: data.latest }), 'info');
       }
     };
+    const filesHandler = (data) => {
+      if (data?.missing?.length > 0) {
+        showToast(t('toast.filesMissing', { count: data.missing.length }), 'warning');
+      }
+    };
     if (window.runtime?.EventsOn) {
       window.runtime.EventsOn('update:available', handler);
+      window.runtime.EventsOn('zapret:files-missing', filesHandler);
     }
     return () => {
       if (window.runtime?.EventsOff) {
         window.runtime.EventsOff('update:available');
+        window.runtime.EventsOff('zapret:files-missing');
       }
     };
   }, [startupDone, showToast]);
@@ -174,16 +180,20 @@ export default function App() {
 
   return (
     <div className="app">
-       <Sidebar activePage={activePage} onNavigate={setActivePage} onOpenChecker={() => setCheckerOpen(true)} onAutoSelect={() => setAutoSelectOpen(true)} onOpenHealth={() => setHealthOpen(true)} healthWarn={healthWarn} zapretRunning={status?.zapret?.status === 'running'} />
+       <Sidebar
+         activePage={activePage}
+         onNavigate={setActivePage}
+         onOpenChecker={() => setCheckerOpen(true)}
+         onAutoSelect={() => setAutoSelectOpen(true)}
+         onOpenHealth={() => setHealthOpen(true)}
+         healthWarn={healthWarn}
+         status={status}
+         showToast={showToast}
+         onOpenLogs={() => setLogsOpen(true)}
+         isDark={theme === 'dark'}
+         onToggleTheme={toggleTheme}
+       />
       <div className="app-body">
-        <Header
-          status={status}
-          onOpenLogs={() => setLogsOpen(true)}
-          isDark={theme === 'dark'}
-          onToggleTheme={toggleTheme}
-          showToast={showToast}
-          onNavigate={setActivePage}
-        />
         {pageContent}
         <Footer status={status} />
       </div>

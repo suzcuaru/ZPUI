@@ -36,6 +36,16 @@ type ActionLog struct {
 	Details   string    `json:"details,omitempty"`
 }
 
+// AvailabilityRecord — запись доступности ресурсов
+type AvailabilityRecord struct {
+	ID             string    `json:"id"`
+	Timestamp      time.Time `json:"timestamp"`
+	Type           string    `json:"type"`
+	TotalResources int       `json:"total_resources"`
+	OKResources    int       `json:"ok_resources"`
+	Pct            float64   `json:"pct"`
+}
+
 // TrafficSnapshot — снапшот трафика
 type TrafficSnapshot struct {
 	ID        string    `json:"id"`

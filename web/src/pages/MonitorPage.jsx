@@ -6,7 +6,7 @@ import { usePolling } from '../hooks/usePolling';
 
 function TrafficChart({ data, color, height }) {
   const canvasRef = useRef(null);
-  const h = height || 80;
+  const h = height || 64;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -119,21 +119,23 @@ export default function MonitorPage({ status, showToast }) {
 
   return (
     <>
+      <div className="page-title">{t('monitor.title')}</div>
+
       <div className="mon-grid">
-        <div className="card-section" style={{ gap: 6 }}>
+        <div className="card-section" style={{ gap: 4 }}>
           <div className="mon-chart-header">
             <span className="card-section-title">{t('monitor.download')}</span>
             <span className="mon-chart-val mono" style={{ color: 'var(--accent)' }}>{m.dl_speed_fmt || '0 B/s'}</span>
           </div>
-          <TrafficChart data={liveHistory.dl} color="accent" height={80} />
+          <TrafficChart data={liveHistory.dl} color="accent" height={64} />
         </div>
 
-        <div className="card-section" style={{ gap: 6 }}>
+        <div className="card-section" style={{ gap: 4 }}>
           <div className="mon-chart-header">
             <span className="card-section-title">{t('monitor.upload')}</span>
             <span className="mon-chart-val mono" style={{ color: 'var(--success)' }}>{m.ul_speed_fmt || '0 B/s'}</span>
           </div>
-          <TrafficChart data={liveHistory.ul} color="success" height={80} />
+          <TrafficChart data={liveHistory.ul} color="success" height={64} />
         </div>
       </div>
 
@@ -156,18 +158,23 @@ export default function MonitorPage({ status, showToast }) {
         </div>
       </div>
 
-      {devices.length > 0 && (
-        <div className="mon-devices">
-          {devices.slice(0, 8).map(d => (
-            <div key={d.ip} className="mon-device">
-              <span className="mon-device-dot" />
-              <span className="mon-device-name">{d.hostname || d.ip}</span>
-              <span className="mon-device-ip">{d.ip}</span>
-              <span className="mon-device-conns">{d.connections || 0}</span>
-            </div>
-          ))}
-        </div>
-      )}
+      <div className="section mon-devices-section">
+        <div className="section-title">{t('monitor.devices')}</div>
+        {devices.length > 0 ? (
+          <div className="mon-devices">
+            {devices.slice(0, 8).map(d => (
+              <div key={d.ip} className="mon-device">
+                <span className="mon-device-dot" />
+                <span className="mon-device-name">{d.hostname || d.ip}</span>
+                <span className="mon-device-ip">{d.ip}</span>
+                <span className="mon-device-conns">{d.connections || 0}</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="proxy-empty">{t('monitor.noDevices')}</div>
+        )}
+      </div>
     </>
   );
 }

@@ -128,7 +128,7 @@ func (m *Manager) RemoveService() error {
 	return nil
 }
 
-func parseStrategyArgs(strategyPath, binPath, listsPath string) (string, error) {
+func parseStrategyArgs(strategyPath, binPath, listsPath, gfTCP, gfUDP string) (string, error) {
 	data, err := os.ReadFile(strategyPath)
 	if err != nil {
 		return "", err
@@ -172,9 +172,9 @@ func parseStrategyArgs(strategyPath, binPath, listsPath string) (string, error) 
 
 	raw = strings.ReplaceAll(raw, `%BIN%`, filepath.ToSlash(binPath)+"/")
 	raw = strings.ReplaceAll(raw, `%LISTS%`, filepath.ToSlash(listsPath)+"/")
-	raw = strings.ReplaceAll(raw, `%GameFilterTCP%`, "12")
-	raw = strings.ReplaceAll(raw, `%GameFilterUDP%`, "12")
-	raw = strings.ReplaceAll(raw, `%GameFilter%`, "12")
+	raw = strings.ReplaceAll(raw, `%GameFilterTCP%`, gfTCP)
+	raw = strings.ReplaceAll(raw, `%GameFilterUDP%`, gfUDP)
+	raw = strings.ReplaceAll(raw, `%GameFilter%`, gfTCP)
 
 	raw = strings.ReplaceAll(raw, `"%~dp0bin\`, fmt.Sprintf(`"%s`, filepath.ToSlash(binPath)+"/"))
 	raw = strings.ReplaceAll(raw, `"%~dp0lists\`, fmt.Sprintf(`"%s`, filepath.ToSlash(listsPath)+"/"))

@@ -201,7 +201,7 @@ func (m *Manager) RunAutoTest(ctx context.Context, results chan<- AutoTestResult
 			Message:  fmt.Sprintf("[%d/%d] %s", i+1, len(strategies), s.Name),
 		}
 
-		proc, err := m.startWinws(s.Filename)
+		proc, exited, err := m.startWinws(s.Filename)
 		if err != nil {
 			results <- AutoTestResult{Type: "result", Strategy: s.Filename, Error: err.Error()}
 			continue
@@ -209,13 +209,14 @@ func (m *Manager) RunAutoTest(ctx context.Context, results chan<- AutoTestResult
 
 		if !sleepCtx(testCtx, 3*time.Second) {
 				proc.Process.Kill()
-				proc.Wait()
 				goto restore
 			}
 
-		if proc.ProcessState != nil && proc.ProcessState.Exited() {
+		select {
+		case <-exited:
 			results <- AutoTestResult{Type: "result", Strategy: s.Filename, Error: "winws exited immediately"}
 			continue
+		default:
 		}
 
 		results <- AutoTestResult{
@@ -234,7 +235,6 @@ func (m *Manager) RunAutoTest(ctx context.Context, results chan<- AutoTestResult
 			select {
 			case <-testCtx.Done():
 				proc.Process.Kill()
-				proc.Wait()
 				goto restore
 			default:
 			}
@@ -252,7 +252,7 @@ func (m *Manager) RunAutoTest(ctx context.Context, results chan<- AutoTestResult
 		}
 
 		proc.Process.Kill()
-		proc.Wait()
+		<-exited
 
 		d := testResultData{
 			Strategy:  s.Filename,
@@ -317,21 +317,21 @@ restore:
 	results <- AutoTestResult{Type: "done"}
 }
 
-func (m *Manager) startWinws(strategyFile string) (*exec.Cmd, error) {
+func (m *Manager) startWinws(strategyFile string) (*exec.Cmd, chan struct{}, error) {
 	strategyPath := m.cfg.StrategyPath(strategyFile)
 	if _, err := os.Stat(strategyPath); os.IsNotExist(err) {
-		return nil, fmt.Errorf("strategy file not found: %s", strategyPath)
+		return nil, nil, fmt.Errorf("strategy file not found: %s", strategyPath)
 	}
 
-	args, err := parseStrategyArgs(strategyPath, m.cfg.BinDir(), m.cfg.ListsDir())
+	args, err := parseStrategyArgs(strategyPath, m.cfg.BinDir(), m.cfg.ListsDir(), m.gameFilterTCP, m.gameFilterUDP)
 	if err != nil {
-		return nil, fmt.Errorf("parse strategy: %w", err)
+		return nil, nil, fmt.Errorf("parse strategy: %w", err)
 	}
 
 	binDir := strings.TrimSuffix(m.cfg.BinDir(), `\`)
 	winws := filepath.Join(binDir, "winws.exe")
 	if _, err := os.Stat(winws); os.IsNotExist(err) {
-		return nil, fmt.Errorf("winws.exe not found: %s", winws)
+		return nil, nil, fmt.Errorf("winws.exe not found: %s", winws)
 	}
 
 	argTokens := splitArgs(args)
@@ -343,10 +343,16 @@ func (m *Manager) startWinws(strategyFile string) (*exec.Cmd, error) {
 	cmd.Dir = binDir
 
 	if err := cmd.Start(); err != nil {
-		return nil, fmt.Errorf("start winws: %w", err)
+		return nil, nil, fmt.Errorf("start winws: %w", err)
 	}
 
-	return cmd, nil
+	exited := make(chan struct{})
+	go func() {
+		cmd.Wait()
+		close(exited)
+	}()
+
+	return cmd, exited, nil
 }
 
 func sleepCtx(ctx context.Context, d time.Duration) bool {
@@ -370,7 +376,11 @@ func testURL(client *http.Client, url string) (bool, int64) {
 	if !ok {
 		host := extractHost(url)
 		if host != "" {
-			conn, dialErr := net.DialTimeout("tcp", host+":443", 3*time.Second)
+			port := "443"
+			if strings.HasPrefix(url, "http://") {
+				port = "80"
+			}
+			conn, dialErr := net.DialTimeout("tcp", net.JoinHostPort(host, port), 3*time.Second)
 			if dialErr == nil {
 				conn.Close()
 				ok = true
@@ -437,6 +447,9 @@ func (m *Manager) loadTestTargets() []testTarget {
 			if line == "" || strings.HasPrefix(line, "#") {
 				continue
 			}
+			if strings.Contains(line, "example") || !strings.Contains(line, ".") {
+				continue
+			}
 			targets = append(targets, testTarget{Name: line, URL: "https://" + line})
 		}
 	}
@@ -485,8 +498,20 @@ func (m *Manager) SetGameFilter(mode string) error {
 
 	switch mode {
 	case "disabled":
+		m.gameFilterTCP = "12"
+		m.gameFilterUDP = "12"
 		return os.Remove(flagFile)
-	case "all", "tcp", "udp":
+	case "all":
+		m.gameFilterTCP = "1024-65535"
+		m.gameFilterUDP = "1024-65535"
+		return os.WriteFile(flagFile, []byte(mode), 0644)
+	case "tcp":
+		m.gameFilterTCP = "1024-65535"
+		m.gameFilterUDP = "12"
+		return os.WriteFile(flagFile, []byte(mode), 0644)
+	case "udp":
+		m.gameFilterTCP = "12"
+		m.gameFilterUDP = "1024-65535"
 		return os.WriteFile(flagFile, []byte(mode), 0644)
 	default:
 		return fmt.Errorf("invalid game filter mode: %s", mode)
@@ -520,6 +545,7 @@ func (m *Manager) AutoSelectAndApply(ctx context.Context, results chan<- AutoTes
 
 	strategies := m.ListStrategies()
 	resources := m.loadTestTargets()
+	originalStrategy := m.cfg.GetCurrentStrategy()
 
 	m.log.Info("strategy", fmt.Sprintf("Auto-select started: %d strategies, %d resources", len(strategies), len(resources)))
 
@@ -566,7 +592,7 @@ func (m *Manager) AutoSelectAndApply(ctx context.Context, results chan<- AutoTes
 			Message:  fmt.Sprintf("[%d/%d] %s", i+1, len(strategies), s.Name),
 		}
 
-		proc, err := m.startWinws(s.Filename)
+		proc, exited, err := m.startWinws(s.Filename)
 		if err != nil {
 			results <- AutoTestResult{Type: "result", Strategy: s.Filename, Error: err.Error()}
 			continue
@@ -574,13 +600,14 @@ func (m *Manager) AutoSelectAndApply(ctx context.Context, results chan<- AutoTes
 
 		if !sleepCtx(testCtx, 3*time.Second) {
 			proc.Process.Kill()
-			proc.Wait()
 			goto applyBest
 		}
 
-		if proc.ProcessState != nil && proc.ProcessState.Exited() {
+		select {
+		case <-exited:
 			results <- AutoTestResult{Type: "result", Strategy: s.Filename, Error: "winws завершился сразу"}
 			continue
+		default:
 		}
 
 		results <- AutoTestResult{
@@ -599,7 +626,6 @@ func (m *Manager) AutoSelectAndApply(ctx context.Context, results chan<- AutoTes
 			select {
 			case <-testCtx.Done():
 				proc.Process.Kill()
-				proc.Wait()
 				goto applyBest
 			default:
 			}
@@ -617,7 +643,7 @@ func (m *Manager) AutoSelectAndApply(ctx context.Context, results chan<- AutoTes
 		}
 
 		proc.Process.Kill()
-		proc.Wait()
+		<-exited
 
 		d := testResultData{
 			Strategy:  s.Filename,
@@ -645,6 +671,9 @@ func (m *Manager) AutoSelectAndApply(ctx context.Context, results chan<- AutoTes
 applyBest:
 	if len(allResults) == 0 {
 		results <- AutoTestResult{Type: "info", Message: "Нет рабочих стратегий"}
+		if originalStrategy != "" {
+			m.InstallService(originalStrategy)
+		}
 		results <- AutoTestResult{Type: "done", Error: "no working strategy"}
 		return
 	}
@@ -686,6 +715,9 @@ applyBest:
 				continue
 			}
 			results <- AutoTestResult{Type: "done", Error: "Служба падает на всех стратегиях"}
+			if originalStrategy != "" {
+				m.InstallService(originalStrategy)
+			}
 			return
 		}
 
@@ -704,6 +736,10 @@ applyBest:
 	}
 
 	if !applied {
+		if originalStrategy != "" {
+			results <- AutoTestResult{Type: "info", Message: "Восстановление исходной стратегии..."}
+			m.InstallService(originalStrategy)
+		}
 		results <- AutoTestResult{Type: "done", Error: "Не удалось применить ни одну стратегию"}
 		return
 	}

@@ -12,6 +12,7 @@ import (
 
 	"zpui/internal/database"
 	"zpui/internal/executil"
+	"zpui/internal/notify"
 	"zpui/internal/zapret"
 )
 
@@ -222,6 +223,13 @@ func (a *App) GetTrafficSnapshots(minutes int) map[string]interface{} {
 	}
 }
 
+func (a *App) notifyOnTestDone() {
+	if a.cfg.NotifyStrategyTest {
+		lang := a.cfg.GetLanguage()
+		notify.Show("ZPUI", tr(lang, "test_complete"))
+	}
+}
+
 func (a *App) saveTrafficSnapshot(dlSpeed, ulSpeed float64, totalDL, totalUL int64, connCount int) {
 	database.InsertSnapshot(&database.TrafficSnapshot{
 		Timestamp: time.Now(),
@@ -245,6 +253,8 @@ func (a *App) RunAutoTestStream() {
 		return
 	}
 
+	runtime.EventsEmit(a.ctx, "strategy:testing", true)
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -256,12 +266,16 @@ func (a *App) RunAutoTestStream() {
 		select {
 		case result, ok := <-results:
 			if !ok {
+				a.notifyOnTestDone()
 				runtime.EventsEmit(a.ctx, "strategy:done", map[string]interface{}{})
+				runtime.EventsEmit(a.ctx, "strategy:testing", false)
 				return
 			}
 			runtime.EventsEmit(a.ctx, "strategy:event", result)
 		case <-done:
+			a.notifyOnTestDone()
 			runtime.EventsEmit(a.ctx, "strategy:done", map[string]interface{}{})
+			runtime.EventsEmit(a.ctx, "strategy:testing", false)
 			return
 		}
 	}

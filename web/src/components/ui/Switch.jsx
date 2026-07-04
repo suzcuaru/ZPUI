@@ -5,7 +5,7 @@ export default function Switch({ checked, onChange, label, disabled, loading }) 
         className="switch-track"
         role="switch"
         aria-checked={!!checked}
-        onClick={onChange}
+        onClick={() => onChange()}
         disabled={disabled || loading}
         tabIndex={0}
       >

@@ -26,30 +26,32 @@ export default function Header({ status, onOpenLogs, isDark, onToggleTheme, show
           className={'header-svc' + (zRun ? ' on' : '') + (zapret.loading ? ' loading' : '')}
           onClick={zapret.toggle}
           disabled={zapret.loading}
+          title={t('header.zapret')}
         >
           {zapret.loading ? <span className="header-svc-spinner" /> : <span className="header-svc-dot" />}
           <span>{t('header.zapret')}</span>
-          <span>{zRun ? 'ON' : 'OFF'}</span>
         </button>
 
         <button
           className={'header-svc' + (pRun ? ' on' : '') + (proxy.loading ? ' loading' : '')}
           onClick={proxy.toggle}
           disabled={proxy.loading}
+          title={t('header.proxy') + (pRun ? ' :' + port : '')}
         >
           {proxy.loading ? <span className="header-svc-spinner" /> : <span className="header-svc-dot" />}
           <span>{t('header.proxy')}</span>
-          <span>{pRun ? ':' + port : 'OFF'}</span>
+          {pRun && <span className="header-svc-port">:{port}</span>}
         </button>
 
         <button
           className={'header-svc' + (xRun ? ' on' : '') + (xbox.loading ? ' loading' : '')}
           onClick={xbox.toggle}
           disabled={xbox.loading}
+          title={t('nav.xboxdns')}
         >
           {xbox.loading ? <span className="header-svc-spinner" /> : <span className="header-svc-dot" />}
           {ICONS.xbox}
-          <span>{xRun ? 'ON' : 'OFF'}</span>
+          <span>{t('nav.xboxdns')}</span>
         </button>
       </div>
 

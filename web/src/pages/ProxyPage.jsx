@@ -15,7 +15,10 @@ export default function ProxyPage({ status, showToast }) {
   const pRun = status?.proxy?.running === true;
   const port = status?.proxy?.port || 1080;
 
-  const proxy = useServiceToggle('proxy', pRun, showToast);
+  const proxy = useServiceToggle('proxy', pRun, showToast, {
+    startMsg: t('header.proxyStarted'),
+    stopMsg: t('header.proxyStopped'),
+  });
   const saveProxyConfig = useDebouncedSave('/api/proxy/config', 500, () => showToast(t('proxy.settingsSaved'), 'success'));
 
   const loadData = useCallback(async () => {
@@ -48,60 +51,85 @@ export default function ProxyPage({ status, showToast }) {
 
   return (
     <>
-      <div className="section">
-        <Row
-          title={t('proxy.socks5Proxy')}
-          desc={`${pRun ? t('proxy.runningOnPort', { port }) : t('proxy.stopped')} · ${devices.length} ${t('proxy.devicesSuffix')} · ${totalConns} ${t('proxy.connSuffix')}`}
-        >
-          <button className={'btn ' + (pRun ? 'btn-danger' : 'btn-accent')} onClick={proxy.toggle} disabled={proxy.loading}>
-            {proxy.loading ? '...' : pRun ? t('common.stop') : t('common.start')}
-          </button>
-        </Row>
-      </div>
+      <div className="page-title">{t('proxy.title')}</div>
 
-      <div className="section">
-        <div className="section-title">{t('proxy.connectedDevices')}</div>
-        {devices.length === 0 ? (
-          <div style={{ color: 'var(--text-tertiary)', fontSize: 11, padding: 8 }}>{t('proxy.noDevices')}</div>
-        ) : (
-          <div className="proxy-devices">
-            {devices.map(d => (
-              <div key={d.ip} className="proxy-device">
-                <span className="pd-status" />
-                <div className="pd-info">
-                  <span className="pd-host">{d.hostname || d.ip}</span>
-                  <span className="pd-ip">{d.ip}{d.mac && ' · ' + d.mac}</span>
-                </div>
-                <div className="pd-latency">
-                  <span className="pd-latency-val">{d.connections}</span>
-                  <span className="pd-latency-label">{t('proxy.connSuffix')}</span>
-                </div>
-              </div>
-            ))}
+      <div className={'proxy-hero' + (pRun ? ' running' : '')}>
+        <div className="proxy-hero-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 010 20M12 2a15 15 0 000 20"/></svg>
+        </div>
+        <div className="proxy-hero-body">
+          <span className="proxy-hero-title">{t('proxy.socks5Proxy')}</span>
+          <span className="proxy-hero-status">
+            {pRun ? t('proxy.runningOnPort', { port }) : t('proxy.stopped')}
+          </span>
+        </div>
+        {pRun && (
+          <div className="proxy-hero-stats">
+            <div className="proxy-hero-stat">
+              <span className="phs-val">{devices.length}</span>
+              <span className="phs-label">{t('proxy.devicesSuffix')}</span>
+            </div>
+            <span className="proxy-hero-sep" />
+            <div className="proxy-hero-stat">
+              <span className="phs-val">{totalConns}</span>
+              <span className="phs-label">{t('proxy.connSuffix')}</span>
+            </div>
           </div>
         )}
+        <button
+          className={'proxy-hero-btn ' + (pRun ? 'stop' : 'start')}
+          onClick={proxy.toggle}
+          disabled={proxy.loading}
+        >
+          {proxy.loading ? <span className="mini-spin" /> : pRun ? t('common.stop') : t('common.start')}
+        </button>
       </div>
 
-      <div className="section">
-        <div className="section-title">{t('proxy.proxySettings')}</div>
-        <div className="form-group">
-          <label>{t('proxy.port')}</label>
-          <input type="number" className="form-input" value={config.port} min="1" max="65535"
-            onChange={e => updateConfig({ port: parseInt(e.target.value) || 1080 })} />
+      <div className="proxy-2col">
+        <div className="section proxy-col-devices">
+          <div className="section-title">{t('proxy.connectedDevices')}</div>
+          {devices.length === 0 ? (
+            <div className="proxy-empty">{t('proxy.noDevices')}</div>
+          ) : (
+            <div className="proxy-devices">
+              {devices.map(d => (
+                <div key={d.ip} className="proxy-device">
+                  <span className="pd-status" />
+                  <div className="pd-info">
+                    <span className="pd-host">{d.hostname || d.ip}</span>
+                    <span className="pd-ip">{d.ip}{d.mac && ' · ' + d.mac}</span>
+                  </div>
+                  <div className="pd-latency">
+                    <span className="pd-latency-val">{d.connections}</span>
+                    <span className="pd-latency-label">{t('proxy.connSuffix')}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
-        <div className="form-group">
-          <label>{t('proxy.username')}</label>
-          <input type="text" className="form-input" value={config.username || ''} placeholder={t('proxy.noAuth')}
-            onChange={e => updateConfig({ username: e.target.value })} />
+
+        <div className="section proxy-col-settings">
+          <div className="section-title">{t('proxy.proxySettings')}</div>
+          <div className="form-group">
+            <label>{t('proxy.port')}</label>
+            <input type="number" className="form-input" value={config.port} min="1" max="65535"
+              onChange={e => updateConfig({ port: parseInt(e.target.value) || 1080 })} />
+          </div>
+          <div className="form-group">
+            <label>{t('proxy.username')}</label>
+            <input type="text" className="form-input" value={config.username || ''} placeholder={t('proxy.noAuth')}
+              onChange={e => updateConfig({ username: e.target.value })} />
+          </div>
+          <div className="form-group">
+            <label>{t('proxy.password')}</label>
+            <input type="password" className="form-input" value={config.password || ''} placeholder={t('proxy.noAuth')}
+              onChange={e => updateConfig({ password: e.target.value })} />
+          </div>
+          <Row title={t('proxy.autoStartProxy')} desc={t('proxy.autoStartProxyDesc')}>
+            <Switch checked={config.auto_start || false} onChange={() => updateConfig({ auto_start: !config.auto_start })} />
+          </Row>
         </div>
-        <div className="form-group">
-          <label>{t('proxy.password')}</label>
-          <input type="password" className="form-input" value={config.password || ''} placeholder={t('proxy.noAuth')}
-            onChange={e => updateConfig({ password: e.target.value })} />
-        </div>
-        <Row title={t('proxy.autoStartProxy')} desc={t('proxy.autoStartProxyDesc')}>
-          <Switch checked={config.auto_start || false} onChange={() => updateConfig({ auto_start: !config.auto_start })} />
-        </Row>
       </div>
     </>
   );

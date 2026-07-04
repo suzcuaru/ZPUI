@@ -12,7 +12,7 @@ func (m *Manager) serviceCreate(strategyFile string) error {
 	listsPath := m.cfg.ListsDir()
 	strategyPath := m.cfg.StrategyPath(strategyFile)
 
-	args, err := parseStrategyArgs(strategyPath, binPath, listsPath)
+	args, err := parseStrategyArgs(strategyPath, binPath, listsPath, m.gameFilterTCP, m.gameFilterUDP)
 	if err != nil {
 		return fmt.Errorf("parse strategy: %w", err)
 	}

@@ -25,15 +25,17 @@ const (
 )
 
 type Manager struct {
-	cfg     *config.Config
-	log     *logger.Logger
-	mu      sync.RWMutex
-	cmd     *exec.Cmd
-	stdout  io.ReadCloser
-	stderr  io.ReadCloser
-	status  Status
-	stopCh  chan struct{}
-	version string
+	cfg           *config.Config
+	log           *logger.Logger
+	mu            sync.RWMutex
+	cmd           *exec.Cmd
+	stdout        io.ReadCloser
+	stderr        io.ReadCloser
+	status        Status
+	stopCh        chan struct{}
+	version       string
+	gameFilterTCP string
+	gameFilterUDP string
 }
 
 func NewManager(cfg *config.Config, log *logger.Logger) *Manager {
@@ -43,6 +45,8 @@ func NewManager(cfg *config.Config, log *logger.Logger) *Manager {
 		status:  StatusStopped,
 		version: detectZapretVersion(cfg),
 	}
+
+	_, m.gameFilterTCP, m.gameFilterUDP = m.LoadGameFilter()
 
 	if m.isServiceRunning() {
 		m.status = StatusRunning
@@ -120,7 +124,7 @@ func (m *Manager) StartWithStrategy(strategyFile string) error {
 
 	m.log.Info("zapret", fmt.Sprintf("Starting zapret with strategy: %s", strategyFile))
 
-	args, err := parseStrategyArgs(strategyPath, m.cfg.BinDir(), m.cfg.ListsDir())
+	args, err := parseStrategyArgs(strategyPath, m.cfg.BinDir(), m.cfg.ListsDir(), m.gameFilterTCP, m.gameFilterUDP)
 	if err != nil {
 		return fmt.Errorf("parse strategy args: %w", err)
 	}
@@ -298,6 +302,46 @@ type InstallResult struct {
 	Strategy string   `json:"strategy"`
 	Running  bool     `json:"running"`
 	Errors   []string `json:"errors,omitempty"`
+}
+
+type FileCheckResult struct {
+	Exists bool   `json:"exists"`
+	Path   string `json:"path"`
+}
+
+type VerifyResult struct {
+	AllPresent bool              `json:"all_present"`
+	Version    string            `json:"version"`
+	Files      []FileCheckResult `json:"files"`
+}
+
+var essentialFiles = []string{
+	"bin/winws.exe",
+	"bin/WinDivert.dll",
+	"bin/WinDivert64.sys",
+	"service.bat",
+	"general.bat",
+}
+
+func (m *Manager) VerifyFiles() *VerifyResult {
+	zapretDir := m.cfg.GetZapretPath()
+	result := &VerifyResult{
+		Version:    m.GetVersion(),
+		AllPresent: true,
+	}
+	for _, rel := range essentialFiles {
+		full := filepath.Join(zapretDir, rel)
+		_, err := os.Stat(full)
+		exists := err == nil
+		if !exists {
+			result.AllPresent = false
+		}
+		result.Files = append(result.Files, FileCheckResult{
+			Exists: exists,
+			Path:   rel,
+		})
+	}
+	return result
 }
 
 // DefaultStrategyName возвращает стратегию по умолчанию (первый general* ALT).

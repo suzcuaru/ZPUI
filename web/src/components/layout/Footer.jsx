@@ -17,11 +17,11 @@ export default function Footer({ status }) {
   return (
     <div className="footer">
       <div className="footer-item">
-        <span style={{ color: 'var(--text-tertiary)' }}>▼</span>
+        <span style={{ color: 'var(--text-tertiary)' }}>↓</span>
         <span className="footer-mono footer-num" style={{ color: 'var(--accent)' }}>{dlSpeed}</span>
       </div>
       <div className="footer-item">
-        <span style={{ color: 'var(--text-tertiary)' }}>▲</span>
+        <span style={{ color: 'var(--text-tertiary)' }}>↑</span>
         <span className="footer-mono footer-num" style={{ color: 'var(--success)' }}>{ulSpeed}</span>
       </div>
 

@@ -118,6 +118,17 @@ func migrate() error {
 		CREATE INDEX IF NOT EXISTS idx_log_ts ON action_logs(timestamp);
 		CREATE INDEX IF NOT EXISTS idx_snap_ts ON traffic_snapshots(timestamp);
 
+		CREATE TABLE IF NOT EXISTS availability_history (
+			id TEXT PRIMARY KEY,
+			timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+			type TEXT DEFAULT 'all',
+			total_resources INTEGER DEFAULT 0,
+			ok_resources INTEGER DEFAULT 0,
+			pct REAL DEFAULT 0
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_avail_ts ON availability_history(timestamp);
+
 		CREATE TABLE IF NOT EXISTS zapret_backup (
 			id INTEGER PRIMARY KEY DEFAULT 1,
 			data TEXT,

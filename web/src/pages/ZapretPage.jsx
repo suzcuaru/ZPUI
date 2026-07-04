@@ -1,69 +1,157 @@
 import { useState, useEffect, useRef } from 'react';
-import Modal from '../components/ui/Modal';
-import Switch from '../components/ui/Switch';
+import DiagnosticsModal from '../components/DiagnosticsModal';
 import { api, apiCall, createStream } from '../api';
 import { useT } from '../i18n';
 
 export default function ZapretPage({ status, showToast }) {
   const { t } = useT();
   const [subtab, setSubtab] = useState('strategies');
+  const [diagOpen, setDiagOpen] = useState(false);
+  const [skipped, setSkipped] = useState(false);
+  const [showColors, setShowColors] = useState(true);
+
+  useEffect(() => {
+    api('GET', '/api/config').then(c => {
+      if (c) {
+        setSkipped(c.zapret_skipped === true);
+        setShowColors(c.show_strategy_colors !== false);
+      }
+    });
+  }, []);
+
+  const handleReenable = async () => {
+    await api('POST', '/api/config', { zapret_skipped: false });
+    setSkipped(false);
+    showToast(t('zapret.reenabled'), 'success');
+  };
+
+  if (skipped) {
+    return (
+      <>
+        <div className="page-title">{t('zapret.title')}</div>
+        <div className="zapret-skipped-banner">
+          <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="var(--warning)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+          <div className="zapret-skipped-text">
+            <strong>{t('zapret.skippedTitle')}</strong>
+            <p>{t('zapret.skippedDesc')}</p>
+          </div>
+          <button className="btn btn-accent btn-sm" onClick={handleReenable}>{t('zapret.reenable')}</button>
+        </div>
+      </>
+    );
+  }
 
   return (
     <>
+      <div className="zapret-head">
+        <div className="page-title">{t('zapret.title')}</div>
+        <div className="zapret-head-actions">
+          <button className="btn btn-xs btn-ghost" onClick={async () => {
+            const r = await api('POST', '/api/zapret/cache/clear', { target: 'discord' });
+            if (r?.cleared?.length) showToast(t('zapret.cacheCleared', { items: r.cleared.join(', ') }), 'success');
+            else showToast(t('zapret.nothingToClear'), 'info');
+          }}>
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+            Discord
+          </button>
+          <button className="btn btn-xs btn-ghost" onClick={async () => {
+            const r = await api('POST', '/api/zapret/cache/clear', { target: 'network' });
+            if (r?.cleared?.length) showToast(t('zapret.cacheCleared', { items: r.cleared.join(', ') }), 'success');
+          }}>
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/></svg>
+            {t('zapret.clearSystemCache')}
+          </button>
+          <button className="btn btn-sm btn-ghost" onClick={() => setDiagOpen(true)}>
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            {t('zapret.diagnostics')}
+          </button>
+        </div>
+      </div>
       <div className="subtabs">
         <button className={'subtab' + (subtab === 'strategies' ? ' active' : '')} onClick={() => setSubtab('strategies')}>{t('zapret.strategies')}</button>
-        <button className={'subtab' + (subtab === 'filters' ? ' active' : '')} onClick={() => setSubtab('filters')}>{t('zapret.filters')}</button>
         <button className={'subtab' + (subtab === 'lists' ? ' active' : '')} onClick={() => setSubtab('lists')}>{t('zapret.lists')}</button>
       </div>
 
-      {subtab === 'strategies' && <StrategiesTab status={status} showToast={showToast} />}
-      {subtab === 'filters' && <FiltersTab showToast={showToast} />}
+      {subtab === 'strategies' && <StrategiesTab status={status} showToast={showToast} showColors={showColors} />}
       {subtab === 'lists' && <ListsTab showToast={showToast} />}
+
+      <DiagnosticsModal open={diagOpen} onClose={() => setDiagOpen(false)} showToast={showToast} />
     </>
   );
 }
 
-function StrategiesTab({ status, showToast }) {
+function StrategiesTab({ status, showToast, showColors }) {
   const { t } = useT();
   const [strategies, setStrategies] = useState([]);
   const [changing, setChanging] = useState(null);
-  const [testModal, setTestModal] = useState(false);
   const [testing, setTesting] = useState(false);
   const [testProgress, setTestProgress] = useState(null);
-  const [bestStrategy, setBestStrategy] = useState(null);
+  const [testResults, setTestResults] = useState({});
+  const [gameFilter, setGameFilter] = useState('disabled');
+  const [ipsetStatus, setIpsetStatus] = useState('loaded');
   const esRef = useRef(null);
 
-  useEffect(() => { loadStrategies(); }, []);
+  useEffect(() => {
+    loadStrategies();
+    loadFilters();
+    if (status?.zapret?.auto_test_running) setTesting(true);
+    const rt = window.runtime;
+    if (rt) {
+      rt.EventsOn('strategy:testing', (active) => {
+        setTesting(active);
+        if (!active) loadStrategies();
+      });
+    }
+    return () => { if (esRef.current) { esRef.current.close(); esRef.current = null; } };
+  }, []);
 
   const loadStrategies = async () => {
     const d = await api('GET', '/api/zapret/strategies');
     if (d) setStrategies(d.strategies || []);
   };
 
-  const handleSet = async (fn) => {
-    setChanging(fn);
-    await apiCall(() => api('POST', '/api/zapret/set-strategy', { filename: fn }), t('zapret.strategyApplied'), showToast);
-    await loadStrategies();
-    setChanging(null);
+  const loadFilters = async () => {
+    const gf = await api('GET', '/api/zapret/game-filter');
+    if (gf) setGameFilter(gf.mode || 'disabled');
+    const ip = await api('GET', '/api/zapret/ipset-status');
+    if (ip) setIpsetStatus(ip.status || 'loaded');
   };
 
-  const handleAutoTest = () => {
-    setTestModal(true); setTesting(true); setTestProgress(null); setBestStrategy(null);
+  const getResultColor = (ok, n) => {
+    if (n === 0) return 'bad';
+    const ratio = ok / n;
+    if (ratio >= 0.8) return 'good';
+    if (ratio >= 0.4) return 'mid';
+    return 'bad';
+  };
+
+  const handleStartTest = () => {
+    setTesting(true);
+    setTestProgress(null);
+    setTestResults({});
     const es = createStream('/api/strategy/stream');
     esRef.current = es;
     es.onmessage = (e) => {
       const d = JSON.parse(e.data);
       if (d.type === 'done') {
         es.close(); esRef.current = null; setTesting(false);
-        showToast(t('zapret.autoTestComplete'), 'success');
+        if (!d.error) showToast(t('zapret.autoTestComplete'), 'success');
         return;
       }
-      if (d.type === 'result' && d.resources_n > 0 && !d.error) {
-        if (!bestStrategy || (d.resources_ok / d.resources_n) > (bestStrategy.resources_ok / bestStrategy.resources_n)) {
-          setBestStrategy(d);
-        }
+      if (d.type === 'progress') setTestProgress(d);
+      if (d.type === 'result' && d.strategy) {
+        setTestResults(prev => ({
+          ...prev,
+          [d.strategy]: {
+            ok: d.resources_ok || 0,
+            n: d.resources_n || 0,
+            ms: d.response_ms || 0,
+            color: d.error ? 'bad' : getResultColor(d.resources_ok, d.resources_n),
+          }
+        }));
       }
-      if (d.type === 'progress') { setTestProgress(d); }
     };
     es.onerror = () => { es.close(); esRef.current = null; setTesting(false); };
   };
@@ -74,108 +162,12 @@ function StrategiesTab({ status, showToast }) {
     setTesting(false);
   };
 
-  return (
-    <>
-      <div className="strat-grid">
-        {strategies.map(s => (
-          <button
-            key={s.filename}
-            className={'strat-card' + (s.current ? ' active' : '')}
-            onClick={() => !s.current && handleSet(s.filename)}
-            disabled={changing === s.filename}
-          >
-            <span className="strat-card-dot" />
-            <span className="strat-card-name">{s.name}</span>
-            {s.current && <span className="strat-card-badge">✓</span>}
-            {changing === s.filename && <span className="strat-card-spin" />}
-          </button>
-        ))}
-        {strategies.length === 0 && <div className="strat-empty">{t('zapret.noStrategies')}</div>}
-      </div>
-
-      <button className="btn btn-sm" onClick={handleAutoTest} style={{ marginTop: 8 }}>
-        {t('zapret.testStrategies')}
-      </button>
-
-      <Modal open={testModal} onClose={() => !testing && setTestModal(false)} title={t('zapret.autoSelect')} wide>
-        {testing && (
-          <div className="at-active">
-            {testProgress && (
-              <>
-                <div className="at-progress-bar">
-                  <div className="at-progress-fill" style={{ width: ((testProgress.current / Math.max(testProgress.total, 1)) * 100) + '%' }} />
-                </div>
-                <div className="at-progress-info">
-                  <span className="at-progress-count">{testProgress.current} / {testProgress.total}</span>
-                  <span className="at-current-str">{testProgress.strategy}</span>
-                </div>
-                {testProgress.phase && (
-                  <div className="at-phase">
-                    <span className={'at-phase-dot ' + testProgress.phase} />
-                    <span className="at-phase-text">{testProgress.message || ''}</span>
-                  </div>
-                )}
-              </>
-            )}
-            <button className="btn btn-danger btn-sm" onClick={cancelTest} style={{ marginTop: 8, width: '100%' }}>
-              {t('common.cancel')}
-            </button>
-          </div>
-        )}
-
-        {!testing && bestStrategy && (
-          <div className="at-best">
-            <div className="at-best-header">
-              <span className="at-best-title">{t('zapret.bestStrategy')}</span>
-            </div>
-            <div className="at-best-card">
-              <div className="at-best-right">
-                <span className="at-best-name">{bestStrategy.strategy}</span>
-                <div className="at-best-score">
-                  <span className="at-best-score-num">{bestStrategy.resources_ok}</span>
-                  <span className="at-best-score-den">/ {bestStrategy.resources_n} {t('zapret.resources')}</span>
-                </div>
-                <div className="at-best-ms">{bestStrategy.response_ms} мс</div>
-                <button className="btn btn-accent btn-sm" onClick={() => { handleSet(bestStrategy.strategy); setTestModal(false); }} style={{ marginTop: 6 }}>
-                  {t('common.apply')}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {!testing && !bestStrategy && (
-          <div className="at-empty">{t('zapret.noWorkingStrategies')}</div>
-        )}
-
-        {!testing && (
-          <button className="btn btn-accent" onClick={() => setTestModal(false)} style={{ marginTop: 12, width: '100%' }}>
-            {t('common.close')}
-          </button>
-        )}
-      </Modal>
-    </>
-  );
-}
-
-function FiltersTab({ showToast }) {
-  const { t } = useT();
-  const [gameFilter, setGameFilter] = useState('disabled');
-  const [ipsetStatus, setIpsetStatus] = useState('loaded');
-  const [autoUpdate, setAutoUpdate] = useState(true);
-  const [autoStart, setAutoStart] = useState(false);
-
-  useEffect(() => { loadFilters(); }, []);
-
-  const loadFilters = async () => {
-    const gf = await api('GET', '/api/zapret/game-filter');
-    if (gf) setGameFilter(gf.mode || 'disabled');
-    const ip = await api('GET', '/api/zapret/ipset-status');
-    if (ip) setIpsetStatus(ip.status || 'loaded');
-    const au = await api('GET', '/api/zapret/auto-update-status');
-    if (au) setAutoUpdate(au.enabled !== false);
-    const c = await api('GET', '/api/config');
-    if (c) setAutoStart(c.auto_start_zapret || false);
+  const handleSet = async (fn) => {
+    if (testing) return;
+    setChanging(fn);
+    await apiCall(() => api('POST', '/api/zapret/set-strategy', { filename: fn }), t('zapret.strategyApplied'), showToast);
+    await loadStrategies();
+    setChanging(null);
   };
 
   const handleGameFilter = async (mode) => {
@@ -189,19 +181,6 @@ function FiltersTab({ showToast }) {
     loadFilters();
   };
 
-  const handleAutoUpdate = async () => {
-    const next = !autoUpdate;
-    setAutoUpdate(next);
-    await apiCall(() => api('POST', '/api/zapret/auto-update-toggle', { enabled: next }), null, showToast);
-  };
-
-  const handleAutoStart = async () => {
-    const next = !autoStart;
-    setAutoStart(next);
-    const c = await api('GET', '/api/config');
-    if (c) await api('POST', '/api/config', { ...c, auto_start_zapret: next });
-  };
-
   const handleUpdateIpset = async () => {
     await apiCall(() => api('POST', '/api/zapret/update-ipset'), t('zapret.ipsetUpdated'), showToast);
   };
@@ -212,15 +191,65 @@ function FiltersTab({ showToast }) {
 
   return (
     <>
-      <div className="flt-section">
-        <div className="flt-label">Game Filter</div>
-        <div className="flt-radios">
-          {[
-            { v: 'disabled', l: t('zapret.off') },
-            { v: 'all', l: 'TCP+UDP' },
-            { v: 'tcp', l: 'TCP' },
-            { v: 'udp', l: 'UDP' },
-          ].map(o => (
+      {testing && testProgress && (
+        <div className="strat-test-bar">
+          <div className="strat-test-info">
+            <span className="strat-test-spin"><span className="mini-spin" /></span>
+            <span className="strat-test-label">{t('zapret.testingStrategies')}</span>
+            <span className="strat-test-count">{testProgress.current} / {testProgress.total}</span>
+          </div>
+          <div className="strat-test-progress">
+            <div className="strat-test-progress-fill" style={{ width: ((testProgress.current / Math.max(testProgress.total, 1)) * 100) + '%' }} />
+          </div>
+        </div>
+      )}
+
+      <div className="strat-grid">
+        {strategies.map(s => {
+          const result = testResults[s.filename];
+          const isTestingThis = testing && testProgress?.strategy === s.filename;
+          return (
+            <button
+              key={s.filename}
+              className={'strat-card' + (s.current ? ' active' : '') + (result && showColors ? ' result-' + result.color : '') + (isTestingThis ? ' testing-now' : '')}
+              onClick={() => !s.current && !testing && handleSet(s.filename)}
+              disabled={testing || changing === s.filename}
+            >
+              <span className="strat-card-dot" />
+              <span className="strat-card-name">{s.name}</span>
+              {s.current && <span className="strat-card-badge">✓</span>}
+              {changing === s.filename && <span className="strat-card-spin" />}
+              {result && (
+                <span className="strat-card-stats" data-tooltip={`${result.ok}/${result.n} · ${result.ms}ms`}>
+                  {result.ok}/{result.n}
+                </span>
+              )}
+            </button>
+          );
+        })}
+        {strategies.length === 0 && <div className="strat-empty">{t('zapret.noStrategies')}</div>}
+      </div>
+
+      {testing ? (
+        <button className="btn btn-danger btn-sm" onClick={cancelTest} style={{ marginTop: 8 }}>
+          {t('common.cancel')}
+        </button>
+      ) : (
+        <button className="btn btn-sm" onClick={handleStartTest} style={{ marginTop: 8 }} disabled={!strategies.length}>
+          {t('zapret.testStrategies')}
+        </button>
+      )}
+
+      <div className="strat-filters">
+        <div className="flt-section">
+          <div className="flt-label">{t('zapret.gameFilter')}</div>
+          <div className="flt-radios">
+            {[
+              { v: 'disabled', l: t('zapret.off') },
+              { v: 'all', l: 'TCP+UDP' },
+              { v: 'tcp', l: 'TCP' },
+              { v: 'udp', l: 'UDP' },
+            ].map(o => (
             <label key={o.v} className="flt-radio">
               <input type="radio" name="gf" checked={gameFilter === o.v} onChange={() => handleGameFilter(o.v)} />
               <span>{o.l}</span>
@@ -230,7 +259,7 @@ function FiltersTab({ showToast }) {
       </div>
 
       <div className="flt-section">
-        <div className="flt-label">IPSet Filter</div>
+        <div className="flt-label">{t('zapret.ipsetFilter')}</div>
         <div className="flt-row">
           <div className="flt-row-info">
             <span className="flt-row-title">{t('zapret.status') + ' '}<strong>{ipsetStatus}</strong></span>
@@ -245,24 +274,6 @@ function FiltersTab({ showToast }) {
         </div>
       </div>
 
-      <div className="flt-section">
-        <div className="flt-row">
-          <div className="flt-row-info">
-            <span className="flt-row-title">{t('zapret.autoStartZapret')}</span>
-            <span className="flt-row-desc">{t('zapret.autoStartZapretDesc')}</span>
-          </div>
-          <Switch checked={autoStart} onChange={handleAutoStart} />
-        </div>
-      </div>
-
-      <div className="flt-section">
-        <div className="flt-row">
-          <div className="flt-row-info">
-            <span className="flt-row-title">{t('zapret.autoUpdateCheck')}</span>
-            <span className="flt-row-desc">{t('zapret.autoUpdateCheckDesc')}</span>
-          </div>
-          <Switch checked={autoUpdate} onChange={handleAutoUpdate} />
-        </div>
       </div>
     </>
   );
@@ -307,42 +318,46 @@ function ListsTab({ showToast }) {
   const readonlyLists = lists.filter(l => !l.editable);
 
   return (
-    <>
-      <div className="section">
-        <div className="section-title">{t('zapret.userLists')}</div>
-        {editableLists.map(l => (
-          <button key={l.name} className={'strat-item' + (selected === l.name ? ' active' : '')} onClick={() => handleSelect(l.name)}>
-            <span className="strat-name">{l.name}</span>
-            <span className="strat-badge">{l.count}</span>
-          </button>
-        ))}
-      </div>
-
-      {selected && (
-        <div className="section">
-          <div className="section-title">{t('zapret.editor')} {selected}</div>
-          <div className="list-editor">
-            <textarea value={content} onChange={e => setContent(e.target.value)} placeholder={t('zapret.textareaPlaceholder')} />
-            <div className="btn-row">
-              <button className="btn btn-accent btn-sm" onClick={handleSave} disabled={saving}>
-                {saving ? t('common.saving') : t('common.save')}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {readonlyLists.length > 0 && (
-        <div className="section">
-          <div className="section-title">{t('zapret.systemLists')}</div>
-          {readonlyLists.map(l => (
-            <div key={l.name} className="info-row">
-              <span className="info-label">{l.name}</span>
-              <span className="info-value mono">{l.count} {t('common.rows')}</span>
-            </div>
+    <div className="lists-2col">
+      <div className="lists-left">
+        <div className="section lists-list-section">
+          <div className="section-title">{t('zapret.userLists')}</div>
+          {editableLists.map(l => (
+            <button key={l.name} className={'strat-item compact' + (selected === l.name ? ' active' : '')} onClick={() => handleSelect(l.name)}>
+              <span className="strat-name">{l.name}</span>
+              <span className="strat-badge">{l.count}</span>
+            </button>
           ))}
         </div>
-      )}
-    </>
+
+        {readonlyLists.length > 0 && (
+          <div className="section lists-sys-section">
+            <div className="section-title">{t('zapret.systemLists')}</div>
+            <div className="lists-sys-grid">
+              {readonlyLists.map(l => (
+                <div key={l.name} className="lists-sys-item">
+                  <span className="lists-sys-name">{l.name}</span>
+                  <span className="lists-sys-count">{l.count}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="section lists-editor-section">
+        <div className="section-title">{selected ? selected : t('zapret.editor')}</div>
+        {selected ? (
+          <div className="list-editor">
+            <textarea value={content} onChange={e => setContent(e.target.value)} placeholder={t('zapret.textareaPlaceholder')} />
+            <button className="btn btn-accent btn-sm" onClick={handleSave} disabled={saving}>
+              {saving ? t('common.saving') : t('common.save')}
+            </button>
+          </div>
+        ) : (
+          <div className="proxy-empty">{t('zapret.selectList')}</div>
+        )}
+      </div>
+    </div>
   );
 }

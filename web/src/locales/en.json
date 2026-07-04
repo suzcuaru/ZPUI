@@ -22,7 +22,9 @@
     "enable": "Enable",
     "disable": "Disable",
     "rows": "rows",
-    "version": "Version"
+    "version": "Version",
+    "ms": "ms",
+    "completed": "Completed"
   },
   "nav": {
     "dashboard": "Home",
@@ -69,6 +71,7 @@
     "title": "Overview",
     "components": "Components",
     "resourceAvailability": "Resource availability",
+    "lastCheck": "checked",
     "standard": "standard",
     "custom": "custom",
     "allStable": "Everything stable",
@@ -85,6 +88,11 @@
   },
   "zapret": {
     "title": "Zapret",
+    "skippedTitle": "Working without Zapret",
+    "skippedDesc": "Zapret is disabled. DPI bypass is unavailable. Proxy and Xbox DNS work normally.",
+    "skippedStatus": "Skipped",
+    "reenable": "Enable Zapret",
+    "reenabled": "Zapret enabled. Restart the app to install.",
     "strategies": "Strategies",
     "filters": "Filters",
     "lists": "Lists",
@@ -97,6 +105,7 @@
     "noWorkingStrategies": "No working strategies",
     "appliedStrategy": "Applied strategy",
     "testStrategies": "Test strategies",
+    "testingStrategies": "Testing strategies",
     "starting": "Starting...",
     "bestStrategy": "Best strategy",
     "resources": "resources",
@@ -105,6 +114,9 @@
     "ipsetUpdated": "IPSet updated",
     "hostsUpdated": "Hosts updated",
     "off": "Off",
+    "gameFilter": "Game Filter",
+    "ipsetFilter": "IPSet",
+    "ipsetStatus": "Status: ",
     "status": "Status:",
     "updateIpset": "Update IPSet",
     "updateHosts": "Update Hosts",
@@ -115,8 +127,23 @@
     "listSaved": "List saved",
     "userLists": "Custom lists",
     "editor": "Editor:",
+    "selectList": "Select a list on the left",
     "textareaPlaceholder": "Enter domains or IPs, one per line...",
-    "systemLists": "System lists (read-only)"
+    "systemLists": "System lists (read-only)",
+    "diagnostics": "Diagnostics",
+    "systemChecks": "System checks",
+    "cacheClearing": "Cache clearing",
+    "clearDiscord": "Clear Discord cache",
+    "clearNetwork": "Clear network cache",
+    "clearAll": "Clear all",
+    "cacheCleared": "Cleared: {items}",
+    "nothingToClear": "Nothing to clear",
+    "clearSystemCache": "System",
+    "cacheNothing": "Nothing to clear",
+    "cacheClearingDiscord": "Clearing Discord cache...",
+    "runDiagnostics": "Run diagnostics",
+    "diagnosticsRunning": "Running checks...",
+    "diagnosticsDesc": "System check for conflicts and DPI bypass issues"
   },
   "proxy": {
     "title": "Proxy",
@@ -148,7 +175,8 @@
     "systemRam": "System RAM",
     "zapret": "Zapret",
     "totalInZpui": "Total in ZPUI",
-    "mb": "MB"
+    "mb": "MB",
+    "noDevices": "No connected devices"
   },
   "sysinfo": {
     "title": "Network Info",
@@ -174,10 +202,28 @@
     "lightTheme": "Light",
     "darkTheme": "Dark",
     "language": "Language",
+    "prevLang": "Previous language",
+    "nextLang": "Next language",
     "autoStartWindows": "Autostart with Windows",
     "startMinimized": "Start minimized",
     "closeToTray": "Close to tray",
     "updateCheck": "Update check",
+    "notifications": "Windows notifications",
+    "showStrategyColors": "Test result colors",
+    "notifyStrategyTest": "Test completion notification",
+    "test": "Test",
+    "testNotificationSent": "Test notification sent",
+    "notifZpuiUpdates": "ZPUI updates",
+    "notifZpuiUpdatesDesc": "Notify about new ZPUI versions",
+    "notifZapretUpdates": "Zapret updates",
+    "notifZapretUpdatesDesc": "Notify about new Zapret versions",
+    "notifMissingFiles": "Missing files",
+    "notifMissingFilesDesc": "Notify about missing Zapret files",
+    "notifServiceStatus": "Service status changes",
+    "notifServiceStatusDesc": "Notify when service starts/stops",
+    "notifResourceDrop": "Resource availability drop",
+    "notifResourceDropDesc": "Notify when availability falls below threshold",
+    "threshold": "Threshold",
     "zapretSection": "Zapret",
     "localInstall": "Local installation",
     "status": "Status",
@@ -190,7 +236,11 @@
     "removeServiceDesc": "Completely remove the Zapret system service",
     "removeServiceBtn": "Remove service",
     "removeServiceConfirm": "Are you sure? The Zapret service will be removed from the system.",
-    "serviceRemoved": "Service removed"
+    "serviceRemoved": "Service removed",
+    "installZapret": "Install Zapret",
+    "installZapretDesc": "Reset no-zapret mode and start installation",
+    "installZapretBtn": "Install",
+    "installZapretConfirm": "The app will restart to install Zapret. Continue?"
   },
   "startup": {
     "loadingSystem": "Loading system…",
@@ -218,7 +268,9 @@
     "serviceConflict": {
       "title": "System Zapret service detected",
       "desc": "Local Zapret copy not found. The system service may conflict. It is recommended to remove it.",
-      "remove": "Remove service"
+      "remove": "Remove service",
+      "workWithout": "Work without Zapret",
+      "skipHint": "If skipped, the app will run without Zapret. DPI bypass will be unavailable, proxy and DNS will continue to work."
     },
     "zapretInstalled": {
       "title": "Zapret installed",
@@ -299,7 +351,9 @@
   },
   "toast": {
     "updateAvailable": "Update available for {name}: {version}",
+    "filesMissing": "Missing zapret files ({count}). Reinstall via Settings.",
     "errorInZpui": "Error in ZPUI",
+    "reportBug": "Report bug",
     "requestFailed": "Request failed"
   },
   "xboxdns": {
