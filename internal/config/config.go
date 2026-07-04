@@ -101,7 +101,7 @@ func defaultConfig(zapretDir string) *Config {
 		AutoStart:       false,
 		Logs:            LogConfig{MaxFiles: 7, Level: "info"},
 		AutoUpdateCheck: true,
-		ZapretRepoURL:   "https://github.com/bol-van/zapret",
+		ZapretRepoURL:   "https://github.com/flowseal/zapret-discord-youtube",
 		ModRepoURL:      "https://github.com/bol-van/zapret",
 
 		Theme:        "system",

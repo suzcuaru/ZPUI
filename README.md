@@ -80,7 +80,7 @@ go build -ldflags "-s -w -H windowsgui" -trimpath ./cmd/zapretupdate/
 | Бэкенд | Go, [Wails v2](https://wails.io/) |
 | Фронтенд | React, Vite |
 | База данных | SQLite |
-| Обход DPI | [zapret](https://github.com/bol-van/zapret) (управляется как внешний процесс) |
+| Обход DPI | [zapret-discord-youtube](https://github.com/flowseal/zapret-discord-youtube) (управляется как внешний процесс) |
 
 ### Структура
 

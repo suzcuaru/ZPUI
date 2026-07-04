@@ -23,7 +23,7 @@
     "level": "info"
   },
   "auto_update_check": true,
-  "zapret_repo_url": "https://github.com/bol-van/zapret",
+  "zapret_repo_url": "https://github.com/flowseal/zapret-discord-youtube",
   "mod_repo_url": "https://github.com/bol-van/zapret",
   "theme": "system",
   "first_run_done": false,
