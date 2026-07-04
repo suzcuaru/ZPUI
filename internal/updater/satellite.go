@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	versionsURL = "https://api.github.com/repos/anomalyco/zpui/releases/latest"
+	versionsURL = "https://api.github.com/repos/suzcuaru/ZPUI/releases/latest"
 )
 
 type RemoteVersions struct {

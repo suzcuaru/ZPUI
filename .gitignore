@@ -12,6 +12,10 @@
 build/bin/
 build/dist/
 build/dist.zip
+build/ZPUI-Setup-*.exe
+
+# Release artifacts
+zpui.zip
 
 # ============================================================
 # Frontend build artifacts

@@ -69,7 +69,7 @@ function ToastItem({ toast, onRemove, version }) {
     const v = version || '—';
     const title = encodeURIComponent('Error in ZPUI');
     const body = encodeURIComponent(`**Error description:**\n\`\`\`\n${toast.msg}\n\`\`\`\n\n**Version:** ${v}\n**OS:** Windows`);
-    openExternal(`https://github.com/anomalyco/zpui/issues/new?title=${title}&body=${body}`);
+    openExternal(`https://github.com/suzcuaru/ZPUI/issues/new?title=${title}&body=${body}`);
   };
 
   const icons = { success: <IconSuccess />, error: <IconError />, info: <IconInfo /> };

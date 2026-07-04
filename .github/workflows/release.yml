@@ -1,0 +1,114 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version (e.g. 1.0.47)'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve version
+        id: ver
+        shell: bash
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then
+            V="${{ inputs.version }}"
+          else
+            V="${GITHUB_REF_NAME#v}"
+          fi
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+          echo "Resolved version: $V"
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install Wails CLI
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0
+
+      - name: Build frontend
+        run: |
+          cd web
+          npm ci
+          npm run build
+
+      - name: Build ZPUI core (Wails)
+        run: >
+          wails build -Platform windows/amd64 -s -skipbindings -o zpui.exe
+          -ldflags "-s -w -H windowsgui -X main.version=${{ steps.ver.outputs.version }}"
+          -trimpath
+
+      - name: Build satellites
+        run: |
+          $ld = "-s -w -H windowsgui -X main.version=${{ steps.ver.outputs.version }}"
+          go build -o wizard.exe       -ldflags "$ld" -trimpath ./cmd/wizard/
+          go build -o autoselect.exe   -ldflags "$ld" -trimpath ./cmd/autoselect/
+          go build -o selfupdate.exe   -ldflags "$ld" -trimpath ./cmd/selfupdate/
+          go build -o zapretupdate.exe -ldflags "$ld" -trimpath ./cmd/zapretupdate/
+
+      - name: Assemble dist
+        shell: pwsh
+        run: |
+          $v = "${{ steps.ver.outputs.version }}"
+          $dist = "build/dist"
+          New-Item -ItemType Directory -Path $dist -Force | Out-Null
+          Copy-Item zpui.exe, wizard.exe, autoselect.exe, selfupdate.exe, zapretupdate.exe -Destination $dist
+          $json = [ordered]@{
+            zpui=$v; wizard=$v; autoselect=$v; selfupdate=$v; zapretupdate=$v
+          } | ConvertTo-Json
+          [System.IO.File]::WriteAllLines("$PWD/$dist/versions.json", $json, (New-Object System.Text.UTF8Encoding $false))
+          if (Test-Path mods) { Copy-Item mods $dist -Recurse } else { New-Item -ItemType Directory -Path "$dist/mods" | Out-Null }
+          Get-ChildItem $dist -Recurse | Select-Object FullName
+
+      - name: Build installer (NSIS)
+        run: |
+          & "C:\Program Files (x86)\NSIS\makensis.exe" `
+            /DVERSION=${{ steps.ver.outputs.version }} `
+            /DDIST=build/dist `
+            /DICON=build/windows/icon.ico `
+            installer/ZPUI.nsi
+
+      - name: Build portable zip
+        shell: pwsh
+        run: |
+          Compress-Archive -Path build/dist/* -DestinationPath zpui.zip -CompressionLevel Optimal
+          Get-Item zpui.zip | Select-Object Name, Length
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          TAG="${GITHUB_REF_NAME:-v${{ steps.ver.outputs.version }}}"
+          VER="${{ steps.ver.outputs.version }}"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" \
+              "build/ZPUI-Setup-$VER.exe" zpui.zip \
+              build/dist/versions.json build/dist/wizard.exe build/dist/autoselect.exe build/dist/selfupdate.exe build/dist/zapretupdate.exe \
+              --clobber
+          else
+            gh release create "$TAG" \
+              "build/ZPUI-Setup-$VER.exe" zpui.zip \
+              build/dist/versions.json build/dist/wizard.exe build/dist/autoselect.exe build/dist/selfupdate.exe build/dist/zapretupdate.exe \
+              --title "ZPUI $VER" --generate-notes
+          fi

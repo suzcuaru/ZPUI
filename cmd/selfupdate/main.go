@@ -27,7 +27,7 @@ type releaseInfo struct {
 	Assets  []releaseAsset `json:"assets"`
 }
 
-const apiURL = "https://api.github.com/repos/anomalyco/zpui/releases/latest"
+const apiURL = "https://api.github.com/repos/suzcuaru/ZPUI/releases/latest"
 
 func main() {
 	exePath, _ := os.Executable()
