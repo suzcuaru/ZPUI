@@ -71,15 +71,17 @@ func main() {
 		entry[2] = 0
 		entry[3] = 0
 		entry[4] = 1
-		entry[5] = 32
-		entry[6] = byte(len(pngData))
-		entry[7] = byte(len(pngData) >> 8)
-		entry[8] = byte(len(pngData) >> 16)
-		entry[9] = byte(len(pngData) >> 24)
-		entry[10] = byte(e.offset)
-		entry[11] = byte(e.offset >> 8)
-		entry[12] = byte(e.offset >> 16)
-		entry[13] = byte(e.offset >> 24)
+		entry[5] = 0
+		entry[6] = 32
+		entry[7] = 0
+		entry[8] = byte(len(pngData))
+		entry[9] = byte(len(pngData) >> 8)
+		entry[10] = byte(len(pngData) >> 16)
+		entry[11] = byte(len(pngData) >> 24)
+		entry[12] = byte(e.offset)
+		entry[13] = byte(e.offset >> 8)
+		entry[14] = byte(e.offset >> 16)
+		entry[15] = byte(e.offset >> 24)
 		icoBuf.Write(entry[:])
 	}
 
