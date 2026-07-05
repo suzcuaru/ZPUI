@@ -6,10 +6,8 @@ import (
 )
 
 var (
-	user32                       = syscall.NewLazyDLL("user32.dll")
-	procFindWindowW              = user32.NewProc("FindWindowW")
-	procGetWindowLongPtrW        = user32.NewProc("GetWindowLongPtrW")
-	procSetWindowLongPtrW        = user32.NewProc("SetWindowLongPtrW")
+	user32          = syscall.NewLazyDLL("user32.dll")
+	procFindWindowW = user32.NewProc("FindWindowW")
 )
 
 const wsMaximizeBox = 0x00010000
@@ -25,16 +23,21 @@ func disableMaximizeButton(windowTitle string) {
 		return
 	}
 
-	style, _, _ := procGetWindowLongPtrW.Call(
-		hwnd,
-		gwlStyle,
-	)
+	var getLong, setLong *syscall.LazyProc
+	if uintptrSize() == 8 {
+		getLong = user32.NewProc("GetWindowLongPtrW")
+		setLong = user32.NewProc("SetWindowLongPtrW")
+	} else {
+		getLong = user32.NewProc("GetWindowLongW")
+		setLong = user32.NewProc("SetWindowLongW")
+	}
 
+	style, _, _ := getLong.Call(hwnd, gwlStyle)
 	newStyle := style &^ wsMaximizeBox
+	setLong.Call(hwnd, gwlStyle, uintptr(newStyle))
+}
 
-	procSetWindowLongPtrW.Call(
-		hwnd,
-		gwlStyle,
-		uintptr(newStyle),
-	)
+func uintptrSize() int {
+	var p uintptr
+	return int(unsafe.Sizeof(p))
 }
