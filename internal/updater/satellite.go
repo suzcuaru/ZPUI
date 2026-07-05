@@ -1,12 +1,15 @@
 package updater
 
 import (
+	"archive/zip"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime"
+	"strings"
 	"time"
 )
 
@@ -203,11 +206,20 @@ func ReplaceModule(exeDir, name string) error {
 	targetPath := filepath.Join(exeDir, fileName)
 	bakPath := targetPath + ".bak"
 
-	downloadURL := downloadBase + fileName
+	archSuffix := "win64"
+	if runtime.GOARCH == "386" {
+		archSuffix = "win32"
+	}
+	zipURL := fmt.Sprintf("%szpui-%s.zip", downloadBase, archSuffix)
 
-	tmpPath := targetPath + ".tmp"
-	if err := downloadFile(downloadURL, tmpPath); err != nil {
+	tmpZip := filepath.Join(exeDir, "zpui-modules-tmp.zip")
+	if err := downloadFile(zipURL, tmpZip); err != nil {
 		return fmt.Errorf("download failed: %w", err)
+	}
+	defer os.Remove(tmpZip)
+
+	if err := extractFromZip(tmpZip, fileName, targetPath); err != nil {
+		return fmt.Errorf("extract failed: %w", err)
 	}
 
 	bm := NewBackupManager(exeDir)
@@ -216,13 +228,42 @@ func ReplaceModule(exeDir, name string) error {
 		os.Rename(targetPath, bakPath)
 	}
 
-	if err := os.Rename(tmpPath, targetPath); err != nil {
+	if err := os.Rename(targetPath+".tmp", targetPath); err != nil {
 		os.Rename(bakPath, targetPath)
 		return fmt.Errorf("replace failed: %w", err)
 	}
 
 	os.Remove(bakPath)
 	return nil
+}
+
+func extractFromZip(zipPath, fileName, destPath string) error {
+	r, err := zip.OpenReader(zipPath)
+	if err != nil {
+		return err
+	}
+	defer r.Close()
+
+	for _, f := range r.File {
+		if strings.EqualFold(filepath.Base(f.Name), fileName) {
+			rc, err := f.Open()
+			if err != nil {
+				return err
+			}
+			defer rc.Close()
+
+			out, err := os.Create(destPath + ".tmp")
+			if err != nil {
+				return err
+			}
+			defer out.Close()
+
+			_, err = io.Copy(out, rc)
+			return err
+		}
+	}
+
+	return fmt.Errorf("file %s not found in archive", fileName)
 }
 
 func downloadFile(url, dest string) error {

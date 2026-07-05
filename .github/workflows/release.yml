@@ -187,6 +187,24 @@ jobs:
           if (-not (Test-Path "build/ZPUI-Setup-$v-win32.exe")) { Write-Error "Installer not created"; exit 1 }
 
       # ── Release ──────────────────────────────────────────
+      - name: Generate versions.json
+        shell: pwsh
+        run: |
+          $v = "${{ steps.ver.outputs.version }}"
+          function GetModVer($p) {
+            if ((Get-Content $p -Raw) -match 'var version = ["'']([^"'']+)["'']') { $matches[1] }
+            else { '0.0.0' }
+          }
+          $json = [ordered]@{
+            zpui=$v
+            wizard=(GetModVer 'cmd/wizard/main.go')
+            autoselect=(GetModVer 'cmd/autoselect/main.go')
+            selfupdate=(GetModVer 'cmd/selfupdate/main.go')
+            zapretupdate=(GetModVer 'cmd/zapretupdate/main.go')
+          } | ConvertTo-Json
+          [System.IO.File]::WriteAllText("$PWD/versions.json", $json, (New-Object System.Text.UTF8Encoding $false))
+          Get-Content versions.json
+
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -199,11 +217,13 @@ jobs:
               "build/ZPUI-Setup-$VER-win64.exe" \
               "build/ZPUI-Setup-$VER-win32.exe" \
               "zpui-win64.zip" "zpui-win32.zip" \
+              "versions.json" \
               --clobber
           else
             gh release create "$TAG" \
               "build/ZPUI-Setup-$VER-win64.exe" \
               "build/ZPUI-Setup-$VER-win32.exe" \
               "zpui-win64.zip" "zpui-win32.zip" \
+              "versions.json" \
               --title "ZPUI $VER" --generate-notes
           fi
