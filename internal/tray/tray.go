@@ -3,6 +3,7 @@ package tray
 import (
 	"encoding/binary"
 	"fmt"
+	"image"
 	"time"
 
 	"zpui/internal/config"
@@ -146,33 +147,25 @@ func createIcon() []byte {
 	binary.LittleEndian.PutUint16(bmpHeader[14:16], bpp)
 	binary.LittleEndian.PutUint32(bmpHeader[20:24], pixelBytes+maskBytes)
 
+	// render the shield icon at 16x16
+	img := image.NewRGBA(image.Rect(0, 0, w, h))
+	DrawShieldIcon(img)
+
 	pixels := make([]byte, pixelBytes)
 	for y := 0; y < h; y++ {
 		for x := 0; x < w; x++ {
 			dstY := h - 1 - y
 			idx := (dstY*w + x) * 4
-
-			bgR, bgG, bgB, bgA := byte(0x6C), byte(0x5C), byte(0xE7), byte(0xFF)
-			fgR, fgG, fgB, fgA := byte(0xFF), byte(0xFF), byte(0xFF), byte(0xFF)
-
-			if !isInRoundedSquare(x, y, w, h, 3) {
-				bgA = 0x00
-				fgA = 0x00
-			}
-
-			r, g, b, a := bgR, bgG, bgB, bgA
-			if isZPixel(x, y) {
-				r, g, b, a = fgR, fgG, fgB, fgA
-			}
-
-			pixels[idx+0] = b
-			pixels[idx+1] = g
-			pixels[idx+2] = r
-			pixels[idx+3] = a
+			r, g, b, a := img.At(x, y).RGBA()
+			pixels[idx+0] = byte(b >> 8)
+			pixels[idx+1] = byte(g >> 8)
+			pixels[idx+2] = byte(r >> 8)
+			pixels[idx+3] = byte(a >> 8)
 		}
 	}
 
-	mask := make([]byte, maskBytes)
+	mask := make([]byte, maskBytes) // all-zero = opaque (alpha channel handles transparency)
+
 	result := make([]byte, 0, headerOffset+imageDataSize)
 	result = append(result, icondir...)
 	result = append(result, entry...)
@@ -180,55 +173,4 @@ func createIcon() []byte {
 	result = append(result, pixels...)
 	result = append(result, mask...)
 	return result
-}
-
-func isInRoundedSquare(x, y, w, h, r int) bool {
-	if x < r && y < r {
-		dx := r - x
-		dy := r - y
-		return dx*dx+dy*dy <= r*r
-	}
-	if x >= w-r && y < r {
-		dx := x - (w - r - 1)
-		dy := r - y
-		return dx*dx+dy*dy <= r*r
-	}
-	if x < r && y >= h-r {
-		dx := r - x
-		dy := y - (h - r - 1)
-		return dx*dx+dy*dy <= r*r
-	}
-	if x >= w-r && y >= h-r {
-		dx := x - (w - r - 1)
-		dy := y - (h - r - 1)
-		return dx*dx+dy*dy <= r*r
-	}
-	return true
-}
-
-func isZPixel(x, y int) bool {
-	if x < 4 || x > 11 {
-		return false
-	}
-	if y >= 3 && y <= 4 {
-		return true
-	}
-	if y >= 11 && y <= 12 {
-		return true
-	}
-	switch y {
-	case 5:
-		return x >= 8 && x <= 11
-	case 6:
-		return x >= 7 && x <= 10
-	case 7:
-		return x >= 6 && x <= 9
-	case 8:
-		return x >= 5 && x <= 8
-	case 9:
-		return x >= 4 && x <= 7
-	case 10:
-		return x >= 4 && x <= 6
-	}
-	return false
 }
