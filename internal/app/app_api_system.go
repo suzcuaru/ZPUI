@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
-	"zpui/internal/availability"
 	"zpui/internal/blockcheck"
 	"zpui/internal/database"
 	"zpui/internal/executil"
@@ -34,7 +33,7 @@ func (a *App) GetResourceStatus() map[string]interface{} {
 	}
 	a.resourceCacheMu.Unlock()
 
-	var defaultTargets []availability.Target
+	var defaultTargets []blockcheck.BulkTarget
 	targetsPath := filepath.Join(a.cfg.GetZapretPath(), "utils", "targets.txt")
 	if body, err := os.ReadFile(targetsPath); err == nil {
 		for _, line := range strings.Split(string(body), "\n") {
@@ -54,31 +53,45 @@ func (a *App) GetResourceStatus() map[string]interface{} {
 			if !strings.HasPrefix(val, "http://") && !strings.HasPrefix(val, "https://") {
 				continue
 			}
-			defaultTargets = append(defaultTargets, availability.Target{Host: key, URL: val})
+			defaultTargets = append(defaultTargets, blockcheck.BulkTarget{Name: key, URL: val})
 		}
 	}
 
-	var userHosts []string
+	var userTargets []blockcheck.BulkTarget
 	if body, err := os.ReadFile(filepath.Join(a.cfg.ListsDir(), "list-general-user.txt")); err == nil {
 		for _, line := range strings.Split(string(body), "\n") {
 			line = strings.TrimSpace(line)
 			if line != "" && !strings.HasPrefix(line, "#") {
-				userHosts = append(userHosts, line)
+				url := line
+				if !strings.HasPrefix(url, "http://") && !strings.HasPrefix(url, "https://") {
+					url = "https://" + url
+				}
+				host := strings.TrimPrefix(strings.TrimPrefix(url, "https://"), "http://")
+				if idx := strings.IndexAny(host, "/:"); idx > 0 {
+					host = host[:idx]
+				}
+				userTargets = append(userTargets, blockcheck.BulkTarget{Name: host, URL: url})
 			}
 		}
 	}
 
-	checker := availability.NewChecker(a.log)
-	cs := checker.Check(defaultTargets, userHosts)
+	var proxyAddr string
+	if a.proxy.IsRunning() {
+		pcfg := a.cfg.GetProxyConfig()
+		proxyAddr = fmt.Sprintf("127.0.0.1:%d", pcfg.Port)
+	}
+
+	checker := blockcheck.NewChecker(8, proxyAddr)
+	report := checker.BulkCheck(defaultTargets, userTargets)
 
 	a.resourceCacheMu.Lock()
-	a.resourceCache = &resCacheData{Default: cs.Default, User: cs.User}
+	a.resourceCache = report
 	a.resourceCacheTime = time.Now()
 	a.resourceCacheMu.Unlock()
 
 	return map[string]interface{}{
-		"default": cs.Default,
-		"user":    cs.User,
+		"default": report.Default,
+		"user":    report.User,
 	}
 }
 

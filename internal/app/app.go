@@ -10,7 +10,7 @@ import (
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 
-	"zpui/internal/availability"
+	"zpui/internal/blockcheck"
 	"zpui/internal/config"
 	"zpui/internal/database"
 	"zpui/internal/executil"
@@ -50,7 +50,7 @@ type App struct {
 	quitOnce     sync.Once
 
 	// Кэш доступности ресурсов (для tray)
-	resourceCache     *resCacheData
+	resourceCache     *blockcheck.BulkReport
 	resourceCacheTime time.Time
 	resourceCacheMu   sync.Mutex
 
@@ -59,11 +59,7 @@ type App struct {
 	windowMu      sync.Mutex
 }
 
-// resCacheData — структура кэша доступности ресурсов.
-type resCacheData struct {
-	Default []availability.Result
-	User    []availability.Result
-}
+
 
 // NewApp создаёт новый экземпляр приложения.
 func NewApp(
@@ -223,43 +219,49 @@ func (a *App) startResourceMonitor() {
 		case <-a.stopCh:
 			return
 		case <-ticker.C:
-			data := a.GetResourceStatus()
-			defRes, _ := data["default"].([]availability.Result)
-			userRes, _ := data["user"].([]availability.Result)
-			all := append(defRes, userRes...)
+			_ = a.GetResourceStatus() // refresh cache
+
+			a.resourceCacheMu.Lock()
+			report := a.resourceCache
+			a.resourceCacheMu.Unlock()
+
+			if report == nil {
+				continue
+			}
+			all := append(report.Default, report.User...)
 			if len(all) == 0 {
 				continue
 			}
 
-			saveSet := func(typ string, res []availability.Result) {
+			saveSet := func(typ string, res []blockcheck.BulkResult) {
 				if len(res) == 0 {
 					return
 				}
-				ok := 0
+				oks := 0
 				for _, r := range res {
 					if r.OK {
-						ok++
+						oks++
 					}
 				}
-				pct := ok * 100 / len(res)
+				pct := oks * 100 / len(res)
 				database.InsertAvailabilitySnapshot(&database.AvailabilityRecord{
 					Timestamp:      time.Now(),
 					Type:           typ,
 					TotalResources: len(res),
-					OKResources:    ok,
+					OKResources:    oks,
 					Pct:            float64(pct),
 				})
 			}
-			saveSet("standard", defRes)
-			saveSet("user", userRes)
+			saveSet("standard", report.Default)
+			saveSet("user", report.User)
 
-			ok := 0
+			oks := 0
 			for _, r := range all {
 				if r.OK {
-					ok++
+					oks++
 				}
 			}
-			pct := ok * 100 / len(all)
+			pct := oks * 100 / len(all)
 
 			if a.cfg.ShouldNotify("resource_drop") {
 				threshold := a.cfg.GetResourceDropPct()
@@ -441,21 +443,21 @@ func (a *App) GetCachedResourcePercent() int {
 		a.resourceCacheMu.Unlock()
 		return -1
 	}
-	data := a.resourceCache
+	report := a.resourceCache
 	a.resourceCacheMu.Unlock()
 
 	total := 0
-	ok := 0
-	for _, r := range data.Default {
+	oks := 0
+	for _, r := range report.Default {
 		total++
 		if r.OK {
-			ok++
+			oks++
 		}
 	}
 	if total == 0 {
 		return -1
 	}
-	return ok * 100 / total
+	return oks * 100 / total
 }
 
 // startTrafficSnapshots — периодическое сохранение снапшотов трафика (каждые 5с).
