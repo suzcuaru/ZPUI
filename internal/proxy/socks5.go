@@ -68,7 +68,11 @@ func (s *SOCKS5Server) Start() error {
 	s.mu.Unlock()
 
 	pcfg := s.cfg.GetProxyConfig()
-	addr := fmt.Sprintf(":%d", pcfg.Port)
+	bind := pcfg.BindHost
+	if bind == "" {
+		bind = "0.0.0.0"
+	}
+	addr := fmt.Sprintf("%s:%d", bind, pcfg.Port)
 
 	ln, err := net.Listen("tcp", addr)
 	if err != nil {

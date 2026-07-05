@@ -146,7 +146,6 @@ export default function LogDrawer({ open, onClose }) {
   const errCount = raw.filter(l => (l.level || '').toLowerCase() === 'error').length;
   const fmtSize = (b) => b < 1024 ? b + ' B' : (b / 1024).toFixed(1) + ' KB';
   const catLabel = (c) => c === 'all' ? t('logs.all') : c.charAt(0).toUpperCase() + c.slice(1);
-  const activeDebugCount = Object.values(debugState).filter(Boolean).length;
 
   return (
     <>
@@ -154,13 +153,8 @@ export default function LogDrawer({ open, onClose }) {
       <div className={'lg-drawer' + (open ? ' open' : '')}>
         <div className="lg-head">
           <span className="lg-head-title">{t('logs.title')}</span>
-          {errCount > 0 && <span className="lg-head-count">({errCount} {t('logs.errors')})</span>}
-          <div className="lg-spacer" />
-          <button className="lg-head-close" onClick={onClose} title={t('common.close')}>✕</button>
-        </div>
-
-        <div className="lg-toolbar">
-          <div className="lg-tabs">
+          {errCount > 0 && <span className="lg-head-badge">{errCount}</span>}
+          <div className="lg-head-tabs">
             <button className={'lg-tab' + (tab === 'live' ? ' on' : '')} onClick={() => setTab('live')}>
               {t('logs.title')}
             </button>
@@ -172,6 +166,8 @@ export default function LogDrawer({ open, onClose }) {
               {t('logs.archive', { defaultValue: 'Archive' })}
             </button>
           </div>
+          <div className="lg-spacer" />
+          <button className="lg-head-close" data-tooltip={t('common.close')} onClick={onClose}>✕</button>
         </div>
 
         {tab === 'live' && (
@@ -186,12 +182,12 @@ export default function LogDrawer({ open, onClose }) {
               </div>
               <div className="lg-actions">
                 <button
-                  className={'lg-btn' + (showDebug ? ' on' : '') + (activeDebugCount > 0 ? ' on' : '')}
+                  className={'lg-btn' + (showDebug || Object.values(debugState).some(Boolean) ? ' on' : '')}
                   onClick={() => setShowDebug(!showDebug)}
-                  title={t('logs.debugMode', { defaultValue: 'Debug' })}
+                  data-tooltip={t('logs.debugMode', { defaultValue: 'Debug mode' })}
                 >⚙</button>
-                <button className="lg-btn" onClick={clearAll} title={t('common.clear', { defaultValue: 'Clear' })}>⊘</button>
-                <button className="lg-btn" onClick={copyAll} title={t('common.copy')}>⎘</button>
+                <button className="lg-btn" onClick={clearAll} data-tooltip={t('common.clear')}>⊘</button>
+                <button className="lg-btn" onClick={copyAll} data-tooltip={t('common.copy')}>⎘</button>
               </div>
             </div>
             {showDebug && (
@@ -202,6 +198,7 @@ export default function LogDrawer({ open, onClose }) {
                     key={c}
                     className={'lg-dbg' + (debugState[c] ? ' on' : '')}
                     onClick={() => toggleDebug(c)}
+                    data-tooltip={debugState[c] ? t('common.disable') : t('common.enable')}
                   >{c}</button>
                 ))}
               </div>
@@ -239,8 +236,8 @@ export default function LogDrawer({ open, onClose }) {
                   <pre className="lg-pre">{errorContent}</pre>
                 ) : <div className="lg-empty">{t('logs.selectFile', { defaultValue: 'Select a file' })}</div>}
                 {selectedError && (
-                  <div style={{ padding: '4px 0', display:'flex', gap:4 }}>
-                    <button className="lg-btn" onClick={() => navigator.clipboard.writeText(errorContent)}>{t('common.copy')}</button>
+                  <div className="lg-file-actions">
+                    <button className="lg-btn" data-tooltip={t('common.copy')} onClick={() => navigator.clipboard.writeText(errorContent)}>⎘</button>
                   </div>
                 )}
               </div>
@@ -262,8 +259,8 @@ export default function LogDrawer({ open, onClose }) {
                   <pre className="lg-pre">{archiveContent}</pre>
                 ) : <div className="lg-empty">{t('logs.selectFile', { defaultValue: 'Select a file' })}</div>}
                 {selectedArchive && (
-                  <div style={{ padding: '4px 0', display:'flex', gap:4 }}>
-                    <button className="lg-btn" onClick={() => navigator.clipboard.writeText(archiveContent)}>{t('common.copy')}</button>
+                  <div className="lg-file-actions">
+                    <button className="lg-btn" data-tooltip={t('common.copy')} onClick={() => navigator.clipboard.writeText(archiveContent)}>⎘</button>
                   </div>
                 )}
               </div>

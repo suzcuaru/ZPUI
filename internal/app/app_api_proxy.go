@@ -68,6 +68,9 @@ func (a *App) SetProxyConfig(opts map[string]interface{}) map[string]interface{}
 	if as, ok := opts["auto_start"].(bool); ok {
 		pcfg.AutoStart = as
 	}
+	if bh, ok := opts["bind_host"].(string); ok {
+		pcfg.BindHost = bh
+	}
 	a.cfg.SetProxyConfig(pcfg)
 	if err := a.cfg.Save(); err != nil {
 		a.log.Error("proxy", "Save error: "+err.Error())

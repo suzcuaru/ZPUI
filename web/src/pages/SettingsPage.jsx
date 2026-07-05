@@ -4,9 +4,9 @@ import { api, apiCall } from '../api';
 import { useT } from '../i18n';
 import { usePolling } from '../hooks/usePolling';
 import { useDebouncedSave } from '../hooks/useDebouncedSave';
-import { useUpdateCheck, checkZpuiUpdate, checkZapretUpdate, resetZapretCheck } from '../hooks/useUpdateCheck';
+import { useUpdateCheck, resetZapretCheck, checkZapretUpdate } from '../hooks/useUpdateCheck';
 
-export default function SettingsPage({ status, showToast }) {
+export default function SettingsPage({ status, showToast, onOpenLogs }) {
   const { t, lang, changeLang } = useT();
   const [config, setConfig] = useState(null);
   const [versions, setVersions] = useState(null);
@@ -79,12 +79,6 @@ export default function SettingsPage({ status, showToast }) {
 
   const modules = (versions?.components || []).filter(c => c.name !== 'ZPUI');
 
-  const st = (state) => {
-    if (state === 'latest') return t('status.upToDate');
-    if (state === 'available') return t('status.updateAvailable');
-    return t('common.error');
-  };
-
   return (
     <div className="settings-page">
       <div className="page-title">{t('settings.title')}</div>
@@ -123,7 +117,6 @@ export default function SettingsPage({ status, showToast }) {
           <MiniRow label={t('settings.startMinimized')}><Switch checked={config.start_minimized || false} onChange={() => update({ start_minimized: !config.start_minimized })} /></MiniRow>
           <MiniRow label={t('settings.closeToTray')}><Switch checked={config.close_to_tray !== false} onChange={() => update({ close_to_tray: !config.close_to_tray })} /></MiniRow>
           <MiniRow label={t('settings.updateCheck')}><Switch checked={config.auto_update_check !== false} onChange={() => update({ auto_update_check: !config.auto_update_check })} /></MiniRow>
-          <MiniRow label={t('settings.showStrategyColors')}><Switch checked={config.show_strategy_colors !== false} onChange={() => update({ show_strategy_colors: !config.show_strategy_colors })} /></MiniRow>
           <MiniRow label={t('settings.notifyStrategyTest')}><Switch checked={config.notify_strategy_test === true} onChange={() => update({ notify_strategy_test: !config.notify_strategy_test })} /></MiniRow>
         </div>
 
@@ -137,20 +130,24 @@ export default function SettingsPage({ status, showToast }) {
                 {zpuiCheck.state === 'available' && zpuiCheck.latest && (
                   <span className="upd-ver-new">→ v{zpuiCheck.latest}</span>
                 )}
-                {zpuiCheck.state !== 'idle' && zpuiCheck.state !== 'checking' && (
-                  <span className={'upd-status ' + zpuiCheck.state} style={{ fontSize: 9, padding: '1px 6px' }}>{st(zpuiCheck.state)}</span>
-                )}
               </div>
             </div>
-            {zpuiCheck.state === 'available' ? (
-              <button className="upd-btn-check" onClick={handleApplyUpdate} style={{ borderColor: 'var(--warning)', color: 'var(--warning)', height: 22, fontSize: 10 }}>
+            {zpuiCheck.state === 'checking' ? (
+              <span className="mini-spin" />
+            ) : zpuiCheck.state === 'available' ? (
+              <button className="upd-btn-check" onClick={handleApplyUpdate}
+                style={{ borderColor: 'var(--warning)', color: 'var(--warning)', height: 22, fontSize: 10 }}>
                 {t('common.update')}
               </button>
-            ) : (
-              <button className={'upd-btn-check' + (zpuiCheck.state === 'checking' ? ' checking' : '')} onClick={checkZpuiUpdate} style={{ height: 22, fontSize: 10 }}>
-                {zpuiCheck.state === 'checking' ? <span className="mini-spin" /> : t('common.check')}
+            ) : zpuiCheck.state === 'error' ? (
+              <button className="upd-btn-check" onClick={onOpenLogs}
+                style={{ borderColor: 'var(--danger)', color: 'var(--danger)', height: 22, fontSize: 10 }}
+                data-tooltip={t('logs.title')}>
+                {t('common.error')}
               </button>
-            )}
+            ) : zpuiCheck.state === 'latest' ? (
+              <span className="upd-status latest" style={{ fontSize: 9, padding: '1px 6px' }}>{t('status.upToDate')}</span>
+            ) : null}
           </div>
           <div className="upd-card" style={{ padding: '8px 10px' }}>
             <div className="upd-info">
@@ -160,20 +157,24 @@ export default function SettingsPage({ status, showToast }) {
                 {zapretCheck.state === 'available' && zapretCheck.latest && (
                   <span className="upd-ver-new">→ v{zapretCheck.latest}</span>
                 )}
-                {zapretCheck.state !== 'idle' && zapretCheck.state !== 'checking' && (
-                  <span className={'upd-status ' + zapretCheck.state} style={{ fontSize: 9, padding: '1px 6px' }}>{st(zapretCheck.state)}</span>
-                )}
               </div>
             </div>
-            {zapretCheck.state === 'available' ? (
-              <button className="upd-btn-check" onClick={() => handleComponentUpdate('Zapret')} style={{ borderColor: 'var(--warning)', color: 'var(--warning)', height: 22, fontSize: 10 }}>
+            {zapretCheck.state === 'checking' ? (
+              <span className="mini-spin" />
+            ) : zapretCheck.state === 'available' ? (
+              <button className="upd-btn-check" onClick={() => handleComponentUpdate('Zapret')}
+                style={{ borderColor: 'var(--warning)', color: 'var(--warning)', height: 22, fontSize: 10 }}>
                 {t('common.update')}
               </button>
-            ) : (
-              <button className={'upd-btn-check' + (zapretCheck.state === 'checking' ? ' checking' : '')} onClick={checkZapretUpdate} style={{ height: 22, fontSize: 10 }}>
-                {zapretCheck.state === 'checking' ? <span className="mini-spin" /> : t('common.check')}
+            ) : zapretCheck.state === 'error' ? (
+              <button className="upd-btn-check" onClick={onOpenLogs}
+                style={{ borderColor: 'var(--danger)', color: 'var(--danger)', height: 22, fontSize: 10 }}
+                data-tooltip={t('logs.title')}>
+                {t('common.error')}
               </button>
-            )}
+            ) : zapretCheck.state === 'latest' ? (
+              <span className="upd-status latest" style={{ fontSize: 9, padding: '1px 6px' }}>{t('status.upToDate')}</span>
+            ) : null}
           </div>
           <div className="section-title" style={{ marginTop: 8, fontSize: 10 }}>{t('settings.satellites')}</div>
           <div className="sat-grid">

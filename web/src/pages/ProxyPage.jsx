@@ -10,10 +10,12 @@ import { useDebouncedSave } from '../hooks/useDebouncedSave';
 export default function ProxyPage({ status, showToast }) {
   const { t } = useT();
   const [devices, setDevices] = useState([]);
-  const [config, setConfig] = useState({ port: 1080, username: '', password: '', auto_start: false });
+  const [config, setConfig] = useState({ port: 1080, bind_host: '0.0.0.0', username: '', password: '', auto_start: false });
 
   const pRun = status?.proxy?.running === true;
-  const port = status?.proxy?.port || 1080;
+  const port = config.port || status?.proxy?.port || 1080;
+  const bindHost = config.bind_host || '0.0.0.0';
+  const proxyAddr = `${bindHost}:${port}`;
 
   const proxy = useServiceToggle('proxy', pRun, showToast, {
     startMsg: t('header.proxyStarted'),
@@ -60,7 +62,9 @@ export default function ProxyPage({ status, showToast }) {
         <div className="proxy-hero-body">
           <span className="proxy-hero-title">{t('proxy.socks5Proxy')}</span>
           <span className="proxy-hero-status">
-            {pRun ? t('proxy.runningOnPort', { port }) : t('proxy.stopped')}
+            {pRun ? (
+              <>socks5://<span className="proxy-addr">{proxyAddr}</span></>
+            ) : t('proxy.stopped')}
           </span>
         </div>
         {pRun && (
@@ -115,6 +119,12 @@ export default function ProxyPage({ status, showToast }) {
             <label>{t('proxy.port')}</label>
             <input type="number" className="form-input" value={config.port} min="1" max="65535"
               onChange={e => updateConfig({ port: parseInt(e.target.value) || 1080 })} />
+          </div>
+          <div className="form-group">
+            <label>{t('proxy.address')}</label>
+            <input type="text" className="form-input" value={config.bind_host || '0.0.0.0'}
+              placeholder="0.0.0.0" onChange={e => updateConfig({ bind_host: e.target.value })} />
+            <span className="form-hint">{t('proxy.addressDesc')}</span>
           </div>
           <div className="form-group">
             <label>{t('proxy.username')}</label>

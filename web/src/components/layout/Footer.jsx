@@ -18,19 +18,19 @@ export default function Footer({ status }) {
     <div className="footer">
       <div className="footer-item">
         <span style={{ color: 'var(--text-tertiary)' }}>↓</span>
-        <span className="footer-mono footer-num" style={{ color: 'var(--accent)' }}>{dlSpeed}</span>
+        <span className="footer-mono footer-num spd" style={{ color: 'var(--accent)' }}>{dlSpeed}</span>
       </div>
       <div className="footer-item">
         <span style={{ color: 'var(--text-tertiary)' }}>↑</span>
-        <span className="footer-mono footer-num" style={{ color: 'var(--success)' }}>{ulSpeed}</span>
+        <span className="footer-mono footer-num spd" style={{ color: 'var(--success)' }}>{ulSpeed}</span>
       </div>
 
       <span className="footer-sep" />
 
       <div className="footer-item">
         <span style={{ color: 'var(--text-tertiary)' }}>{t('footer.total')}</span>
-        <span className="footer-mono footer-num" style={{ color: 'var(--text-secondary)' }}>↓{dlTotal}</span>
-        <span className="footer-mono footer-num" style={{ color: 'var(--text-secondary)' }}>↑{ulTotal}</span>
+        <span className="footer-mono footer-num total" style={{ color: 'var(--text-secondary)' }}>↓{dlTotal}</span>
+        <span className="footer-mono footer-num total" style={{ color: 'var(--text-secondary)' }}>↑{ulTotal}</span>
       </div>
 
       <span className="footer-sep" />

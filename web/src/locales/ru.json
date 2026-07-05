@@ -164,7 +164,9 @@
     "password": "Пароль",
     "autoStartProxy": "Автозапуск прокси",
     "autoStartProxyDesc": "Запускать при старте приложения",
-    "settingsSaved": "Настройки прокси сохранены"
+    "settingsSaved": "Настройки прокси сохранены",
+    "address": "Адрес",
+    "addressDesc": "Адрес привязки (0.0.0.0 = все интерфейсы)"
   },
   "monitor": {
     "title": "Мониторинг",
@@ -211,7 +213,6 @@
     "closeToTray": "Сворачивать в трей при закрытии",
     "updateCheck": "Проверка обновлений",
     "notifications": "Уведомления Windows",
-    "showStrategyColors": "Цвета результатов теста",
     "notifyStrategyTest": "Уведомление о завершении теста",
     "test": "Тест",
     "testNotificationSent": "Тестовое уведомление отправлено",

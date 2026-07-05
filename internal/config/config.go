@@ -13,6 +13,7 @@ type ProxyConfig struct {
 	Enabled   bool   `json:"enabled"`
 	AutoStart bool   `json:"auto_start"`
 	Port      int    `json:"port"`
+	BindHost  string `json:"bind_host"`
 	Username  string `json:"username"`
 	Password  string `json:"password"`
 }
@@ -75,7 +76,6 @@ type Config struct {
 	LastNotifiedZPUIVersion   string `json:"last_notified_zpui_version"`
 	LastNotifiedZapretVersion string `json:"last_notified_zapret_version"`
 
-	ShowStrategyColors bool `json:"show_strategy_colors"`
 	ShowStrategyModal  bool `json:"show_strategy_modal"`
 	NotifyStrategyTest bool `json:"notify_strategy_test"`
 
@@ -92,6 +92,7 @@ func defaultConfig(zapretDir string) *Config {
 			Enabled:   false,
 			AutoStart: false,
 			Port:      1080,
+			BindHost:  "0.0.0.0",
 			Username:  "",
 			Password:  "",
 		},
@@ -116,7 +117,6 @@ func defaultConfig(zapretDir string) *Config {
 
 		NotificationsEnabled: true,
 
-		ShowStrategyColors: true,
 		NotifyStrategyTest: false,
 
 		NotifyZPUIUpdates:   true,

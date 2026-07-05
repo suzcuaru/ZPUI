@@ -97,7 +97,6 @@ func (a *App) GetConfig() map[string]interface{} {
 		"notify_service_status": a.cfg.NotifyServiceStatus,
 		"notify_resource_drop":  a.cfg.NotifyResourceDrop,
 		"resource_drop_pct":     a.cfg.GetResourceDropPct(),
-		"show_strategy_colors":  a.cfg.ShowStrategyColors,
 		"show_strategy_modal":   a.cfg.ShowStrategyModal,
 		"notify_strategy_test":  a.cfg.NotifyStrategyTest,
 		"logs":                a.cfg.Logs,

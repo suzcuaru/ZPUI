@@ -71,7 +71,9 @@ func (a *App) Run() error {
 
 		go func() {
 			time.Sleep(800 * time.Millisecond)
-			a.controller.ShowWindow()
+			if !a.cfg.StartMinimized {
+				a.controller.ShowWindow()
+			}
 		}()
 	}
 

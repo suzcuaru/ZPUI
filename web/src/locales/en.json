@@ -164,7 +164,9 @@
     "password": "Password",
     "autoStartProxy": "Proxy autostart",
     "autoStartProxyDesc": "Start when app launches",
-    "settingsSaved": "Proxy settings saved"
+    "settingsSaved": "Proxy settings saved",
+    "address": "Address",
+    "addressDesc": "Bind address (0.0.0.0 = all interfaces)"
   },
   "monitor": {
     "title": "Monitoring",
@@ -211,7 +213,6 @@
     "closeToTray": "Close to tray",
     "updateCheck": "Update check",
     "notifications": "Windows notifications",
-    "showStrategyColors": "Test result colors",
     "notifyStrategyTest": "Test completion notification",
     "test": "Test",
     "testNotificationSent": "Test notification sent",

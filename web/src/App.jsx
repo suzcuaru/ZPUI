@@ -183,7 +183,7 @@ export default function App() {
   const pageContent = backendOnline ? (
     <div className="main-area page-fade" key={activePage}>
         {PageComponent ? (
-         <PageComponent status={status} showToast={showToast} onNavigate={setActivePage} />
+         <PageComponent status={status} showToast={showToast} onNavigate={setActivePage} onOpenLogs={() => setLogsOpen(true)} />
        ) : null}
     </div>
   ) : (
