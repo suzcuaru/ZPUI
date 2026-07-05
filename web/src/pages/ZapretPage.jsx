@@ -191,19 +191,6 @@ function StrategiesTab({ status, showToast, showColors }) {
 
   return (
     <>
-      {testing && testProgress && (
-        <div className="strat-test-bar">
-          <div className="strat-test-info">
-            <span className="strat-test-spin"><span className="mini-spin" /></span>
-            <span className="strat-test-label">{t('zapret.testingStrategies')}</span>
-            <span className="strat-test-count">{testProgress.current} / {testProgress.total}</span>
-          </div>
-          <div className="strat-test-progress">
-            <div className="strat-test-progress-fill" style={{ width: ((testProgress.current / Math.max(testProgress.total, 1)) * 100) + '%' }} />
-          </div>
-        </div>
-      )}
-
       <div className="strat-grid">
         {strategies.map(s => {
           const result = testResults[s.filename];
@@ -229,16 +216,6 @@ function StrategiesTab({ status, showToast, showColors }) {
         })}
         {strategies.length === 0 && <div className="strat-empty">{t('zapret.noStrategies')}</div>}
       </div>
-
-      {testing ? (
-        <button className="btn btn-danger btn-sm" onClick={cancelTest} style={{ marginTop: 8 }}>
-          {t('common.cancel')}
-        </button>
-      ) : (
-        <button className="btn btn-sm" onClick={handleStartTest} style={{ marginTop: 8 }} disabled={!strategies.length}>
-          {t('zapret.testStrategies')}
-        </button>
-      )}
 
       <div className="strat-filters">
         <div className="flt-section">

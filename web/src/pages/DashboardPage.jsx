@@ -121,26 +121,29 @@ export default function DashboardPage({ status, showToast, onNavigate }) {
             </button>
           </div>
         </div>
-        <div className="db-resource-row">
-          <div className="db-resource-item">
-            <span className="db-resource-pct" style={{ color: defPct >= 80 ? 'var(--success)' : defPct >= 50 ? 'var(--warning)' : 'var(--danger)' }}>
+        <div className="db-avail-row">
+          <div className="db-avail-stat">
+            <span className="db-avail-pct" style={{ color: defPct >= 80 ? 'var(--success)' : defPct >= 50 ? 'var(--warning)' : 'var(--danger)' }}>
               {defPct >= 0 ? `${defPct}%` : '—'}
             </span>
-            <span className="db-resource-label">{t('dashboard.standard')}</span>
-            <span className="db-resource-sub">{defOk}/{defRes.length}</span>
+            <span className="db-avail-label">{t('dashboard.standard')}</span>
           </div>
-          <div className="db-resource-divider" />
-          <div className="db-resource-item">
-            <span className="db-resource-pct" style={{ color: userPct >= 80 ? 'var(--success)' : userPct >= 50 ? 'var(--warning)' : 'var(--danger)' }}>
+          <div className="db-avail-chart">
+            <MiniSpark records={availStd} color="var(--accent)" />
+          </div>
+          <span className="db-avail-count">{defOk}/{defRes.length}</span>
+        </div>
+        <div className="db-avail-row">
+          <div className="db-avail-stat">
+            <span className="db-avail-pct" style={{ color: userPct >= 80 ? 'var(--success)' : userPct >= 50 ? 'var(--warning)' : 'var(--danger)' }}>
               {userPct >= 0 ? `${userPct}%` : '—'}
             </span>
-            <span className="db-resource-label">{t('dashboard.custom')}</span>
-            <span className="db-resource-sub">{userOk}/{userRes.length}</span>
+            <span className="db-avail-label">{t('dashboard.custom')}</span>
           </div>
-        </div>
-        <div className="db-mini-charts">
-          <MiniSpark records={availStd} color="var(--accent)" />
-          <MiniSpark records={availUser} color="var(--success)" />
+          <div className="db-avail-chart">
+            <MiniSpark records={availUser} color="var(--success)" />
+          </div>
+          <span className="db-avail-count">{userOk}/{userRes.length}</span>
         </div>
       </div>
 
@@ -164,12 +167,14 @@ export default function DashboardPage({ status, showToast, onNavigate }) {
 
       {!allOk && !loading && (
         <div className="card-section" style={{ gap: 6 }}>
+          <span className="card-section-title" style={{ fontSize: 11, color: 'var(--danger)' }}>
+            {t('dashboard.unavailableResources')} ({fails.length})
+          </span>
           <div className="db-fail-grid">
-            {fails.slice(0, 20).map((r, i) => (
+            {fails.map((r, i) => (
               <span key={i} className="db-fail-tag">{r.name}</span>
             ))}
           </div>
-          {fails.length > 20 && <span className="db-fail-more">+{fails.length - 20}</span>}
         </div>
       )}
     </>
@@ -177,24 +182,25 @@ export default function DashboardPage({ status, showToast, onNavigate }) {
 }
 
 function MiniSpark({ records, color }) {
-  const path = useMemo(() => {
-    if (records.length < 2) return null;
-    const w = 140, h = 28;
+  const data = useMemo(() => {
+    if (!records || records.length < 2) return null;
+    const W = 100, H = 30;
     const pts = records.map((r, i) => {
-      const x = (i / (records.length - 1)) * w;
-      const y = h - (r.pct / 100) * (h - 4) - 2;
-      return `${x},${y}`;
+      const x = (i / (records.length - 1)) * W;
+      const y = H - (r.pct / 100) * (H - 4) - 2;
+      return [x, y];
     });
-    return { line: pts.join(' '), fill: `M0,${h} L${pts.join(' L')} L${w},${h} Z` };
+    const line = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' ');
+    const fill = `${line} L${W},${H} L0,${H} Z`;
+    return { line, fill, W, H };
   }, [records]);
 
-  if (!path) return <div className="mini-spark-wrap" />;
+  if (!data) return <div className="mini-spark-empty" />;
+
   return (
-    <div className="mini-spark-wrap">
-      <svg width="140" height="28" viewBox="0 0 140 28" className="mini-spark">
-        <path d={path.fill} fill={color} fillOpacity="0.1" />
-        <polyline points={path.line} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    </div>
+    <svg className="mini-spark-svg" viewBox={`0 0 ${data.W} ${data.H}`} preserveAspectRatio="none">
+      <path d={data.fill} fill={color} fillOpacity="0.1" />
+      <path d={data.line} fill="none" stroke={color} strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   );
 }

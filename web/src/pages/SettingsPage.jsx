@@ -84,15 +84,10 @@ export default function SettingsPage({ status, showToast }) {
   const checkZpuiUpdate = async () => {
     setZpuiCheck({ state: 'checking', current: versions?.zpui, latest: null });
     const d = await api('GET', '/api/updates/check/zpui');
-    if (d?.error || !d?.repo_available) {
-      setZpuiCheck({ state: 'error', current: versions?.zpui, latest: null });
-      return;
-    }
-    setZpuiCheck({
-      state: d.update_needed ? 'available' : 'latest',
-      current: d.current || versions?.zpui,
-      latest: d.latest || versions?.zpui,
-    });
+    if (d?.error) { setZpuiCheck({ state: 'error', current: versions?.zpui, latest: null }); return; }
+    const latest = d?.latest || d?.current || versions?.zpui;
+    const hasUpdate = d?.update_needed === true;
+    setZpuiCheck({ state: hasUpdate ? 'available' : 'latest', current: d?.current || versions?.zpui, latest });
   };
 
   const checkZapretUpdate = async () => {

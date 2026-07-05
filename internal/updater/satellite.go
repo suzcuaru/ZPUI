@@ -11,8 +11,11 @@ import (
 )
 
 const (
-	githubAPIURL = "https://api.github.com/repos/suzcuaru/ZPUI/releases/latest"
-	userAgent    = "ZPUI/updater"
+	githubReleasePage = "https://github.com/suzcuaru/ZPUI/releases/latest"
+	downloadBase      = githubReleasePage + "/download/"
+	versionsURL       = downloadBase + "versions.json"
+	githubAPIURL      = "https://api.github.com/repos/suzcuaru/ZPUI/releases/latest"
+	userAgent         = "ZPUI/updater"
 )
 
 type RemoteVersions struct {
@@ -119,18 +122,8 @@ func findAsset(assets []releaseAsset, name string) string {
 }
 
 func FetchRemoteVersions() (*RemoteVersions, error) {
-	rel, err := fetchReleaseInfo()
-	if err != nil {
-		return nil, err
-	}
-
-	vURL := findAsset(rel.Assets, "versions.json")
-	if vURL == "" {
-		return nil, fmt.Errorf("versions.json не найден в assets релиза %s", rel.TagName)
-	}
-
 	client := &http.Client{Timeout: 15 * time.Second}
-	req, err := http.NewRequest("GET", vURL, nil)
+	req, err := http.NewRequest("GET", versionsURL, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -210,31 +203,7 @@ func ReplaceSatellite(exeDir, name string) error {
 	targetPath := filepath.Join(exeDir, fileName)
 	bakPath := targetPath + ".bak"
 
-	remote, err := FetchRemoteVersions()
-	if err != nil {
-		return fmt.Errorf("failed to fetch remote versions: %w", err)
-	}
-
-	remoteMap := map[string]string{
-		"wizard":       remote.Wizard,
-		"autoselect":   remote.AutoSelect,
-		"selfupdate":   remote.SelfUpdate,
-		"zapretupdate": remote.ZapretUpdate,
-	}
-
-	latestVer := remoteMap[name]
-	if latestVer == "" {
-		return fmt.Errorf("no remote version for %s", name)
-	}
-
-	rel, err := fetchReleaseInfo()
-	if err != nil {
-		return fmt.Errorf("failed to fetch release info: %w", err)
-	}
-	downloadURL := findAsset(rel.Assets, fileName)
-	if downloadURL == "" {
-		return fmt.Errorf("no download URL for %s", fileName)
-	}
+	downloadURL := downloadBase + fileName
 
 	tmpPath := targetPath + ".tmp"
 	if err := downloadFile(downloadURL, tmpPath); err != nil {

@@ -1311,21 +1311,22 @@ input, textarea { user-select:text; -webkit-user-select:text; }
 .db-res-recheck:hover { background:var(--bg-hover); color:var(--accent); border-color:var(--accent); }
 .db-res-recheck:disabled { opacity:0.5; }
 .db-res-recheck.spinning { pointer-events:none; }
-.db-resource-item { flex:1; display:flex; flex-direction:column; align-items:center; gap:0; }
-.db-resource-pct { font-size:20px; font-weight:800; line-height:1.1; }
-.db-resource-label { font-size:9px; color:var(--text-tertiary); text-transform:uppercase; letter-spacing:0.02em; }
-.db-resource-sub { font-size:9px; color:var(--text-tertiary); font-family:var(--font-mono); }
-.db-resource-divider { width:1px; height:32px; background:var(--border); }
-.db-resource-spark { flex:0 0 auto; display:flex; align-items:center; }
-.avail-spark { display:block; flex-shrink:0; }
-.db-mini-charts { display:flex; justify-content:flex-end; gap:4px; padding-top:2px; }
-.mini-spark-wrap { display:flex; align-items:center; }
-.mini-spark { display:block; flex-shrink:0; }
+
+.db-avail-row { display:flex; align-items:center; gap:10px; padding:3px 0; }
+.db-avail-stat { display:flex; flex-direction:column; align-items:center; min-width:46px; gap:1px; }
+.db-avail-pct { font-size:18px; font-weight:800; line-height:1.1; }
+.db-avail-label { font-size:8px; color:var(--text-tertiary); text-transform:uppercase; letter-spacing:0.02em; }
+.db-avail-chart { flex:1; height:32px; min-width:0; }
+.db-avail-count { font-size:10px; color:var(--text-tertiary); font-family:var(--font-mono); min-width:36px; text-align:right; }
+.mini-spark-svg { width:100%; height:100%; display:block; }
+.mini-spark-empty { flex:1; height:32px; }
 
 .db-fail-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 4px;
+  max-height: 140px;
+  overflow-y: auto;
 }
 .db-fail-tag {
   font-size:9px; padding:2px 6px; border-radius:6px;
@@ -1929,7 +1930,7 @@ input, textarea { user-select:text; -webkit-user-select:text; }
   cursor:pointer; transition:all 180ms ease; position:relative;
 }
 .svc-card:hover { border-color:var(--accent); transform:translateY(-1px); }
-.svc-card.on { border-color:var(--success); }
+.svc-card.on { border-color:var(--success); box-shadow:0 0 0 2px var(--success), 0 4px 16px rgba(34,197,94,0.12); }
 .svc-card-icon {
   width:42px; height:42px; border-radius:var(--radius-md);
   display:flex; align-items:center; justify-content:center;

@@ -1,12 +1,14 @@
 ; ==============================================================================
 ;  ZPUI Installer (NSIS)
 ;  Per-user, no admin required (enables in-app self-update)
+;  Bilingual: auto-detects Windows language (Russian / English)
 ;
 ;  Features:
 ;    - MIT License agreement page
-;    - Smart version detection: upgrade / reinstall / downgrade detection
-;    - Preserves user data (config, logs, zapret, backups) on update
-;    - Auto-kills running ZPUI before overwrite
+;    - Smart version detection: upgrade / reinstall / downgrade
+;    - Bilingual UI (auto-detect from system locale)
+;    - File-lock check: detects running ZPUI, asks to close
+;    - Preserves user data on update
 ;    - Start Menu + Desktop shortcuts
 ;
 ;  Build:
@@ -37,17 +39,14 @@
 !endif
 
 ; --- Runtime variables ---
-Var ExistingVersion      ; version string of the installed copy ("1.0.48")
-Var ExistingDir          ; install dir of the installed copy
-Var UpgradeMode          ; 0 = fresh install
-                          ; 1 = upgrade   (installed < this)
-                          ; 2 = same       (installed == this)
-                          ; 3 = downgrade  (installed > this)
+Var ExistingVersion
+Var ExistingDir
+Var UpgradeMode          ; 0=fresh, 1=upgrade, 2=same, 3=downgrade
 
 ; ==============================================================================
 ;  General settings
 ; ==============================================================================
-Name "ZPUI"
+Name "ZPUI ${VERSION}"
 OutFile "${OUTDIR}\ZPUI-Setup-${VERSION}.exe"
 Unicode True
 RequestExecutionLevel user
@@ -59,7 +58,7 @@ SetCompressor /SOLID lzma
 
 BrandingText "ZPUI ${VERSION}  ·  github.com/suzcuaru/ZPUI"
 
-; --- Version info embedded in the .exe ---
+; --- Version info ---
 VIProductVersion "${VERSION}.0"
 VIAddVersionKey "ProductName" "ZPUI"
 VIAddVersionKey "FileDescription" "ZPUI — Zapret DPI bypass controller"
@@ -69,26 +68,17 @@ VIAddVersionKey "FileVersion" "${VERSION}"
 VIAddVersionKey "ProductVersion" "${VERSION}"
 
 ; ==============================================================================
-;  Modern UI — appearance
+;  Modern UI
 ; ==============================================================================
 !define MUI_ICON "${ICON}"
 !define MUI_UNICON "${ICON}"
 !define MUI_ABORTWARNING
 
-; --- Welcome page ---
-!define MUI_WELCOMEPAGE_TITLE "Welcome to the ZPUI ${VERSION} Setup Wizard"
-!define MUI_WELCOMEPAGE_TEXT "This wizard will guide you through the installation of ZPUI ${VERSION}.$\r$\n$\r$\nZPUI is a Windows GUI controller for Zapret (DPI bypass), with built-in proxy, traffic monitoring, Xbox DNS configuration and auto-update.$\r$\n$\r$\nIt is recommended to close all other applications before continuing.$\r$\n$\r$\nClick Next to continue."
-
-; --- License page ---
-!define MUI_LICENSEPAGE_TEXT_TOP "Please review the license terms before installing ZPUI."
-!define MUI_LICENSEPAGE_TEXT_BOTTOM "If you accept the terms of the agreement, click I Agree to continue."
-
-; --- Finish page ---
+; --- Finish page (paths only — text auto-translated by MUI) ---
 !define MUI_FINISHPAGE_RUN "$INSTDIR\zpui.exe"
-!define MUI_FINISHPAGE_RUN_TEXT "Launch ZPUI now"
 !define MUI_FINISHPAGE_SHOWREADME ""
 !define MUI_FINISHPAGE_SHOWREADME_NOTCHECKED
-!define MUI_FINISHPAGE_LINK "Visit ZPUI on GitHub"
+!define MUI_FINISHPAGE_LINK "github.com/suzcuaru/ZPUI"
 !define MUI_FINISHPAGE_LINK_LOCATION "https://github.com/suzcuaru/ZPUI"
 
 ; ==============================================================================
@@ -97,8 +87,6 @@ VIAddVersionKey "ProductVersion" "${VERSION}"
 !insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_LICENSE "${LICENSE}"
 !insertmacro MUI_PAGE_COMPONENTS
-
-; Skip directory page on upgrade / same / downgrade (keep existing dir)
 !define MUI_PAGE_CUSTOMFUNCTION_PRE SkipDirectoryPage
 !insertmacro MUI_PAGE_DIRECTORY
 !insertmacro MUI_PAGE_INSTFILES
@@ -109,20 +97,45 @@ VIAddVersionKey "ProductVersion" "${VERSION}"
 !insertmacro MUI_UNPAGE_INSTFILES
 
 ; ==============================================================================
-;  Languages
+;  Languages (first = default fallback; auto-detected from system locale)
 ; ==============================================================================
 !insertmacro MUI_LANGUAGE "English"
 !insertmacro MUI_LANGUAGE "Russian"
 
 ; ==============================================================================
-;  Install sections
+;  LangStrings — custom text (resolved at runtime by $LANGUAGE)
+; ==============================================================================
+LangString MsgAppRunning ${LANG_ENGLISH} "ZPUI is still running. Please close ZPUI and click Retry to continue."
+LangString MsgAppRunning ${LANG_RUSSIAN} "ZPUI запущен. Пожалуйста, закройте ZPUI и нажмите «Повтор» для продолжения."
+
+LangString MsgUpgrade ${LANG_ENGLISH} "An older version of ZPUI ($ExistingVersion) is installed.$\r$\n$\r$\nThis will upgrade to version ${VERSION}.$\r$\nYour settings and data will be preserved.$\r$\n$\r$\nClick OK to continue or Cancel to abort."
+LangString MsgUpgrade ${LANG_RUSSIAN} "Установлена более старая версия ZPUI ($ExistingVersion).$\r$\n$\r$\nБудет выполнено обновление до версии ${VERSION}.$\r$\nВаши настройки и данные будут сохранены.$\r$\n$\r$\nНажмите OK для продолжения или «Отмена» для отказа."
+
+LangString MsgSameVer ${LANG_ENGLISH} "ZPUI version $ExistingVersion is already installed.$\r$\n$\r$\nDo you want to reinstall it?$\r$\n$\r$\nClick OK to continue or Cancel to abort."
+LangString MsgSameVer ${LANG_RUSSIAN} "ZPUI версии $ExistingVersion уже установлен.$\r$\n$\r$\nПереустановить?$\r$\n$\r$\nНажмите OK для продолжения или «Отмена» для отказа."
+
+LangString MsgDowngrade ${LANG_ENGLISH} "A newer version of ZPUI ($ExistingVersion) is already installed.$\r$\n$\r$\nIt is not recommended to install an older version (${VERSION}).$\r$\n$\r$\nDo you want to continue anyway?"
+LangString MsgDowngrade ${LANG_RUSSIAN} "Установлена более новая версия ZPUI ($ExistingVersion).$\r$\n$\r$\nНе рекомендуется устанавливать более старую версию (${VERSION}).$\r$\n$\r$\nПродолжить в любом случае?"
+
+LangString MsgRemoveZapret ${LANG_ENGLISH} "Remove the Zapret DPI engine and its configuration?$\r$\n$\r$\nIf you plan to reinstall ZPUI later, you can keep it."
+LangString MsgRemoveZapret ${LANG_RUSSIAN} "Удалить движок Zapret и его конфигурацию?$\r$\n$\r$\nЕсли вы планируете переустановить ZPUI позже, можете его оставить."
+
+LangString DESC_SecCore ${LANG_ENGLISH} "ZPUI core application, satellite tools and mods."
+LangString DESC_SecCore ${LANG_RUSSIAN} "Основное приложение ZPUI, спутники и моды."
+LangString DESC_SecStartMenu ${LANG_ENGLISH} "Create a shortcut in the Start Menu."
+LangString DESC_SecStartMenu ${LANG_RUSSIAN} "Создать ярлык в меню «Пуск»."
+LangString DESC_SecDesktop ${LANG_ENGLISH} "Create a shortcut on the Desktop."
+LangString DESC_SecDesktop ${LANG_RUSSIAN} "Создать ярлык на рабочем столе."
+
+; ==============================================================================
+;  Sections
 ; ==============================================================================
 Section "ZPUI" SecCore
   SectionIn RO
   SetOutPath "$INSTDIR"
 
-  ; Kill running instances before overwriting (safe during upgrades)
-  Call KillRunningApp
+  ; Ensure ZPUI is closed (file-lock check — works regardless of privileges)
+  Call EnsureAppClosed
 
   ; Write all dist files (overwrites binaries, preserves user data)
   File /r "${DIST}\*.*"
@@ -134,7 +147,7 @@ Section "ZPUI" SecCore
   ; Uninstaller
   WriteUninstaller "$INSTDIR\uninstall.exe"
 
-  ; Add/Remove Programs entry (per-user)
+  ; Add/Remove Programs entry
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\ZPUI" "DisplayName" "ZPUI"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\ZPUI" "DisplayVersion" "${VERSION}"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\ZPUI" "DisplayIcon" "$INSTDIR\zpui.exe"
@@ -147,7 +160,7 @@ Section "ZPUI" SecCore
   WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\ZPUI" "NoModify" 1
   WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\ZPUI" "NoRepair" 1
 
-  ; Estimated size for "Add/Remove Programs"
+  ; Estimated size
   ${GetSize} "$INSTDIR" "/S=0K" $0 $1 $2
   IntFmt $0 "0x%08X" $0
   WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\ZPUI" "EstimatedSize" "$0"
@@ -164,15 +177,8 @@ Section "Desktop shortcut" SecDesktop
 SectionEnd
 
 ; ==============================================================================
-;  Descriptions
+;  Section descriptions (must come after sections)
 ; ==============================================================================
-LangString DESC_SecCore ${LANG_ENGLISH} "ZPUI core application, satellite tools and mods."
-LangString DESC_SecCore ${LANG_RUSSIAN} "Основное приложение ZPUI, спутники и моды."
-LangString DESC_SecStartMenu ${LANG_ENGLISH} "Create a shortcut in the Start Menu."
-LangString DESC_SecStartMenu ${LANG_RUSSIAN} "Создать ярлык в меню «Пуск»."
-LangString DESC_SecDesktop ${LANG_ENGLISH} "Create a shortcut on the Desktop."
-LangString DESC_SecDesktop ${LANG_RUSSIAN} "Создать ярлык на рабочем столе."
-
 !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
   !insertmacro MUI_DESCRIPTION_TEXT ${SecCore} $(DESC_SecCore)
   !insertmacro MUI_DESCRIPTION_TEXT ${SecStartMenu} $(DESC_SecStartMenu)
@@ -180,19 +186,24 @@ LangString DESC_SecDesktop ${LANG_RUSSIAN} "Создать ярлык на ра�
 !insertmacro MUI_FUNCTION_DESCRIPTION_END
 
 ; ==============================================================================
-;  Helper: kill running ZPUI + satellites
+;  Helper: ensure ZPUI is closed via file-lock detection
+;  Works regardless of privilege level (installer is per-user, ZPUI may be elevated)
 ; ==============================================================================
-Function KillRunningApp
-  nsExec::ExecToLog 'taskkill /IM zpui.exe /F'
-  nsExec::ExecToLog 'taskkill /IM wizard.exe /F'
-  nsExec::ExecToLog 'taskkill /IM autoselect.exe /F'
-  nsExec::ExecToLog 'taskkill /IM selfupdate.exe /F'
-  nsExec::ExecToLog 'taskkill /IM zapretupdate.exe /F'
-  Sleep 500
+Function EnsureAppClosed
+  IfFileExists "$INSTDIR\zpui.exe" 0 done
+  retry:
+    ClearErrors
+    FileOpen $0 "$INSTDIR\zpui.exe" a
+    IfErrors 0 close_ok
+      MessageBox MB_RETRYCANCEL|MB_ICONSTOP "$(MsgAppRunning)" IDRETRY retry
+      Quit
+    close_ok:
+    FileClose $0
+  done:
 FunctionEnd
 
 ; ==============================================================================
-;  Helper: skip directory page when updating existing install
+;  Helper: skip directory page on upgrade/same/downgrade
 ; ==============================================================================
 Function SkipDirectoryPage
   ${If} $UpgradeMode > 0
@@ -201,50 +212,36 @@ Function SkipDirectoryPage
 FunctionEnd
 
 ; ==============================================================================
-;  .onInit — detect existing installation and compare versions
+;  .onInit — detect existing installation, compare versions
 ; ==============================================================================
 Function .onInit
   StrCpy $UpgradeMode 0
   StrCpy $ExistingVersion ""
 
-  ; Read existing version and install dir from registry
   ReadRegStr $ExistingVersion HKCU "Software\ZPUI" "Version"
   ReadRegStr $ExistingDir    HKCU "Software\ZPUI" "InstallDir"
 
   ${If} $ExistingVersion != ""
-    ; An installation was found — compare versions
     ${VersionCompare} "${VERSION}" "$ExistingVersion" $R0
 
     ${If} $R0 == 1
-      ; --- Upgrade: installed version is older ---
       StrCpy $UpgradeMode 1
       StrCpy $INSTDIR "$ExistingDir"
-      MessageBox MB_OKCANCEL|MB_ICONINFORMATION \
-        "An older version of ZPUI ($ExistingVersion) is installed.$\r$\n$\r$\nThis will upgrade to version ${VERSION}.$\r$\nYour settings and data will be preserved.$\r$\n$\r$\nClick OK to continue or Cancel to abort." \
-        IDOK +2
+      MessageBox MB_OKCANCEL|MB_ICONINFORMATION "$(MsgUpgrade)" IDOK +2
       Abort
 
     ${ElseIf} $R0 == 0
-      ; --- Same version ---
       StrCpy $UpgradeMode 2
       StrCpy $INSTDIR "$ExistingDir"
-      MessageBox MB_OKCANCEL|MB_ICONQUESTION \
-        "ZPUI version $ExistingVersion is already installed.$\r$\n$\r$\nDo you want to reinstall it?$\r$\n$\r$\nClick OK to continue or Cancel to abort." \
-        IDOK +2
+      MessageBox MB_OKCANCEL|MB_ICONQUESTION "$(MsgSameVer)" IDOK +2
       Abort
 
     ${Else}
-      ; --- Downgrade: installed version is newer ($R0 == 2) ---
       StrCpy $UpgradeMode 3
       StrCpy $INSTDIR "$ExistingDir"
-      MessageBox MB_YESNO|MB_ICONEXCLAMATION \
-        "A newer version of ZPUI ($ExistingVersion) is already installed.$\r$\n$\r$\nIt is not recommended to install an older version (${VERSION}).$\r$\n$\r$\nDo you want to continue anyway?" \
-        IDNO +2
+      MessageBox MB_YESNO|MB_ICONEXCLAMATION "$(MsgDowngrade)" IDNO +2
       Abort
     ${EndIf}
-
-    ; Kill running instances before proceeding with update
-    Call KillRunningApp
   ${EndIf}
 
   ; Default: shortcuts checked
@@ -260,6 +257,13 @@ Function .onInit
       SectionSetFlags ${SecDesktop} 0
     ${EndIf}
   ${EndIf}
+FunctionEnd
+
+; ==============================================================================
+;  un.onInit — restore language for uninstaller
+; ==============================================================================
+Function un.onInit
+  !insertmacro MUI_UNGETLANGUAGE
 FunctionEnd
 
 ; ==============================================================================
@@ -279,17 +283,14 @@ Section "Uninstall"
   Delete "$INSTDIR\versions.json"
   Delete "$INSTDIR\uninstall.exe"
 
-  ; --- User data: ask before removing ---
-  ; Zapret installation (downloaded by wizard — can be large)
+  ; --- Zapret (ask) ---
   ${If} ${FileExists} "$INSTDIR\zapret"
-    MessageBox MB_YESNO|MB_ICONQUESTION \
-      "Remove the Zapret DPI engine and its configuration?$\r$\n$\r$\nIf you plan to reinstall ZPUI later, you can keep it." \
-      IDNO skip_zapret
+    MessageBox MB_YESNO|MB_ICONQUESTION "$(MsgRemoveZapret)" IDNO skip_zapret
     RMDir /r "$INSTDIR\zapret"
   ${EndIf}
   skip_zapret:
 
-  ; --- Mods (user customisation) ---
+  ; --- Mods ---
   RMDir /r "$INSTDIR\mods"
 
   ; --- Backups ---
@@ -299,10 +300,8 @@ Section "Uninstall"
   ; --- Logs ---
   RMDir /r "$INSTDIR\logs"
 
-  ; --- Database ---
+  ; --- Database + Config ---
   Delete "$INSTDIR\zpui.db"
-
-  ; --- Config ---
   Delete "$INSTDIR\config.json"
 
   ; Remove install dir if empty
