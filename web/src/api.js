@@ -94,6 +94,7 @@ const GET_ROUTES = {
   '/api/logs/error': (app, p) => app.ReadErrorSnapshot(p.name || ''),
   '/api/logs/archive': (app) => app.GetArchiveLogs(),
   '/api/logs/archive/read': (app, p) => app.ReadArchiveLog(p.name || ''),
+  '/api/logs/debug': (app) => app.GetLogDebug(),
 };
 
 /**
@@ -142,6 +143,7 @@ const POST_ROUTES = {
   '/api/zapret/install-service-logged': (app, b) => app.InstallServiceLogged(b.strategy || ''),
   '/api/zapret/autoselect': (app) => app.RunAutoSelectStream(),
   '/api/logs/clear': (app) => app.ClearLogs(),
+  '/api/logs/debug': (app, b) => app.SetLogDebug(b.category || '', b.enabled === true),
   '/api/test-notification': (app) => app.SendTestNotification(),
 };
 

@@ -300,6 +300,8 @@
     "noLogs": "No logs",
     "errors": "Errors",
     "archive": "Archive",
+    "availability": "Availability",
+    "debugMode": "Debug",
     "noErrors": "No errors",
     "noArchive": "No archives",
     "selectFile": "Select a file"

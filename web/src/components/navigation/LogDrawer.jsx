@@ -1,8 +1,10 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { api } from '../../api';
 import { useT } from '../../i18n';
 
-const CATS = ['all', 'main', 'app', 'zapret', 'network', 'tray', 'config', 'xboxdns'];
+const CATS = ['all', 'app', 'zapret', 'network', 'availability', 'config', 'tray', 'xboxdns'];
+const ALL_FETCH = ['app', 'zapret', 'network', 'availability', 'tray', 'config', 'xboxdns'];
+const DEBUG_CATS = ['app', 'zapret', 'network', 'availability'];
 
 const FE_KEY = '__zpui_fe_logs';
 const MAX_FE = 500;
@@ -31,19 +33,11 @@ if (typeof window !== 'undefined' && !window.__zpui_log_init) {
 
 export default function LogDrawer({ open, onClose }) {
   const { t } = useT();
-  const CAT_LABELS = {
-    all: t('logs.all'),
-    main: 'Main',
-    app: 'App',
-    zapret: 'Zapret',
-    network: t('logs.network'),
-    tray: 'Tray',
-    config: t('logs.config'),
-    xboxdns: 'Xbox DNS',
-  };
   const [tab, setTab] = useState('live');
   const [cat, setCat] = useState('all');
   const [raw, setRaw] = useState([]);
+  const [debugState, setDebugState] = useState({});
+  const [debugOpen, setDebugOpen] = useState(false);
   const [errorFiles, setErrorFiles] = useState([]);
   const [selectedError, setSelectedError] = useState(null);
   const [errorContent, setErrorContent] = useState('');
@@ -55,16 +49,21 @@ export default function LogDrawer({ open, onClose }) {
 
   useEffect(() => {
     if (!open) return;
+    api('GET', '/api/logs/debug').then(d => {
+      if (d?.categories) setDebugState(d.categories);
+    });
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
     if (tab === 'live') {
       const load = async () => {
         let be = [];
-         if (cat === 'all') {
-           const results = await Promise.all(
-             ['main', 'app', 'zapret', 'network', 'tray', 'config', 'xboxdns'].map(c =>
-               api('GET', `/api/logs?category=${c}&lines=100`)
-             )
-           );
-           be = results.flatMap(d => (d?.lines || []).map(l => ({ ...l, source: 'be' })));
+        if (cat === 'all') {
+          const results = await Promise.all(
+            ALL_FETCH.map(c => api('GET', `/api/logs?category=${c}&lines=100`))
+          );
+          be = results.flatMap(d => (d?.lines || []).map(l => ({ ...l, source: 'be' })));
         } else {
           const d = await api('GET', `/api/logs?category=${cat}&lines=250`);
           be = (d?.lines || []).map(l => ({ ...l, source: 'be' }));
@@ -91,6 +90,12 @@ export default function LogDrawer({ open, onClose }) {
       load();
     }
   }, [open, tab, cat]);
+
+  const toggleDebug = async (category) => {
+    const next = !debugState[category];
+    setDebugState(prev => ({ ...prev, [category]: next }));
+    await api('POST', '/api/logs/debug', { category, enabled: next });
+  };
 
   const readError = async (name) => {
     setSelectedError(name);
@@ -129,9 +134,19 @@ export default function LogDrawer({ open, onClose }) {
     if (text) navigator.clipboard.writeText(text);
   };
 
-  const errCount = raw.filter(l => (l.level || '').toLowerCase() === 'error').length;
+  const clearAll = async () => {
+    sessionStorage.removeItem(FE_KEY);
+    await api('POST', '/api/logs/clear');
+    setRaw([]);
+    setErrorFiles([]);
+    setSelectedError(null);
+    setErrorContent('');
+  };
 
+  const errCount = raw.filter(l => (l.level || '').toLowerCase() === 'error').length;
   const fmtSize = (b) => b < 1024 ? b + ' B' : (b / 1024).toFixed(1) + ' KB';
+  const catLabel = (c) => c === 'all' ? t('logs.all') : c.charAt(0).toUpperCase() + c.slice(1);
+  const activeDebugCount = Object.values(debugState).filter(Boolean).length;
 
   return (
     <>
@@ -155,15 +170,34 @@ export default function LogDrawer({ open, onClose }) {
 
         {tab === 'live' && (
           <div className="lg-subbar">
-            {CATS.map(c => (
-              <button key={c} className={'lg-chip' + (cat === c ? ' on' : '')} onClick={() => setCat(c)}>{CAT_LABELS[c]}</button>
-            ))}
-            {errCount > 0 && <span className="lg-err">{errCount} err</span>}
-            <button className="lg-btn" onClick={async () => {
-              sessionStorage.removeItem(FE_KEY);
-              await api('POST', '/api/logs/clear');
-              setRaw([]);
-            }}>⊘</button>
+            <div className="lg-cat-row">
+              {CATS.map(c => (
+                <button key={c} className={'lg-chip' + (cat === c ? ' on' : '')} onClick={() => setCat(c)}>
+                  {catLabel(c)}
+                </button>
+              ))}
+            </div>
+            <div className="lg-subbar-actions">
+              {errCount > 0 && <span className="lg-err">{errCount} err</span>}
+              <button
+                className={'lg-dbg-toggle' + (debugOpen ? ' on' : '') + (activeDebugCount > 0 ? ' active' : '')}
+                onClick={() => setDebugOpen(!debugOpen)}
+                data-tooltip={t('logs.debugMode', { defaultValue: 'Debug' })}
+              >⚙</button>
+              <button className="lg-btn" onClick={clearAll} data-tooltip={t('common.clear', { defaultValue: 'Clear' })}>⊘</button>
+            </div>
+            {debugOpen && (
+              <div className="lg-debug-row">
+                <span className="lg-debug-label">{t('logs.debugMode', { defaultValue: 'Debug' })}:</span>
+                {DEBUG_CATS.map(c => (
+                  <button
+                    key={c}
+                    className={'lg-dbg' + (debugState[c] ? ' on' : '')}
+                    onClick={() => toggleDebug(c)}
+                  >{c}</button>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -174,7 +208,7 @@ export default function LogDrawer({ open, onClose }) {
               return (
                 <div key={i} className={'lg-row ' + lv}>
                   <span className="lg-time">{l.time || ''}</span>
-                  <span className={'lg-lv ' + lv}>{lv === 'error' ? 'E' : lv === 'warn' ? 'W' : 'I'}</span>
+                  <span className={'lg-lv ' + lv}>{lv === 'error' ? 'E' : lv === 'warn' ? 'W' : lv === 'debug' ? 'D' : 'I'}</span>
                   {l.source === 'fe' && <span className="lg-fe">FE</span>}
                   <span className="lg-msg">{l.message || ''}</span>
                 </div>

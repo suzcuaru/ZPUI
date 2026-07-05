@@ -31,6 +31,18 @@ func (a *App) ClearLogs() map[string]interface{} {
 	return okResp()
 }
 
+func (a *App) SetLogDebug(category string, enabled bool) map[string]interface{} {
+	if category == "" {
+		return errResp("category required")
+	}
+	a.log.SetDebug(category, enabled)
+	return okResp()
+}
+
+func (a *App) GetLogDebug() map[string]interface{} {
+	return map[string]interface{}{"categories": a.log.GetDebugCategories()}
+}
+
 func (a *App) GetErrorSnapshots() map[string]interface{} {
 	errorsDir := filepath.Join(a.cfg.LogsDir(), "errors")
 	return map[string]interface{}{"files": listLogDir(errorsDir)}

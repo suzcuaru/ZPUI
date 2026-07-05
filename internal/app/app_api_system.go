@@ -1,16 +1,14 @@
 package app
 
 import (
-	"crypto/tls"
 	"fmt"
 	"net"
-	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 	"time"
+	"zpui/internal/availability"
 	"zpui/internal/blockcheck"
 	"zpui/internal/database"
 	"zpui/internal/executil"
@@ -36,21 +34,7 @@ func (a *App) GetResourceStatus() map[string]interface{} {
 	}
 	a.resourceCacheMu.Unlock()
 
-	dialer := &net.Dialer{Timeout: 3 * time.Second}
-	client := &http.Client{
-		Timeout: 5 * time.Second,
-		Transport: &http.Transport{
-			DialContext:     dialer.DialContext,
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
-
-	type check struct {
-		host string
-		url  string
-	}
-
-	var defaultResources []check
+	var defaultTargets []availability.Target
 	targetsPath := filepath.Join(a.cfg.GetZapretPath(), "utils", "targets.txt")
 	if body, err := os.ReadFile(targetsPath); err == nil {
 		for _, line := range strings.Split(string(body), "\n") {
@@ -63,15 +47,14 @@ func (a *App) GetResourceStatus() map[string]interface{} {
 				continue
 			}
 			key := strings.TrimSpace(parts[0])
-			val := strings.TrimSpace(parts[1])
-			val = strings.Trim(val, `"`)
+			val := strings.TrimSpace(strings.Trim(parts[1], `"`))
 			if strings.HasPrefix(val, "PING:") {
 				continue
 			}
 			if !strings.HasPrefix(val, "http://") && !strings.HasPrefix(val, "https://") {
 				continue
 			}
-			defaultResources = append(defaultResources, check{host: key, url: val})
+			defaultTargets = append(defaultTargets, availability.Target{Host: key, URL: val})
 		}
 	}
 
@@ -85,57 +68,17 @@ func (a *App) GetResourceStatus() map[string]interface{} {
 		}
 	}
 
-	var allChecks []check
-	allChecks = append(allChecks, defaultResources...)
-	for _, h := range userHosts {
-		allChecks = append(allChecks, check{host: h, url: "https://" + h})
-	}
-
-	results := make([]map[string]interface{}, len(allChecks))
-	var wg sync.WaitGroup
-	for i, c := range allChecks {
-		wg.Add(1)
-		go func(idx int, c check) {
-			defer wg.Done()
-			ok := false
-			resp, err := client.Get(c.url)
-			if err == nil {
-				resp.Body.Close()
-				ok = resp.StatusCode < 500
-			}
-			if !ok {
-				conn, err := net.DialTimeout("tcp", c.host+":443", 3*time.Second)
-				if err == nil {
-					conn.Close()
-					ok = true
-				}
-			}
-			results[idx] = map[string]interface{}{
-				"name": c.host,
-				"url":  c.url,
-				"ok":   ok,
-			}
-		}(i, c)
-	}
-	wg.Wait()
-
-	var defaultResults, userResults []map[string]interface{}
-	for i, r := range results {
-		if i < len(defaultResources) {
-			defaultResults = append(defaultResults, r)
-		} else {
-			userResults = append(userResults, r)
-		}
-	}
+	checker := availability.NewChecker(a.log)
+	cs := checker.Check(defaultTargets, userHosts)
 
 	a.resourceCacheMu.Lock()
-	a.resourceCache = &resCacheData{Default: defaultResults, User: userResults}
+	a.resourceCache = &resCacheData{Default: cs.Default, User: cs.User}
 	a.resourceCacheTime = time.Now()
 	a.resourceCacheMu.Unlock()
 
 	return map[string]interface{}{
-		"default": defaultResults,
-		"user":    userResults,
+		"default": cs.Default,
+		"user":    cs.User,
 	}
 }
 

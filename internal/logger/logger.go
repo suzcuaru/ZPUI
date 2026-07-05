@@ -24,14 +24,15 @@ const snapshotDebounce = 30 * time.Second
 const errRetention = 30
 
 type Logger struct {
-	mu        sync.Mutex
-	baseDir   string
-	maxDays   int
-	files     map[string]*os.File // bucket -> открытый файл (текущий день)
-	fileDates map[string]string   // bucket -> дата (YYYY-MM-DD) открытия
-	ring      []ringEntry         // кольцевой буфер: последние записи (все категории)
-	lastSnap  time.Time           // анти-спам для срезов ошибок
-	stopCh    chan struct{}
+	mu              sync.Mutex
+	baseDir         string
+	maxDays         int
+	files           map[string]*os.File
+	fileDates       map[string]string
+	ring            []ringEntry
+	lastSnap        time.Time
+	debugCategories map[string]bool
+	stopCh          chan struct{}
 }
 
 type ringEntry struct {
@@ -64,11 +65,12 @@ func New(baseDir string, maxDays int) (*Logger, error) {
 	}
 
 	l := &Logger{
-		baseDir:   baseDir,
-		maxDays:   maxDays,
-		files:     make(map[string]*os.File),
-		fileDates: make(map[string]string),
-		stopCh:    make(chan struct{}),
+		baseDir:         baseDir,
+		maxDays:         maxDays,
+		files:           make(map[string]*os.File),
+		fileDates:       make(map[string]string),
+		debugCategories: make(map[string]bool),
+		stopCh:          make(chan struct{}),
 	}
 
 	go l.cleanupLoop()
@@ -98,11 +100,17 @@ func (l *Logger) Warn(category, msg string) {
 }
 
 func (l *Logger) Debug(category, msg string) {
+	l.mu.Lock()
+	debug := l.debugCategories[category]
+	l.mu.Unlock()
+	if !debug {
+		return
+	}
 	l.write("DEBUG", category, msg)
 }
 
 func (l *Logger) Network(msg string) {
-	l.write("INFO", "network", msg)
+	l.write("DEBUG", "network", msg)
 }
 
 func (l *Logger) ZapretLog(msg string) {
@@ -110,7 +118,29 @@ func (l *Logger) ZapretLog(msg string) {
 }
 
 func (l *Logger) WriteZapretOutput(line string) {
-	l.ZapretLog(strings.TrimRight(line, "\r\n"))
+	l.Debug("zapret", strings.TrimRight(line, "\r\n"))
+}
+
+func (l *Logger) SetDebug(category string, enabled bool) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.debugCategories[category] = enabled
+}
+
+func (l *Logger) IsDebug(category string) bool {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.debugCategories[category]
+}
+
+func (l *Logger) GetDebugCategories() map[string]bool {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	result := make(map[string]bool)
+	for k, v := range l.debugCategories {
+		result[k] = v
+	}
+	return result
 }
 
 // mapBucket сворачивает категорию в физический файл-бакет.
@@ -362,6 +392,15 @@ func (l *Logger) Clear() {
 		}
 	}
 	l.ring = nil
+
+	errorsDir := filepath.Join(l.baseDir, "errors")
+	if entries, err := os.ReadDir(errorsDir); err == nil {
+		for _, e := range entries {
+			if !e.IsDir() && strings.HasSuffix(e.Name(), ".log") {
+				os.Remove(filepath.Join(errorsDir, e.Name()))
+			}
+		}
+	}
 }
 
 // ListLogFiles возвращает все доступные лог-файлы: текущие, архивы и срезы ошибок.

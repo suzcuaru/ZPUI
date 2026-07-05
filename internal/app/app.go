@@ -10,6 +10,7 @@ import (
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 
+	"zpui/internal/availability"
 	"zpui/internal/config"
 	"zpui/internal/database"
 	"zpui/internal/executil"
@@ -60,8 +61,8 @@ type App struct {
 
 // resCacheData — структура кэша доступности ресурсов.
 type resCacheData struct {
-	Default []map[string]interface{}
-	User    []map[string]interface{}
+	Default []availability.Result
+	User    []availability.Result
 }
 
 // NewApp создаёт новый экземпляр приложения.
@@ -223,20 +224,20 @@ func (a *App) startResourceMonitor() {
 			return
 		case <-ticker.C:
 			data := a.GetResourceStatus()
-			defRes, _ := data["default"].([]map[string]interface{})
-			userRes, _ := data["user"].([]map[string]interface{})
+			defRes, _ := data["default"].([]availability.Result)
+			userRes, _ := data["user"].([]availability.Result)
 			all := append(defRes, userRes...)
 			if len(all) == 0 {
 				continue
 			}
 
-			saveSet := func(typ string, res []map[string]interface{}) {
+			saveSet := func(typ string, res []availability.Result) {
 				if len(res) == 0 {
 					return
 				}
 				ok := 0
 				for _, r := range res {
-					if r["ok"] == true {
+					if r.OK {
 						ok++
 					}
 				}
@@ -254,7 +255,7 @@ func (a *App) startResourceMonitor() {
 
 			ok := 0
 			for _, r := range all {
-				if r["ok"] == true {
+				if r.OK {
 					ok++
 				}
 			}
@@ -447,7 +448,7 @@ func (a *App) GetCachedResourcePercent() int {
 	ok := 0
 	for _, r := range data.Default {
 		total++
-		if isOk, _ := r["ok"].(bool); isOk {
+		if r.OK {
 			ok++
 		}
 	}

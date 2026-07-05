@@ -300,6 +300,8 @@
     "noLogs": "Нет логов",
     "errors": "Ошибки",
     "archive": "Архив",
+    "availability": "Доступность",
+    "debugMode": "Отладка",
     "noErrors": "Нет ошибок",
     "noArchive": "Нет архивов",
     "selectFile": "Выберите файл"
