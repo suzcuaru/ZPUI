@@ -8,6 +8,8 @@ import ResourceChecker from './components/ResourceChecker';
 import HealthCheckModal from './components/HealthCheckModal';
 import AutoSelectModal from './components/AutoSelectModal';
 import SetupWizard from './components/SetupWizard';
+import HelpModal from './components/HelpModal';
+import DiagnosticsModal from './components/DiagnosticsModal';
 import DashboardPage from './pages/DashboardPage';
 import ZapretPage from './pages/ZapretPage';
 import SettingsPage from './pages/SettingsPage';
@@ -43,6 +45,8 @@ export default function App() {
   const [themeMode, setThemeMode] = useState('system');
   const [healthOpen, setHealthOpen] = useState(false);
   const [healthWarn, setHealthWarn] = useState(null);
+  const [diagOpen, setDiagOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
   const failCountRef = useRef(0);
   const themeInitRef = useRef(false);
 
@@ -166,6 +170,9 @@ export default function App() {
 
   const handleStartupComplete = useCallback(() => {
     setStartupDone(true);
+    if (!localStorage.getItem('zpui-manual-seen')) {
+      setHelpOpen(true);
+    }
   }, []);
 
   const handleWizardCancel = useCallback(() => {
@@ -212,19 +219,20 @@ export default function App() {
 
   return (
     <div className="app">
-       <Sidebar
-         activePage={activePage}
-         onNavigate={setActivePage}
-         onOpenChecker={() => setCheckerOpen(true)}
-         onAutoSelect={() => setAutoSelectOpen(true)}
-         onOpenHealth={() => setHealthOpen(true)}
-         healthWarn={healthWarn}
-         status={status}
-         showToast={showToast}
-         onOpenLogs={() => setLogsOpen(true)}
-         isDark={theme === 'dark'}
-         onToggleTheme={toggleTheme}
-       />
+        <Sidebar
+          activePage={activePage}
+          onNavigate={setActivePage}
+          onOpenChecker={() => setCheckerOpen(true)}
+          onAutoSelect={() => setAutoSelectOpen(true)}
+          onOpenHealth={() => setHealthOpen(true)}
+          onOpenDiagnostics={() => setDiagOpen(true)}
+          healthWarn={healthWarn}
+          status={status}
+          showToast={showToast}
+          onOpenLogs={() => setLogsOpen(true)}
+          isDark={theme === 'dark'}
+          onToggleTheme={toggleTheme}
+        />
       <div className="app-body">
         {pageContent}
         <Footer status={status} />
@@ -233,6 +241,8 @@ export default function App() {
       {checkerOpen && <ResourceChecker onClose={() => setCheckerOpen(false)} showToast={showToast} proxyRunning={status?.proxy?.running} />}
       {healthOpen && <HealthCheckModal onClose={() => setHealthOpen(false)} />}
       <AutoSelectModal open={autoSelectOpen} onClose={() => setAutoSelectOpen(false)} showToast={showToast} />
+      <DiagnosticsModal open={diagOpen} onClose={() => setDiagOpen(false)} showToast={showToast} />
+      {helpOpen && <HelpModal onClose={() => setHelpOpen(false)} />}
       <Toast toasts={toasts} onRemove={removeToast} version={status?.mod?.version} />
     </div>
   );

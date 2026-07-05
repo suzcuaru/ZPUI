@@ -550,6 +550,35 @@ input, textarea { user-select:text; -webkit-user-select:text; }
 @keyframes fadeIn { from{opacity:0} to{opacity:1} }
 @keyframes slideUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
 
+/* ── Help Modal ────────────────────────── */
+.help-modal { max-width:440px; }
+.help-header {
+  display:flex; justify-content:space-between; align-items:center;
+  padding:10px 16px;
+}
+.help-counter { font-size:11px; color:var(--text-tertiary); }
+.help-close {
+  background:none; border:none; color:var(--text-tertiary);
+  font-size:14px; cursor:pointer; padding:2px 6px;
+  border-radius:var(--radius-sm); transition:all 150ms;
+}
+.help-close:hover { color:var(--text-primary); background:var(--bg-hover); }
+.help-body { padding:8px 20px 20px; }
+.help-title { font-size:16px; font-weight:600; color:var(--text-primary); margin:0 0 10px; }
+.help-text { font-size:13px; line-height:1.6; color:var(--text-secondary); margin:0; }
+.help-dots {
+  display:flex; gap:6px; justify-content:center; padding:0 0 12px;
+}
+.help-dot {
+  width:7px; height:7px; border-radius:50%;
+  background:var(--bg-hover); cursor:pointer; transition:all 150ms;
+}
+.help-dot.active { background:var(--accent); width:18px; border-radius:4px; }
+.help-actions {
+  padding:10px 16px; border-top:1px solid var(--border);
+  display:flex; justify-content:space-between; gap:6px;
+}
+
 /* ── Log Drawer ────────────────────────── */
 .lg-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.35); z-index:300; opacity:0; pointer-events:none; transition:opacity 200ms; }
 .lg-overlay.open { opacity:1; pointer-events:auto; }
