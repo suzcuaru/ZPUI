@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"context"
@@ -91,7 +91,7 @@ func NewApp(
 }
 
 // startup вызывается Wails при запуске приложения.
-func (a *App) startup(ctx context.Context) {
+func (a *App) Startup(ctx context.Context) {
 	a.ctx = ctx
 	a.log.Info("app", "Wails application started")
 
@@ -326,7 +326,7 @@ func (a *App) checkAndRecoverZapret() bool {
 }
 
 // shutdown вызывается Wails при завершении приложения.
-func (a *App) shutdown(ctx context.Context) {
+func (a *App) Shutdown(ctx context.Context) {
 	a.shutdownOnce.Do(func() {
 		a.log.Info("app", "Shutting down...")
 
@@ -368,7 +368,7 @@ func (a *App) shutdown(ctx context.Context) {
 // beforeClose вызывается при закрытии окна (X).
 // Если включён close-to-tray — сворачивает окно в трей вместо выхода.
 // Для выхода используйте tray → Выход.
-func (a *App) beforeClose(ctx context.Context) bool {
+func (a *App) BeforeClose(ctx context.Context) bool {
 	if a.cfg.GetCloseToTray() {
 		a.log.Info("app", "Window close requested — hiding to tray")
 		a.windowMu.Lock()

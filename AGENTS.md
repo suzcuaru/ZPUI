@@ -4,10 +4,11 @@ Guidance for AI agents (and humans) working on ZPUI.
 
 ## Project layout
 
-- `app*.go`, `main.go`, `versions.go`, `window_windows.go` — Wails app core (package `main`). All `func (a *App)` methods are Wails bindings exposed to the frontend.
-- `internal/` — backend packages by domain: `zapret`, `proxy`, `monitor`, `config`, `database`, `updater`, `xboxdns`, `blockcheck`, `sysinfo`, `tray`, `logger`, `executil`, `autostart`, `singleinstance`, `mods`.
-- `cmd/{autoselect,selfupdate,wizard,zapretupdate}` — satellite executables.
-- `web/` — React + Vite frontend. `web/src/api.js` is a shim that routes `api('GET','/api/...')` calls to Wails bindings (`window.go.main.App.*`).
+- `main.go` — Wails entry point (package `main`); creates and binds `app.App`.
+- `internal/app/` — Wails app core (package `app`): the `App` struct and all `func (a *App)` methods (Wails bindings exposed to the frontend as `window.go.app.App`). Includes `app*.go`, `versions.go`, `window_windows.go`.
+- `internal/` — backend packages by domain: `app`, `wizard`, `autoselect`, `zapret`, `proxy`, `monitor`, `config`, `database`, `updater`, `xboxdns`, `blockcheck`, `sysinfo`, `tray`, `logger`, `executil`, `autostart`, `singleinstance`, `mods`.
+- `cmd/{autoselect,selfupdate,wizard,zapretupdate}` — satellite executables (thin CLI wrappers over `internal/wizard` and `internal/autoselect`; `selfupdate`/`zapretupdate` are standalone updaters).
+- `web/` — React + Vite frontend. `web/src/api.js` is a shim that routes `api('GET','/api/...')` calls to Wails bindings (`window.go.app.App.*`).
 
 ## Build & verify commands
 
@@ -43,8 +44,8 @@ Requires `go`, `node`, and the `wails` CLI on PATH.
 
 ## Conventions
 
-- Frontend → backend calls go through `web/src/api.js` (route map). Add new endpoints there and as a `func (a *App)` method.
+- Frontend → backend calls go through `web/src/api.js` (route map). Add new endpoints there and as a `func (a *App)` method in `internal/app/`.
 - Shared frontend logic lives in `web/src/hooks/` (`usePolling`, `useDebouncedSave`, `useServiceToggle`) and `web/src/components/ui/` (`Row`, `Switch`, `Modal`).
 - All user-facing strings go through i18n (`web/src/locales/{ru,en}.json` + `useT`). Non-React modules use the `tr()` accessor from `i18n`.
-- Backend responses use `map[string]interface{}` with `{"error": "..."}` / `{"status": "ok"}`; helpers `errResp()` / `okResp()` live in `app_api_types.go`.
+- Backend responses use `map[string]interface{}` with `{"error": "..."}` / `{"status": "ok"}`; helpers `errResp()` / `okResp()` live in `internal/app/app_api_types.go`.
 - No comments unless explaining non-obvious logic.

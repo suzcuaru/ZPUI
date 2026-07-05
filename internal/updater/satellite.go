@@ -52,12 +52,30 @@ func newGitHubRequest(url string) (*http.Request, error) {
 	return req, nil
 }
 
-// fetchReleaseInfo получает информацию о последнем релизе с проверкой статуса.
+// fetchReleaseInfo получает информацию о последнем релизе с кешированием
+// (in-memory TTL 5 минут + ETag/If-None-Match для экономии rate-limit GitHub).
 func fetchReleaseInfo() (*releaseInfo, error) {
+	cacheMu.RLock()
+	if cachedRel != nil && time.Since(cachedAt) < releaseCacheTTL {
+		r := *cachedRel
+		cacheMu.RUnlock()
+		return &r, nil
+	}
+	etag := cachedEtag
+	body := cachedBody
+	cacheMu.RUnlock()
+
+	if etag == "" || body == nil {
+		etag, body = loadPersistentCache()
+	}
+
 	client := &http.Client{Timeout: 15 * time.Second}
 	req, err := newGitHubRequest(githubAPIURL)
 	if err != nil {
 		return nil, err
+	}
+	if etag != "" {
+		req.Header.Set("If-None-Match", etag)
 	}
 	resp, err := client.Do(req)
 	if err != nil {
@@ -65,15 +83,30 @@ func fetchReleaseInfo() (*releaseInfo, error) {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
+	switch resp.StatusCode {
+	case http.StatusNotModified:
+		if body != nil {
+			var rel releaseInfo
+			if err := json.Unmarshal(body, &rel); err == nil {
+				storeCache(&rel, body, etag)
+				return &rel, nil
+			}
+		}
+		return nil, fmt.Errorf("github 304 без кеша")
+	case http.StatusOK:
+		raw, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+		if err != nil {
+			return nil, fmt.Errorf("чтение ответа github: %w", err)
+		}
+		var rel releaseInfo
+		if err := json.Unmarshal(raw, &rel); err != nil {
+			return nil, fmt.Errorf("разбор ответа github: %w", err)
+		}
+		storeCache(&rel, raw, resp.Header.Get("ETag"))
+		return &rel, nil
+	default:
 		return nil, fmt.Errorf("github api вернул статус %d", resp.StatusCode)
 	}
-
-	var rel releaseInfo
-	if err := json.NewDecoder(resp.Body).Decode(&rel); err != nil {
-		return nil, fmt.Errorf("разбор ответа github: %w", err)
-	}
-	return &rel, nil
 }
 
 func findAsset(assets []releaseAsset, name string) string {

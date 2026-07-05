@@ -14,6 +14,7 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
 	"github.com/wailsapp/wails/v2/pkg/options/windows"
 
+	zpuiapp "zpui/internal/app"
 	"zpui/internal/config"
 	"zpui/internal/database"
 	"zpui/internal/executil"
@@ -22,6 +23,7 @@ import (
 	"zpui/internal/proxy"
 	"zpui/internal/singleinstance"
 	"zpui/internal/tray"
+	"zpui/internal/updater"
 	"zpui/internal/xboxdns"
 	"zpui/internal/zapret"
 )
@@ -41,6 +43,8 @@ func main() {
 		log.Fatal(err)
 	}
 	exeDir := filepath.Dir(exePath)
+
+	updater.SetCacheDir(exeDir)
 
 	// Проверка единственного экземпляра
 	if cleanup, err := singleinstance.Check(exePath); err != nil {
@@ -80,7 +84,7 @@ func main() {
 	xboxDnsMgr := xboxdns.NewManager(logMgr)
 
 	// Создаём Wails-приложение
-	app := NewApp(cfg, logMgr, zapretMgr, proxyServer, trafficMonitor, xboxDnsMgr, version, exeDir)
+	app := zpuiapp.NewApp(cfg, logMgr, zapretMgr, proxyServer, trafficMonitor, xboxDnsMgr, version, exeDir)
 
 	// Создаём tray (контроллер = app, управляет окном через Wails runtime)
 	trayApp := tray.New(cfg, logMgr, zapretMgr, proxyServer, app, version)
@@ -112,10 +116,10 @@ func main() {
 		AssetServer: &assetserver.Options{
 			Assets: distFS,
 		},
-		OnStartup:    app.startup,
-		OnShutdown:   app.shutdown,
-		OnBeforeClose: app.beforeClose,
-		Bind:         []interface{}{app},
+		OnStartup:     app.Startup,
+		OnShutdown:    app.Shutdown,
+		OnBeforeClose: app.BeforeClose,
+		Bind:          []interface{}{app},
 		Windows: &windows.Options{
 			WebviewIsTransparent: false,
 			WindowIsTranslucent:  false,

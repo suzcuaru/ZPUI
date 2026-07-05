@@ -1,14 +1,19 @@
-package main
+package app
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
+	"sync/atomic"
+
+	"github.com/wailsapp/wails/v2/pkg/runtime"
+
 	"zpui/internal/database"
 	"zpui/internal/executil"
 	"zpui/internal/notify"
+	"zpui/internal/wizard"
 	"zpui/internal/zapret"
 )
 
@@ -309,25 +314,43 @@ func (a *App) RemoveSystemZapretService() map[string]interface{} {
 	return map[string]interface{}{"status": "ok"}
 }
 
+var wizardRunning atomic.Bool
+
 func (a *App) RunWizard() map[string]interface{} {
-	exePath, err := os.Executable()
-	if err != nil {
-		return map[string]interface{}{"error": err.Error()}
-	}
-	exeDir := filepath.Dir(exePath)
-	wizardPath := filepath.Join(exeDir, "wizard.exe")
-
-	if _, err := os.Stat(wizardPath); err != nil {
-		return map[string]interface{}{"error": "wizard.exe не найден"}
+	if !wizardRunning.CompareAndSwap(false, true) {
+		return errResp("wizard уже запущен")
 	}
 
-	cmd := executil.HiddenCmd(wizardPath)
-	if err := cmd.Start(); err != nil {
-		return map[string]interface{}{"error": err.Error()}
-	}
+	go func() {
+		defer wizardRunning.Store(false)
 
-	a.log.Info("app", "Wizard started (PID: "+strconv.Itoa(cmd.Process.Pid)+")")
-	return map[string]interface{}{"status": "ok"}
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		_, err := wizard.Run(ctx, wizard.Options{
+			ExeDir: a.exeDir,
+			Config: a.cfg,
+			Log:    a.log,
+			OnProgress: func(p wizard.Progress) {
+				if a.ctx != nil {
+					runtime.EventsEmit(a.ctx, "wizard:progress", p)
+				}
+			},
+		})
+
+		if a.ctx == nil {
+			return
+		}
+		if err != nil {
+			a.log.Error("wizard", "Wizard failed: "+err.Error())
+			runtime.EventsEmit(a.ctx, "wizard:done", map[string]interface{}{"error": err.Error()})
+			return
+		}
+		runtime.EventsEmit(a.ctx, "wizard:done", map[string]interface{}{"status": "ok"})
+	}()
+
+	a.log.Info("app", "Wizard started (in-process)")
+	return okResp()
 }
 
 func (a *App) CheckWizardDone() bool {

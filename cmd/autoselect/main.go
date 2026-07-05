@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"zpui/internal/autoselect"
 	"zpui/internal/config"
 	"zpui/internal/logger"
 	"zpui/internal/zapret"
@@ -37,101 +38,27 @@ func main() {
 		os.Exit(1)
 	}
 
-	zapretMgr := zapret.NewManager(cfg, logMgr)
-
-	strategies := zapretMgr.ListStrategies()
-	if len(strategies) == 0 {
-		log("ERROR: No strategies found in " + cfg.GetZapretPath())
-		os.Exit(1)
-	}
-
-	log(fmt.Sprintf("Testing %d strategies...", len(strategies)))
-
-	if zapretMgr.GetStatus() == zapret.StatusRunning {
-		log("Stopping current zapret instance...")
-		zapretMgr.Stop()
-		time.Sleep(2 * time.Second)
-	}
-
-	resultsCh := make(chan zapret.AutoTestResult, 50)
-	doneCh := make(chan struct{})
-
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()
 
-	go zapretMgr.RunAutoTest(ctx, resultsCh, doneCh)
-
-	completed := 0
-	total := len(strategies)
-	type result struct {
-		Strategy    string
-		ResourcesN  int
-		ResourcesOK int
-		ResponseMs  int64
-		Score       float64
-	}
-	var results []result
-
-	for {
-		select {
-		case r, ok := <-resultsCh:
-			if !ok {
-				continue
-			}
-			if r.Type == "result" && r.Strategy != "" && r.ResourcesN > 0 {
-				completed++
-				pct := completed * 100 / total
-				fmt.Printf("\r[%3d%%] %-40s %d/%d  %dms   ",
-					pct, r.Strategy, r.ResourcesOK, r.ResourcesN, r.ResponseMs)
-
-				score := float64(r.ResourcesOK) / float64(r.ResourcesN)
-				if r.ResponseMs > 0 {
-					score -= float64(r.ResponseMs) / 10000.0
-				}
-				results = append(results, result{
-					Strategy:    r.Strategy,
-					ResourcesN:  r.ResourcesN,
-					ResourcesOK: r.ResourcesOK,
-					ResponseMs:  r.ResponseMs,
-					Score:       score,
-				})
-			}
-		case <-doneCh:
-			fmt.Println()
-			goto done
-		case <-ctx.Done():
-			fmt.Println()
-			log("Timeout reached")
-			goto done
+	res := autoselect.Run(ctx, cfg, logMgr, func(r zapret.AutoTestResult) {
+		if r.Type == "result" && r.Strategy != "" {
+			fmt.Printf("\r[%3d%%] %-40s %d/%d  %dms   ",
+				r.Current, r.Strategy, r.ResourcesOK, r.ResourcesN, r.ResponseMs)
+		} else if r.Message != "" {
+			fmt.Printf("\n%s", r.Message)
 		}
-	}
+	})
 
-done:
-	if len(results) == 0 {
-		log("No results")
+	fmt.Println()
+	if res.Error != "" {
+		log("Finished with error: " + res.Error)
 		os.Exit(1)
 	}
-
-	best := results[0]
-	for _, r := range results[1:] {
-		if r.Score > best.Score {
-			best = r
-		}
-	}
-
-	log(fmt.Sprintf("Best: %s (%d/%d resources, %dms score:%.2f)", best.Strategy, best.ResourcesOK, best.ResourcesN, best.ResponseMs, best.Score))
-
-	cfg.SetCurrentStrategy(best.Strategy)
-	cfg.Save()
-	log("Strategy saved: " + best.Strategy)
-
-	fmt.Println("\n=== Results ===")
-	for i, r := range results {
-		marker := ""
-		if r.Strategy == best.Strategy {
-			marker = " *"
-		}
-		fmt.Printf("%2d. %-40s %d/%-3d  %4dms  %.2f%s\n",
-			i+1, r.Strategy, r.ResourcesOK, r.ResourcesN, r.ResponseMs, r.Score, marker)
+	if res.Applied {
+		log(fmt.Sprintf("Applied strategy: %s", res.Strategy))
+	} else {
+		log("No strategy applied")
+		os.Exit(1)
 	}
 }

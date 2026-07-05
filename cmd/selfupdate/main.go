@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"zpui/internal/logger"
@@ -157,7 +158,15 @@ func unzipTo(zipPath, dest string) error {
 	}
 	defer r.Close()
 
+	selfName := ""
+	if exe, err := os.Executable(); err == nil {
+		selfName = strings.ToLower(filepath.Base(exe))
+	}
+
 	for _, f := range r.File {
+		if selfName != "" && strings.ToLower(filepath.Base(f.Name)) == selfName {
+			continue
+		}
 		path := filepath.Join(dest, f.Name)
 		if f.FileInfo().IsDir() {
 			os.MkdirAll(path, 0755)

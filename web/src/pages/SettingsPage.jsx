@@ -5,6 +5,8 @@ import { useT } from '../i18n';
 import { usePolling } from '../hooks/usePolling';
 import { useDebouncedSave } from '../hooks/useDebouncedSave';
 
+let autoChecked = false;
+
 export default function SettingsPage({ status, showToast }) {
   const { t, lang, changeLang } = useT();
   const [config, setConfig] = useState(null);
@@ -25,6 +27,33 @@ export default function SettingsPage({ status, showToast }) {
 
   useEffect(() => { loadConfig(); }, []);
   usePolling(loadVersions, 10000);
+
+  useEffect(() => {
+    if (autoChecked) return;
+    autoChecked = true;
+    const id = setTimeout(() => {
+      checkZpuiUpdate();
+      checkZapretUpdate();
+    }, 1500);
+    return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const rt = window.runtime;
+    if (!rt?.EventsOn) return;
+    const handler = (data) => {
+      if (!data?.latest) return;
+      if (data.component === 'ZPUI') {
+        setZpuiCheck({ state: 'available', current: data.current || versions?.zpui, latest: data.latest });
+      } else if (data.component === 'zapret') {
+        setZapretCheck({ state: 'available', current: data.current || status?.zapret?.version, latest: data.latest });
+      }
+    };
+    rt.EventsOn('update:available', handler);
+    return () => { try { rt.EventsOff('update:available'); } catch {} };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [versions, status]);
 
   const saveConfig = useDebouncedSave('/api/config', 500, null);
   const update = useCallback((patch) => {
@@ -184,7 +213,7 @@ export default function SettingsPage({ status, showToast }) {
             <div className="upd-info">
               <span className="upd-name">Zapret</span>
               <div className="upd-ver-row">
-                <span className="upd-ver">v{zapretCheck.current || status?.zapret?.version || '—'}</span>
+                <span className="upd-ver">v{status?.zapret?.version || zapretCheck.current || '—'}</span>
                 {zapretCheck.state === 'available' && zapretCheck.latest && (
                   <span className="upd-ver-new">→ v{zapretCheck.latest}</span>
                 )}

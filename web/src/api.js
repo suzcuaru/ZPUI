@@ -2,7 +2,7 @@
  * api.js — Shim-слой: маршрутизация старых HTTP-вызовов через Wails bindings.
  *
  * Фронтенд вызывает api('GET', '/api/status') как и раньше,
- * а внутри вызов перенаправляется на window.go.main.App.Method().
+ * а внутри вызов перенаправляется на window.go.app.App.Method().
  *
  * Также предоставляет createStream() для замены EventSource (SSE → Wails Events).
  */
@@ -12,8 +12,9 @@ import { tr } from './i18n';
 // ─── Helpers ──────────────────────────────────────────
 
 function wailsApp() {
-  if (typeof window !== 'undefined' && window.go && window.go.main && window.go.main.App) {
-    return window.go.main.App;
+  if (typeof window !== 'undefined' && window.go) {
+    if (window.go.app && window.go.app.App) return window.go.app.App;
+    if (window.go.main && window.go.main.App) return window.go.main.App;
   }
   return null;
 }

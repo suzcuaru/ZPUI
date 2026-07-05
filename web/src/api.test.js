@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { api } from './api';
 
 function installApp(app) {
-  window.go = { main: { App: app } };
+  window.go = { app: { App: app } };
 }
 
 describe('api routing', () => {
