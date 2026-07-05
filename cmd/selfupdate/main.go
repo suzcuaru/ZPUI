@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -16,7 +17,17 @@ import (
 
 var version = "1.0.0"
 
-const downloadURL = "https://github.com/suzcuaru/ZPUI/releases/latest/download/zpui.zip"
+func downloadURL() string {
+	arch := runtime.GOARCH
+	switch arch {
+	case "amd64":
+		return "https://github.com/suzcuaru/ZPUI/releases/latest/download/zpui-win64.zip"
+	case "386":
+		return "https://github.com/suzcuaru/ZPUI/releases/latest/download/zpui-win32.zip"
+	default:
+		return "https://github.com/suzcuaru/ZPUI/releases/latest/download/zpui-win64.zip"
+	}
+}
 
 func main() {
 	exePath, _ := os.Executable()
@@ -59,9 +70,9 @@ func main() {
 	exec.Command("taskkill", "/IM", "zpui.exe", "/F").Run()
 	time.Sleep(2 * time.Second)
 
-	log("Downloading update...")
+	log("Downloading update (" + downloadURL() + ")...")
 	zipPath := filepath.Join(exeDir, "zpui-update.zip")
-	if err := downloadFile(downloadURL, zipPath); err != nil {
+	if err := downloadFile(downloadURL(), zipPath); err != nil {
 		logErr("Download failed: " + err.Error())
 		log("Restoring backup...")
 		copyFile(filepath.Join(backupDir, "zpui.exe.bak"), zpuiExe)

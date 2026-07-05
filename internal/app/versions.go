@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"zpui/internal/executil"
 	"zpui/internal/updater"
@@ -23,37 +24,74 @@ type VersionsManifest struct {
 	ZapretUpdate string `json:"zapretupdate"`
 }
 
+type modManifest struct {
+	ID      string `json:"id"`
+	Name    string `json:"name"`
+	Version string `json:"version"`
+}
+
 func (a *App) GetVersions() map[string]interface{} {
 	manifest := a.loadVersionsManifest()
 	exeDir := a.getExeDir()
 
-	satFiles := map[string]string{
-		"wizard":       "wizard.exe",
-		"autoselect":   "autoselect.exe",
-		"selfupdate":   "selfupdate.exe",
-		"zapretupdate": "zapretupdate.exe",
+	components := []ComponentVersion{
+		{Name: "ZPUI", Version: a.version, File: "zpui.exe"},
+		{Name: "Wizard", Version: manifest.Wizard, File: "wizard.exe"},
+		{Name: "AutoSelect", Version: manifest.AutoSelect, File: "autoselect.exe"},
+		{Name: "SelfUpdate", Version: manifest.SelfUpdate, File: "selfupdate.exe"},
+		{Name: "ZapretUpdate", Version: manifest.ZapretUpdate, File: "zapretupdate.exe"},
 	}
 
 	installed := map[string]bool{}
-	for key, file := range satFiles {
-		_, err := os.Stat(filepath.Join(exeDir, file))
-		installed[key] = err == nil
+	for _, c := range components {
+		_, err := os.Stat(filepath.Join(exeDir, c.File))
+		installed[strings.ToLower(c.Name)] = err == nil
+	}
+
+	modsDir := filepath.Join(exeDir, "mods")
+	if entries, err := os.ReadDir(modsDir); err == nil {
+		for _, e := range entries {
+			if !e.IsDir() {
+				continue
+			}
+			manifestPath := filepath.Join(modsDir, e.Name(), "mod.json")
+			data, err := os.ReadFile(manifestPath)
+			if err != nil {
+				continue
+			}
+			var m modManifest
+			if err := json.Unmarshal(data, &m); err != nil {
+				continue
+			}
+			if m.Version == "" {
+				m.Version = "0.0.0"
+			}
+			id := m.ID
+			if id == "" {
+				id = e.Name()
+			}
+			displayName := m.Name
+			if displayName == "" {
+				displayName = id
+			}
+			components = append(components, ComponentVersion{
+				Name: displayName, Version: m.Version, File: "mods/" + id + "/",
+			})
+			installed[id] = true
+		}
+	}
+
+	verMap := map[string]string{}
+	for _, c := range components {
+		key := strings.ToLower(c.Name)
+		verMap[key] = c.Version
 	}
 
 	return map[string]interface{}{
-		"components": []ComponentVersion{
-			{Name: "ZPUI", Version: a.version, File: "zpui.exe"},
-			{Name: "Wizard", Version: manifest.Wizard, File: "wizard.exe"},
-			{Name: "AutoSelect", Version: manifest.AutoSelect, File: "autoselect.exe"},
-			{Name: "SelfUpdate", Version: manifest.SelfUpdate, File: "selfupdate.exe"},
-			{Name: "ZapretUpdate", Version: manifest.ZapretUpdate, File: "zapretupdate.exe"},
-		},
-		"zpui":         a.version,
-		"wizard":       manifest.Wizard,
-		"autoselect":   manifest.AutoSelect,
-		"selfupdate":   manifest.SelfUpdate,
-		"zapretupdate": manifest.ZapretUpdate,
-		"installed":    installed,
+		"components": components,
+		"zpui":       a.version,
+		"wizard":     manifest.Wizard,
+		"installed":  installed,
 	}
 }
 

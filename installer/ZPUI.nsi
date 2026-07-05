@@ -25,8 +25,11 @@
 !ifndef VERSION
   !define VERSION "1.0.0"
 !endif
+!ifndef ARCH
+  !define ARCH "win64"
+!endif
 !ifndef DIST
-  !define DIST "build\dist"
+  !define DIST "build\dist-${ARCH}"
 !endif
 !ifndef ICON
   !define ICON "build\windows\icon.ico"
@@ -47,7 +50,7 @@ Var UpgradeMode          ; 0=fresh, 1=upgrade, 2=same, 3=downgrade
 ;  General settings
 ; ==============================================================================
 Name "ZPUI ${VERSION}"
-OutFile "${OUTDIR}\ZPUI-Setup-${VERSION}.exe"
+OutFile "${OUTDIR}\ZPUI-Setup-${VERSION}-${ARCH}.exe"
 Unicode True
 RequestExecutionLevel user
 InstallDir "$LOCALAPPDATA\Programs\ZPUI"

@@ -77,12 +77,7 @@ export default function SettingsPage({ status, showToast }) {
 
   if (!config) return null;
 
-  const satellites = [
-    { key: 'wizard',       name: 'Wizard',        file: 'wizard.exe' },
-    { key: 'autoselect',   name: 'AutoSelect',    file: 'autoselect.exe' },
-    { key: 'selfupdate',   name: 'SelfUpdate',    file: 'selfupdate.exe' },
-    { key: 'zapretupdate', name: 'ZapretUpdate',  file: 'zapretupdate.exe' },
-  ];
+  const modules = (versions?.components || []).filter(c => c.name !== 'ZPUI');
 
   const st = (state) => {
     if (state === 'latest') return t('status.upToDate');
@@ -182,16 +177,16 @@ export default function SettingsPage({ status, showToast }) {
           </div>
           <div className="section-title" style={{ marginTop: 8, fontSize: 10 }}>{t('settings.satellites')}</div>
           <div className="sat-grid">
-            {satellites.map(s => {
-              const isInstalled = versions?.installed?.[s.key] !== false;
-              const ver = versions?.[s.key];
+            {modules.map(m => {
+              const key = m.name.toLowerCase();
+              const isInstalled = versions?.installed?.[key] !== false;
               return (
-                <div key={s.key} className="sat-card" style={{ padding: '5px 8px' }}>
-                  <span className="sat-name" style={{ fontSize: 10, minWidth: 65 }}>{s.name}</span>
+                <div key={key} className="sat-card" style={{ padding: '5px 8px' }}>
+                  <span className="sat-name" style={{ fontSize: 10, minWidth: 65 }}>{m.name}</span>
                   <span className="sat-ver" style={{ fontSize: 9, color: isInstalled ? 'var(--text-secondary)' : 'var(--text-tertiary)' }}>
-                    {!isInstalled ? '—' : ver && ver !== '0.0.0' ? 'v' + ver : '—'}
+                    {!isInstalled ? '—' : m.version && m.version !== '0.0.0' ? 'v' + m.version : '—'}
                   </span>
-                  <span className="sat-file" style={{ fontSize: 8 }}>{s.file}</span>
+                  <span className="sat-file" style={{ fontSize: 8 }}>{m.file}</span>
                 </div>
               );
             })}

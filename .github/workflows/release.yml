@@ -52,39 +52,34 @@ jobs:
           npm ci
           npm run build
 
-      - name: Build ZPUI core (Wails)
+      # ── 64-bit build ─────────────────────────────────────
+      - name: Build ZPUI core (win64)
         run: >
           wails build -platform windows/amd64 -s -skipbindings -o zpui.exe
           -ldflags "-s -w -H windowsgui -X main.version=${{ steps.ver.outputs.version }}"
           -trimpath
 
-      - name: Build modules
+      - name: Build modules (win64)
         run: |
+          $env:GOARCH = "amd64"
           $ld = "-s -w -H windowsgui"
           go build -o wizard.exe       -ldflags "$ld" -trimpath ./cmd/wizard/
           go build -o autoselect.exe   -ldflags "$ld" -trimpath ./cmd/autoselect/
           go build -o selfupdate.exe   -ldflags "$ld" -trimpath ./cmd/selfupdate/
           go build -o zapretupdate.exe -ldflags "$ld" -trimpath ./cmd/zapretupdate/
 
-      - name: Assemble dist
+      - name: Assemble dist (win64)
         shell: pwsh
         run: |
           $v = "${{ steps.ver.outputs.version }}"
-          $dist = "build/dist"
+          $dist = "build/dist-win64"
           New-Item -ItemType Directory -Path $dist -Force | Out-Null
-
-          # Wails outputs to build/bin/zpui.exe; copy to root if missing there
           if (-not (Test-Path zpui.exe) -and (Test-Path build/bin/zpui.exe)) {
             Copy-Item build/bin/zpui.exe zpui.exe
           }
-
-          # Verify every required binary exists before packaging
           $exes = 'zpui.exe','wizard.exe','autoselect.exe','selfupdate.exe','zapretupdate.exe'
           $missing = @($exes | Where-Object { -not (Test-Path $_) })
-          if ($missing.Count -gt 0) {
-            Write-Error "Missing binaries: $($missing -join ', ')"; exit 1
-          }
-
+          if ($missing.Count -gt 0) { Write-Error "Missing: $($missing -join ', ')"; exit 1 }
           Copy-Item $exes -Destination $dist
           function GetModVer($p) {
             if ((Get-Content $p -Raw) -match 'var version = ["'']([^"'']+)["'']') { $matches[1] }
@@ -97,61 +92,118 @@ jobs:
             selfupdate=(GetModVer 'cmd/selfupdate/main.go')
             zapretupdate=(GetModVer 'cmd/zapretupdate/main.go')
           } | ConvertTo-Json
-          [System.IO.File]::WriteAllLines("$PWD/$dist/versions.json", $json, (New-Object System.Text.UTF8Encoding $false))
+          [System.IO.File]::WriteAllText("$PWD/$dist/versions.json", $json, (New-Object System.Text.UTF8Encoding $false))
           if (Test-Path mods) { Copy-Item mods $dist -Recurse } else { New-Item -ItemType Directory -Path "$dist/mods" | Out-Null }
           Get-ChildItem $dist -Recurse | Select-Object FullName
 
-      - name: Build installer (NSIS)
+      - name: Build portable zip (win64)
+        shell: pwsh
+        run: |
+          Compress-Archive -Path build/dist-win64/* -DestinationPath zpui-win64.zip -CompressionLevel Optimal
+          Get-Item zpui-win64.zip | Select-Object Name, Length
+
+      - name: Build installer (win64)
         shell: pwsh
         run: |
           $v = "${{ steps.ver.outputs.version }}"
-
           function Find-Makensis {
-            $paths = @(
-              "C:\Program Files (x86)\NSIS\makensis.exe",
-              "C:\Program Files\NSIS\makensis.exe"
-            )
+            $paths = @("C:\Program Files (x86)\NSIS\makensis.exe","C:\Program Files\NSIS\makensis.exe")
             $hit = $paths | Where-Object { Test-Path $_ } | Select-Object -First 1
             if ($hit) { return $hit }
             $cmd = Get-Command makensis -ErrorAction SilentlyContinue
             if ($cmd) { return $cmd.Source }
             return $null
           }
-
           $makensis = Find-Makensis
-          if (-not $makensis) {
-            Write-Host "NSIS not found, installing via Chocolatey..."
-            choco install nsis -y --no-progress
-            $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
-            $makensis = Find-Makensis
-          }
-          if (-not $makensis) { Write-Error "makensis not found after install"; exit 1 }
-          Write-Host "Using makensis: $makensis"
+          if (-not $makensis) { choco install nsis -y --no-progress; $env:Path = [Environment]::GetEnvironmentVariable("Path","Machine")+";"+[Environment]::GetEnvironmentVariable("Path","User"); $makensis = Find-Makensis }
+          if (-not $makensis) { Write-Error "makensis not found"; exit 1 }
+          & $makensis /DVERSION=$v /DDIST="$PWD/build/dist-win64" /DICON="$PWD/build/windows/icon.ico" /DOUTDIR="$PWD/build" /DLICENSE="$PWD/LICENSE" /DARCH=win64 installer/ZPUI.nsi
+          if (-not (Test-Path "build/ZPUI-Setup-$v-win64.exe")) { Write-Error "Installer not created"; exit 1 }
 
-          & $makensis /DVERSION=$v /DDIST="$PWD/build/dist" /DICON="$PWD/build/windows/icon.ico" /DOUTDIR="$PWD/build" /DLICENSE="$PWD/LICENSE" installer/ZPUI.nsi
-          if (-not (Test-Path "build/ZPUI-Setup-$v.exe")) { Write-Error "Installer was not created"; exit 1 }
+      # ── 32-bit build ─────────────────────────────────────
+      - name: Clean previous binaries
+        run: |
+          Remove-Item -Force zpui.exe,wizard.exe,autoselect.exe,selfupdate.exe,zapretupdate.exe -ErrorAction SilentlyContinue
+          Remove-Item -Recurse -Force build/bin -ErrorAction SilentlyContinue
 
-      - name: Build portable zip
+      - name: Build ZPUI core (win32)
+        run: >
+          wails build -platform windows/386 -s -skipbindings -o zpui.exe
+          -ldflags "-s -w -H windowsgui -X main.version=${{ steps.ver.outputs.version }}"
+          -trimpath
+
+      - name: Build modules (win32)
+        run: |
+          $env:GOARCH = "386"
+          $ld = "-s -w -H windowsgui"
+          go build -o wizard.exe       -ldflags "$ld" -trimpath ./cmd/wizard/
+          go build -o autoselect.exe   -ldflags "$ld" -trimpath ./cmd/autoselect/
+          go build -o selfupdate.exe   -ldflags "$ld" -trimpath ./cmd/selfupdate/
+          go build -o zapretupdate.exe -ldflags "$ld" -trimpath ./cmd/zapretupdate/
+
+      - name: Assemble dist (win32)
         shell: pwsh
         run: |
-          Compress-Archive -Path build/dist/* -DestinationPath zpui.zip -CompressionLevel Optimal
-          Get-Item zpui.zip | Select-Object Name, Length
+          $v = "${{ steps.ver.outputs.version }}"
+          $dist = "build/dist-win32"
+          New-Item -ItemType Directory -Path $dist -Force | Out-Null
+          if (-not (Test-Path zpui.exe) -and (Test-Path build/bin/zpui.exe)) {
+            Copy-Item build/bin/zpui.exe zpui.exe
+          }
+          $exes = 'zpui.exe','wizard.exe','autoselect.exe','selfupdate.exe','zapretupdate.exe'
+          $missing = @($exes | Where-Object { -not (Test-Path $_) })
+          if ($missing.Count -gt 0) { Write-Error "Missing: $($missing -join ', ')"; exit 1 }
+          Copy-Item $exes -Destination $dist
+          function GetModVer($p) {
+            if ((Get-Content $p -Raw) -match 'var version = ["'']([^"'']+)["'']') { $matches[1] }
+            else { '0.0.0' }
+          }
+          $json = [ordered]@{
+            zpui=$v
+            wizard=(GetModVer 'cmd/wizard/main.go')
+            autoselect=(GetModVer 'cmd/autoselect/main.go')
+            selfupdate=(GetModVer 'cmd/selfupdate/main.go')
+            zapretupdate=(GetModVer 'cmd/zapretupdate/main.go')
+          } | ConvertTo-Json
+          [System.IO.File]::WriteAllText("$PWD/$dist/versions.json", $json, (New-Object System.Text.UTF8Encoding $false))
+          if (Test-Path mods) { Copy-Item mods $dist -Recurse } else { New-Item -ItemType Directory -Path "$dist/mods" | Out-Null }
+          Get-ChildItem $dist -Recurse | Select-Object FullName
 
+      - name: Build portable zip (win32)
+        shell: pwsh
+        run: |
+          Compress-Archive -Path build/dist-win32/* -DestinationPath zpui-win32.zip -CompressionLevel Optimal
+          Get-Item zpui-win32.zip | Select-Object Name, Length
+
+      - name: Build installer (win32)
+        shell: pwsh
+        run: |
+          $v = "${{ steps.ver.outputs.version }}"
+          function Find-Makensis { $paths = @("C:\Program Files (x86)\NSIS\makensis.exe","C:\Program Files\NSIS\makensis.exe"); $hit = $paths | Where-Object { Test-Path $_ } | Select-Object -First 1; if ($hit) { return $hit }; $cmd = Get-Command makensis -ErrorAction SilentlyContinue; if ($cmd) { return $cmd.Source }; return $null }
+          $makensis = Find-Makensis
+          if (-not $makensis) { choco install nsis -y --no-progress; $env:Path = [Environment]::GetEnvironmentVariable("Path","Machine")+";"+[Environment]::GetEnvironmentVariable("Path","User"); $makensis = Find-Makensis }
+          if (-not $makensis) { Write-Error "makensis not found"; exit 1 }
+          & $makensis /DVERSION=$v /DDIST="$PWD/build/dist-win32" /DICON="$PWD/build/windows/icon.ico" /DOUTDIR="$PWD/build" /DLICENSE="$PWD/LICENSE" /DARCH=win32 installer/ZPUI.nsi
+          if (-not (Test-Path "build/ZPUI-Setup-$v-win32.exe")) { Write-Error "Installer not created"; exit 1 }
+
+      # ── Release ──────────────────────────────────────────
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
         run: |
-          TAG="${GITHUB_REF_NAME:-v${{ steps.ver.outputs.version }}}"
           VER="${{ steps.ver.outputs.version }}"
+          TAG="${GITHUB_REF_NAME:-v$VER}"
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" \
-              "build/ZPUI-Setup-$VER.exe" zpui.zip \
-              build/dist/versions.json build/dist/wizard.exe build/dist/autoselect.exe build/dist/selfupdate.exe build/dist/zapretupdate.exe \
+              "build/ZPUI-Setup-$VER-win64.exe" \
+              "build/ZPUI-Setup-$VER-win32.exe" \
+              "zpui-win64.zip" "zpui-win32.zip" \
               --clobber
           else
             gh release create "$TAG" \
-              "build/ZPUI-Setup-$VER.exe" zpui.zip \
-              build/dist/versions.json build/dist/wizard.exe build/dist/autoselect.exe build/dist/selfupdate.exe build/dist/zapretupdate.exe \
+              "build/ZPUI-Setup-$VER-win64.exe" \
+              "build/ZPUI-Setup-$VER-win32.exe" \
+              "zpui-win64.zip" "zpui-win32.zip" \
               --title "ZPUI $VER" --generate-notes
           fi
