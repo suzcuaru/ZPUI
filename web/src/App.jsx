@@ -7,7 +7,7 @@ import OfflineScreen from './components/feedback/OfflineScreen';
 import ResourceChecker from './components/ResourceChecker';
 import HealthCheckModal from './components/HealthCheckModal';
 import AutoSelectModal from './components/AutoSelectModal';
-import StartupScreen from './components/StartupScreen';
+import SetupWizard from './components/SetupWizard';
 import DashboardPage from './pages/DashboardPage';
 import ZapretPage from './pages/ZapretPage';
 import SettingsPage from './pages/SettingsPage';
@@ -168,11 +168,20 @@ export default function App() {
     setStartupDone(true);
   }, []);
 
+  const handleWizardCancel = useCallback(() => {
+    // Exit the app - called when user chooses Cancel on third-party warning
+    if (window.runtime?.WindowClose) {
+      window.runtime.WindowClose();
+    } else if (window.runtime?.Quit) {
+      window.runtime.Quit();
+    }
+  }, []);
+
   // Show startup screen when not done
   if (!startupDone) {
     return (
       <>
-        <StartupScreen onComplete={handleStartupComplete} />
+        <SetupWizard onComplete={handleStartupComplete} onCancel={handleWizardCancel} />
         <Toast toasts={toasts} onRemove={removeToast} version={status?.mod?.version} />
       </>
     );

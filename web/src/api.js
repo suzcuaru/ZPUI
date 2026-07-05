@@ -95,6 +95,8 @@ const GET_ROUTES = {
   '/api/logs/archive': (app) => app.GetArchiveLogs(),
   '/api/logs/archive/read': (app, p) => app.ReadArchiveLog(p.name || ''),
   '/api/logs/debug': (app) => app.GetLogDebug(),
+  '/api/setup/detect-thirdparty': (app) => app.DetectThirdPartyZapret(),
+  '/api/setup/strategies': (app, p) => app.SetupListStrategies(p.strategy || ''),
 };
 
 /**
@@ -145,6 +147,15 @@ const POST_ROUTES = {
   '/api/logs/clear': (app) => app.ClearLogs(),
   '/api/logs/debug': (app, b) => app.SetLogDebug(b.category || '', b.enabled === true),
   '/api/test-notification': (app) => app.SendTestNotification(),
+  '/api/setup/remove-thirdparty': (app) => app.RemoveThirdPartyZapret(),
+  '/api/setup/install': (app) => app.InstallOurZapret(),
+  '/api/setup/start': (app) => app.StartOurZapret(),
+  '/api/setup/apply-strategy': (app, b) => app.SetupApplyStrategy(b.strategy || ''),
+  '/api/setup/configure-filters': (app, b) => app.SetupConfigureFilters(b.mode || ''),
+  '/api/setup/configure-dns': (app, b) => app.SetupConfigureDNS(b.enable === true, b.primary || '', b.secondary || ''),
+  '/api/setup/configure-proxy': (app, b) => app.SetupConfigureProxy(b.enable === true, parseInt(b.port) || 1080, b.bind_host || ''),
+  '/api/setup/skip': (app) => app.SetupSkip(),
+  '/api/setup/complete': (app) => app.SetupComplete(),
 };
 
 const DELETE_ROUTES = {
