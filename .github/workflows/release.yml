@@ -106,6 +106,7 @@ jobs:
         shell: pwsh
         run: |
           $v = "${{ steps.ver.outputs.version }}"
+          $vClean = $v -replace '-.*$',''
           function Find-Makensis {
             $paths = @("C:\Program Files (x86)\NSIS\makensis.exe","C:\Program Files\NSIS\makensis.exe")
             $hit = $paths | Where-Object { Test-Path $_ } | Select-Object -First 1
@@ -117,7 +118,7 @@ jobs:
           $makensis = Find-Makensis
           if (-not $makensis) { choco install nsis -y --no-progress; $env:Path = [Environment]::GetEnvironmentVariable("Path","Machine")+";"+[Environment]::GetEnvironmentVariable("Path","User"); $makensis = Find-Makensis }
           if (-not $makensis) { Write-Error "makensis not found"; exit 1 }
-          & $makensis /DVERSION=$v /DDIST="$PWD/build/dist-win64" /DICON="$PWD/build/windows/icon.ico" /DOUTDIR="$PWD/build" /DLICENSE="$PWD/LICENSE" /DARCH=win64 installer/ZPUI.nsi
+          & $makensis /DVERSION=$v /DVERSION_NUM=$vClean /DDIST="$PWD/build/dist-win64" /DICON="$PWD/build/windows/icon.ico" /DOUTDIR="$PWD/build" /DLICENSE="$PWD/LICENSE" /DARCH=win64 installer/ZPUI.nsi
           if (-not (Test-Path "build/ZPUI-Setup-$v-win64.exe")) { Write-Error "Installer not created"; exit 1 }
 
       # ── 32-bit build ─────────────────────────────────────
@@ -179,11 +180,12 @@ jobs:
         shell: pwsh
         run: |
           $v = "${{ steps.ver.outputs.version }}"
+          $vClean = $v -replace '-.*$',''
           function Find-Makensis { $paths = @("C:\Program Files (x86)\NSIS\makensis.exe","C:\Program Files\NSIS\makensis.exe"); $hit = $paths | Where-Object { Test-Path $_ } | Select-Object -First 1; if ($hit) { return $hit }; $cmd = Get-Command makensis -ErrorAction SilentlyContinue; if ($cmd) { return $cmd.Source }; return $null }
           $makensis = Find-Makensis
           if (-not $makensis) { choco install nsis -y --no-progress; $env:Path = [Environment]::GetEnvironmentVariable("Path","Machine")+";"+[Environment]::GetEnvironmentVariable("Path","User"); $makensis = Find-Makensis }
           if (-not $makensis) { Write-Error "makensis not found"; exit 1 }
-          & $makensis /DVERSION=$v /DDIST="$PWD/build/dist-win32" /DICON="$PWD/build/windows/icon.ico" /DOUTDIR="$PWD/build" /DLICENSE="$PWD/LICENSE" /DARCH=win32 installer/ZPUI.nsi
+          & $makensis /DVERSION=$v /DVERSION_NUM=$vClean /DDIST="$PWD/build/dist-win32" /DICON="$PWD/build/windows/icon.ico" /DOUTDIR="$PWD/build" /DLICENSE="$PWD/LICENSE" /DARCH=win32 installer/ZPUI.nsi
           if (-not (Test-Path "build/ZPUI-Setup-$v-win32.exe")) { Write-Error "Installer not created"; exit 1 }
 
       # ── Release ──────────────────────────────────────────

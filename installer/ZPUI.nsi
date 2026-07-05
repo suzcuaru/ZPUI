@@ -62,8 +62,6 @@ SetCompressor /SOLID lzma
 BrandingText "ZPUI ${VERSION}  ·  github.com/suzcuaru/ZPUI"
 
 ; --- Version info ---
-; Strip pre-release suffix (e.g. "1.4.0-dev" → "1.4.0") for Windows version requirement
-!searchparse /noerrors "${VERSION}" "-" VERSION_NUM ""
 !ifndef VERSION_NUM
   !define VERSION_NUM "${VERSION}"
 !endif
