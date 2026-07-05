@@ -1,4 +1,4 @@
-; ==============================================================================
+﻿; ==============================================================================
 ;  ZPUI Installer (NSIS)
 ;  Per-user, no admin required (enables in-app self-update)
 ;  Bilingual: auto-detects Windows language (Russian / English)
