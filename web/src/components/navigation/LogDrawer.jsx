@@ -37,7 +37,7 @@ export default function LogDrawer({ open, onClose }) {
   const [cat, setCat] = useState('all');
   const [raw, setRaw] = useState([]);
   const [debugState, setDebugState] = useState({});
-  const [debugOpen, setDebugOpen] = useState(false);
+  const [showDebug, setShowDebug] = useState(false);
   const [errorFiles, setErrorFiles] = useState([]);
   const [selectedError, setSelectedError] = useState(null);
   const [errorContent, setErrorContent] = useState('');
@@ -153,8 +153,17 @@ export default function LogDrawer({ open, onClose }) {
       <div className={'lg-overlay' + (open ? ' open' : '')} onClick={onClose} />
       <div className={'lg-drawer' + (open ? ' open' : '')}>
         <div className="lg-head">
+          <span className="lg-head-title">{t('logs.title')}</span>
+          {errCount > 0 && <span className="lg-head-count">({errCount} {t('logs.errors')})</span>}
+          <div className="lg-spacer" />
+          <button className="lg-head-close" onClick={onClose} title={t('common.close')}>✕</button>
+        </div>
+
+        <div className="lg-toolbar">
           <div className="lg-tabs">
-            <button className={'lg-tab' + (tab === 'live' ? ' on' : '')} onClick={() => setTab('live')}>{t('logs.title')}</button>
+            <button className={'lg-tab' + (tab === 'live' ? ' on' : '')} onClick={() => setTab('live')}>
+              {t('logs.title')}
+            </button>
             <button className={'lg-tab' + (tab === 'errors' ? ' on' : '')} onClick={() => setTab('errors')}>
               {t('logs.errors', { defaultValue: 'Errors' })}
               {errorFiles.length > 0 && <span className="lg-tab-badge">{errorFiles.length}</span>}
@@ -163,31 +172,30 @@ export default function LogDrawer({ open, onClose }) {
               {t('logs.archive', { defaultValue: 'Archive' })}
             </button>
           </div>
-          <div className="lg-spacer" />
-          <button className="lg-btn" onClick={copyAll} data-tooltip={t('common.copy')}>⎘</button>
-          <button className="lg-btn lg-close" onClick={onClose}>✕</button>
         </div>
 
         {tab === 'live' && (
-          <div className="lg-subbar">
-            <div className="lg-cat-row">
-              {CATS.map(c => (
-                <button key={c} className={'lg-chip' + (cat === c ? ' on' : '')} onClick={() => setCat(c)}>
-                  {catLabel(c)}
-                </button>
-              ))}
+          <>
+            <div className="lg-toolbar">
+              <div className="lg-cats">
+                {CATS.map(c => (
+                  <button key={c} className={'lg-chip' + (cat === c ? ' on' : '')} onClick={() => setCat(c)}>
+                    {catLabel(c)}
+                  </button>
+                ))}
+              </div>
+              <div className="lg-actions">
+                <button
+                  className={'lg-btn' + (showDebug ? ' on' : '') + (activeDebugCount > 0 ? ' on' : '')}
+                  onClick={() => setShowDebug(!showDebug)}
+                  title={t('logs.debugMode', { defaultValue: 'Debug' })}
+                >⚙</button>
+                <button className="lg-btn" onClick={clearAll} title={t('common.clear', { defaultValue: 'Clear' })}>⊘</button>
+                <button className="lg-btn" onClick={copyAll} title={t('common.copy')}>⎘</button>
+              </div>
             </div>
-            <div className="lg-subbar-actions">
-              {errCount > 0 && <span className="lg-err">{errCount} err</span>}
-              <button
-                className={'lg-dbg-toggle' + (debugOpen ? ' on' : '') + (activeDebugCount > 0 ? ' active' : '')}
-                onClick={() => setDebugOpen(!debugOpen)}
-                data-tooltip={t('logs.debugMode', { defaultValue: 'Debug' })}
-              >⚙</button>
-              <button className="lg-btn" onClick={clearAll} data-tooltip={t('common.clear', { defaultValue: 'Clear' })}>⊘</button>
-            </div>
-            {debugOpen && (
-              <div className="lg-debug-row">
+            {showDebug && (
+              <div className="lg-debug-bar">
                 <span className="lg-debug-label">{t('logs.debugMode', { defaultValue: 'Debug' })}:</span>
                 {DEBUG_CATS.map(c => (
                   <button
@@ -198,7 +206,7 @@ export default function LogDrawer({ open, onClose }) {
                 ))}
               </div>
             )}
-          </div>
+          </>
         )}
 
         <div className="lg-body" ref={bodyRef}>
@@ -230,6 +238,11 @@ export default function LogDrawer({ open, onClose }) {
                 {selectedError && errorContent ? (
                   <pre className="lg-pre">{errorContent}</pre>
                 ) : <div className="lg-empty">{t('logs.selectFile', { defaultValue: 'Select a file' })}</div>}
+                {selectedError && (
+                  <div style={{ padding: '4px 0', display:'flex', gap:4 }}>
+                    <button className="lg-btn" onClick={() => navigator.clipboard.writeText(errorContent)}>{t('common.copy')}</button>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -248,6 +261,11 @@ export default function LogDrawer({ open, onClose }) {
                 {selectedArchive && archiveContent ? (
                   <pre className="lg-pre">{archiveContent}</pre>
                 ) : <div className="lg-empty">{t('logs.selectFile', { defaultValue: 'Select a file' })}</div>}
+                {selectedArchive && (
+                  <div style={{ padding: '4px 0', display:'flex', gap:4 }}>
+                    <button className="lg-btn" onClick={() => navigator.clipboard.writeText(archiveContent)}>{t('common.copy')}</button>
+                  </div>
+                )}
               </div>
             </div>
           )}

@@ -13,6 +13,7 @@
     "stop": "Disable",
     "load": "Load",
     "copy": "Copy",
+    "clear": "Clear",
     "copied": "Copied",
     "restart": "Restart",
     "skip": "Skip",
