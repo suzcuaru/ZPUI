@@ -120,7 +120,7 @@ jobs:
           if (-not $makensis) { Write-Error "makensis not found after install"; exit 1 }
           Write-Host "Using makensis: $makensis"
 
-          & $makensis /DVERSION=$v /DDIST="$PWD/build/dist" /DICON="$PWD/build/windows/icon.ico" /DOUTDIR="$PWD/build" installer/ZPUI.nsi
+          & $makensis /DVERSION=$v /DDIST="$PWD/build/dist" /DICON="$PWD/build/windows/icon.ico" /DOUTDIR="$PWD/build" /DLICENSE="$PWD/LICENSE" installer/ZPUI.nsi
           if (-not (Test-Path "build/ZPUI-Setup-$v.exe")) { Write-Error "Installer was not created"; exit 1 }
 
       - name: Build portable zip
