@@ -31,6 +31,9 @@ import (
 //go:embed all:web/dist
 var webFS embed.FS
 
+//go:embed build/windows/icon.ico
+var trayIcon []byte
+
 var version = "1.0.0"
 
 func main() {
@@ -87,7 +90,7 @@ func main() {
 	app := zpuiapp.NewApp(cfg, logMgr, zapretMgr, proxyServer, trafficMonitor, xboxDnsMgr, version, exeDir)
 
 	// Создаём tray (контроллер = app, управляет окном через Wails runtime)
-	trayApp := tray.New(cfg, logMgr, zapretMgr, proxyServer, app, version)
+	trayApp := tray.New(cfg, logMgr, zapretMgr, proxyServer, app, version, trayIcon)
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
