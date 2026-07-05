@@ -223,27 +223,27 @@ func (a *App) SetupConfigureFilters(mode string) map[string]interface{} {
 	return okResp()
 }
 
-// SetupConfigureDNS настройка DNS
-func (a *App) SetupConfigureDNS(enable bool, primary, secondary string) map[string]interface{} {
+// SetupConfigureDNS настройка Xbox DNS (xbox-dns.ru: 111.88.96.50 / 111.88.96.51)
+func (a *App) SetupConfigureDNS(enable bool) map[string]interface{} {
 	if !enable {
 		if a.xboxDns.IsEnabled() {
 			a.xboxDns.Disable()
 		}
+		xd := a.cfg.GetXboxDnsConfig()
+		xd.Enabled = false
+		a.cfg.SetXboxDnsConfig(xd)
 		return okResp()
 	}
 
-	if primary == "" {
-		primary = "77.88.8.8"
-	}
-	if secondary == "" {
-		secondary = "77.88.8.1"
-	}
-
-	a.xboxDns.Configure(primary, secondary)
+	xd := a.cfg.GetXboxDnsConfig()
+	a.xboxDns.Configure(xd.PrimaryDNS, xd.SecondaryDNS)
 	if err := a.xboxDns.Enable(); err != nil {
 		return errResp(err.Error())
 	}
+	xd.Enabled = true
+	a.cfg.SetXboxDnsConfig(xd)
 
+	a.log.Info("setup", fmt.Sprintf("Xbox DNS enabled: %s / %s", xd.PrimaryDNS, xd.SecondaryDNS))
 	return okResp()
 }
 

@@ -149,7 +149,7 @@ export default function SetupWizard({ onComplete, onCancel }) {
       // We already know wantFilters, wantDNS
     }
     await api('POST', '/api/setup/configure-filters', { mode: wantFilters ? 'all' : 'disabled' });
-    await api('POST', '/api/setup/configure-dns', { enable: wantDNS, primary: '77.88.8.8', secondary: '77.88.8.1' });
+    await api('POST', '/api/setup/configure-dns', { enable: wantDNS });
     await api('POST', '/api/setup/configure-proxy', { enable: wantProxy, port: 1080, bind_host: '127.0.0.1' });
     await api('POST', '/api/setup/complete');
 
@@ -331,7 +331,7 @@ export default function SetupWizard({ onComplete, onCancel }) {
               {t('setup.dns.title') || 'Xbox DNS'}
             </div>
             <p style={{ fontSize: 12, opacity: 0.8, marginBottom: 12 }}>
-              {t('setup.dns.desc') || 'Использовать Яндекс DNS (77.88.8.8 / 77.88.8.1) для обхода блокировок на уровне DNS? Помогает, если провайдер подменяет DNS-ответы. Рекомендуется для Xbox и других консолей.'}
+              {t('setup.dns.desc') || 'Использовать серверы xbox-dns.ru (111.88.96.50 / 111.88.96.51) для обхода блокировок на уровне DNS. Меняет DNS на всех активных сетевых адаптерах. Рекомендуется для Xbox и других консолей.'}
             </p>
             <div style={{ display: 'flex', gap: 8 }}>
               <button className="btn btn-accent btn-sm" style={{ flex: 1 }} onClick={() => handleDNSAnswer(true)}>

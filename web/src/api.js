@@ -152,7 +152,7 @@ const POST_ROUTES = {
   '/api/setup/start': (app) => app.StartOurZapret(),
   '/api/setup/apply-strategy': (app, b) => app.SetupApplyStrategy(b.strategy || ''),
   '/api/setup/configure-filters': (app, b) => app.SetupConfigureFilters(b.mode || ''),
-  '/api/setup/configure-dns': (app, b) => app.SetupConfigureDNS(b.enable === true, b.primary || '', b.secondary || ''),
+  '/api/setup/configure-dns': (app, b) => app.SetupConfigureDNS(b.enable === true),
   '/api/setup/configure-proxy': (app, b) => app.SetupConfigureProxy(b.enable === true, parseInt(b.port) || 1080, b.bind_host || ''),
   '/api/setup/skip': (app) => app.SetupSkip(),
   '/api/setup/complete': (app) => app.SetupComplete(),
