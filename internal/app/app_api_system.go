@@ -365,7 +365,7 @@ func (a *App) isHostInUserList(host string) bool {
 type SystemHealth struct {
 	Overall    string            `json:"overall"`
 	Components []ComponentHealth `json:"components"`
-	Satellites map[string]string `json:"satellites"`
+	Modules    map[string]string `json:"modules"`
 	Warnings   []string          `json:"warnings"`
 	Timestamp  string            `json:"timestamp"`
 }
@@ -422,14 +422,14 @@ func (a *App) HealthCheck() map[string]interface{} {
 
 	exePath, _ := os.Executable()
 	exeDir := filepath.Dir(exePath)
-	satellites := map[string]string{}
+	modules := map[string]string{}
 	for _, name := range []string{"wizard", "autoselect", "selfupdate", "zapretupdate"} {
 		exeFile := filepath.Join(exeDir, name+".exe")
 		if _, err := os.Stat(exeFile); err != nil {
-			satellites[name] = "missing"
+			modules[name] = "missing"
 			warnings = append(warnings, name+".exe: файл не найден")
 		} else {
-			satellites[name] = "ok"
+			modules[name] = "ok"
 		}
 	}
 
@@ -442,7 +442,7 @@ func (a *App) HealthCheck() map[string]interface{} {
 				break
 			}
 		}
-		for _, s := range satellites {
+		for _, s := range modules {
 			if s == "missing" {
 				hasBroken = true
 				break
@@ -458,7 +458,7 @@ func (a *App) HealthCheck() map[string]interface{} {
 	return map[string]interface{}{
 		"overall":    overall,
 		"components": components,
-		"satellites": satellites,
+		"modules":    modules,
 		"warnings":   warnings,
 		"timestamp":  time.Now().Format("15:04:05"),
 	}

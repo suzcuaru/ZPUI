@@ -24,7 +24,7 @@ set "DIST=%BAT_DIR%build\dist"
 
 echo ========================================
 echo   ZPUI Build System v%VERSION%
-echo   Core + Satellites + Mods
+echo   Core + Modules
 echo ========================================
 echo.
 
@@ -80,22 +80,22 @@ if errorlevel 1 (echo [ERROR] Wails build failed & timeout /t 10 > nul & exit /b
 copy /y "build\bin\zpui.exe" "zpui.exe" > nul
 echo.
 
-REM === STEP 4: Build satellite exes ===
-echo [4/7] Building satellite tools...
+REM === STEP 4: Build module exes ===
+echo [4/7] Building module tools...
 
-go build -o wizard.exe       -ldflags "-s -w -H windowsgui -X main.version=%VERSION%" -trimpath ./cmd/wizard/
+go build -o wizard.exe       -ldflags "-s -w -H windowsgui" -trimpath ./cmd/wizard/
 if errorlevel 1 (echo [ERROR] wizard.exe build failed & timeout /t 10 > nul & exit /b 1)
 echo   [OK] wizard.exe
 
-go build -o autoselect.exe   -ldflags "-s -w -H windowsgui -X main.version=%VERSION%" -trimpath ./cmd/autoselect/
+go build -o autoselect.exe   -ldflags "-s -w -H windowsgui" -trimpath ./cmd/autoselect/
 if errorlevel 1 (echo [ERROR] autoselect.exe build failed & timeout /t 10 > nul & exit /b 1)
 echo   [OK] autoselect.exe
 
-go build -o selfupdate.exe   -ldflags "-s -w -H windowsgui -X main.version=%VERSION%" -trimpath ./cmd/selfupdate/
+go build -o selfupdate.exe   -ldflags "-s -w -H windowsgui" -trimpath ./cmd/selfupdate/
 if errorlevel 1 (echo [ERROR] selfupdate.exe build failed & timeout /t 10 > nul & exit /b 1)
 echo   [OK] selfupdate.exe
 
-go build -o zapretupdate.exe -ldflags "-s -w -H windowsgui -X main.version=%VERSION%" -trimpath ./cmd/zapretupdate/
+go build -o zapretupdate.exe -ldflags "-s -w -H windowsgui" -trimpath ./cmd/zapretupdate/
 if errorlevel 1 (echo [ERROR] zapretupdate.exe build failed & timeout /t 10 > nul & exit /b 1)
 echo   [OK] zapretupdate.exe
 echo.
@@ -110,14 +110,17 @@ copy /y "autoselect.exe"     "%DIST%\" > nul
 copy /y "selfupdate.exe"     "%DIST%\" > nul
 copy /y "zapretupdate.exe"   "%DIST%\" > nul
 
-REM --- Generate versions.json ---
-echo {> "%DIST%\versions.json"
-echo   "zpui": "%VERSION%",>> "%DIST%\versions.json"
-echo   "wizard": "%VERSION%",>> "%DIST%\versions.json"
-echo   "autoselect": "%VERSION%",>> "%DIST%\versions.json"
-echo   "selfupdate": "%VERSION%",>> "%DIST%\versions.json"
-echo   "zapretupdate": "%VERSION%">> "%DIST%\versions.json"
-echo }>> "%DIST%\versions.json"
+REM --- Generate versions.json (module versions read from source code) ---
+powershell -NoProfile -Command "& {
+  $v = '%VERSION%'
+  function GetModVer($p) { if ((Get-Content $p -Raw) -match 'var version = .([^\x22\x27]+).') { $matches[1].Trim() } else { '0.0.0' } }
+  $wz = GetModVer '%BAT_DIR%cmd\wizard\main.go'
+  $as = GetModVer '%BAT_DIR%cmd\autoselect\main.go'
+  $su = GetModVer '%BAT_DIR%cmd\selfupdate\main.go'
+  $zu = GetModVer '%BAT_DIR%cmd\zapretupdate\main.go'
+  $j = [ordered]@{ zpui=$v; wizard=$wz; autoselect=$as; selfupdate=$su; zapretupdate=$zu } | ConvertTo-Json
+  [System.IO.File]::WriteAllLines('%DIST%\versions.json', $j, (New-Object System.Text.UTF8Encoding $false))
+}"
 
 echo Done.
 echo.
@@ -150,7 +153,7 @@ echo.
 echo   Mods:
 dir /b /ad "%DIST%\mods" 2>nul || echo     (none)
 echo.
-echo   ZPUI v%VERSION% + 4 satellites
+echo   ZPUI v%VERSION% + 4 modules
 echo ========================================
 echo.
 echo   Press any key to close...

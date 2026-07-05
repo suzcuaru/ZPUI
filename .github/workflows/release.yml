@@ -58,9 +58,9 @@ jobs:
           -ldflags "-s -w -H windowsgui -X main.version=${{ steps.ver.outputs.version }}"
           -trimpath
 
-      - name: Build satellites
+      - name: Build modules
         run: |
-          $ld = "-s -w -H windowsgui -X main.version=${{ steps.ver.outputs.version }}"
+          $ld = "-s -w -H windowsgui"
           go build -o wizard.exe       -ldflags "$ld" -trimpath ./cmd/wizard/
           go build -o autoselect.exe   -ldflags "$ld" -trimpath ./cmd/autoselect/
           go build -o selfupdate.exe   -ldflags "$ld" -trimpath ./cmd/selfupdate/
@@ -86,8 +86,16 @@ jobs:
           }
 
           Copy-Item $exes -Destination $dist
+          function GetModVer($p) {
+            if ((Get-Content $p -Raw) -match 'var version = ["'']([^"'']+)["'']') { $matches[1] }
+            else { '0.0.0' }
+          }
           $json = [ordered]@{
-            zpui=$v; wizard=$v; autoselect=$v; selfupdate=$v; zapretupdate=$v
+            zpui=$v
+            wizard=(GetModVer 'cmd/wizard/main.go')
+            autoselect=(GetModVer 'cmd/autoselect/main.go')
+            selfupdate=(GetModVer 'cmd/selfupdate/main.go')
+            zapretupdate=(GetModVer 'cmd/zapretupdate/main.go')
           } | ConvertTo-Json
           [System.IO.File]::WriteAllLines("$PWD/$dist/versions.json", $json, (New-Object System.Text.UTF8Encoding $false))
           if (Test-Path mods) { Copy-Item mods $dist -Recurse } else { New-Item -ItemType Directory -Path "$dist/mods" | Out-Null }

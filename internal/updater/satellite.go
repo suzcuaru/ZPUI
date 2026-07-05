@@ -187,7 +187,7 @@ func CheckAllComponents(localVersions map[string]string, exeDir string) ([]Compo
 	return result, nil
 }
 
-func ReplaceSatellite(exeDir, name string) error {
+func ReplaceModule(exeDir, name string) error {
 	fileMap := map[string]string{
 		"wizard":       "wizard.exe",
 		"autoselect":   "autoselect.exe",
@@ -197,7 +197,7 @@ func ReplaceSatellite(exeDir, name string) error {
 
 	fileName, ok := fileMap[name]
 	if !ok {
-		return fmt.Errorf("unknown satellite: %s", name)
+		return fmt.Errorf("unknown module: %s", name)
 	}
 
 	targetPath := filepath.Join(exeDir, fileName)
@@ -212,7 +212,7 @@ func ReplaceSatellite(exeDir, name string) error {
 
 	bm := NewBackupManager(exeDir)
 	if _, err := os.Stat(targetPath); err == nil {
-		bm.BackupComponent("satellite_"+name, "pre-update", "satellite", []string{targetPath})
+		bm.BackupComponent("module_"+name, "pre-update", "module", []string{targetPath})
 		os.Rename(targetPath, bakPath)
 	}
 

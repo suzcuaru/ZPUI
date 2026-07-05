@@ -2,7 +2,6 @@ package main
 
 import (
 	"archive/zip"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -17,18 +16,7 @@ import (
 
 var version = "1.0.0"
 
-type releaseAsset struct {
-	Name               string `json:"name"`
-	BrowserDownloadURL string `json:"browser_download_url"`
-}
-
-type releaseInfo struct {
-	TagName string        `json:"tag_name"`
-	Name    string        `json:"name"`
-	Assets  []releaseAsset `json:"assets"`
-}
-
-const apiURL = "https://api.github.com/repos/suzcuaru/ZPUI/releases/latest"
+const downloadURL = "https://github.com/suzcuaru/ZPUI/releases/latest/download/zpui.zip"
 
 func main() {
 	exePath, _ := os.Executable()
@@ -47,34 +35,11 @@ func main() {
 		logMgr.Error("selfupdate", msg)
 	}
 
-	log("Self-updater started")
+	log("Self-updater started (v" + version + ")")
 
 	zpuiExe := filepath.Join(exeDir, "zpui.exe")
 	if _, err := os.Stat(zpuiExe); err != nil {
 		logErr("zpui.exe not found in " + exeDir)
-		os.Exit(1)
-	}
-
-	log("Checking latest release...")
-	rel, err := getLatestRelease()
-	if err != nil {
-		logErr("Failed to check release: " + err.Error())
-		os.Exit(1)
-	}
-	log(fmt.Sprintf("Latest: %s (%s)", rel.TagName, rel.Name))
-
-	var downloadURL string
-	for _, a := range rel.Assets {
-		if a.Name == "zpui.zip" || a.Name == "zpui-windows.zip" {
-			downloadURL = a.BrowserDownloadURL
-			break
-		}
-	}
-	if downloadURL == "" && len(rel.Assets) > 0 {
-		downloadURL = rel.Assets[0].BrowserDownloadURL
-	}
-	if downloadURL == "" {
-		logErr("No download asset found in release")
 		os.Exit(1)
 	}
 
@@ -117,23 +82,6 @@ func main() {
 
 	log("Starting zpui.exe...")
 	exec.Command(zpuiExe).Start()
-}
-
-func getLatestRelease() (*releaseInfo, error) {
-	client := &http.Client{Timeout: 15 * time.Second}
-	req, _ := http.NewRequest("GET", apiURL, nil)
-	req.Header.Set("Accept", "application/vnd.github+json")
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	var rel releaseInfo
-	if err := json.NewDecoder(resp.Body).Decode(&rel); err != nil {
-		return nil, err
-	}
-	return &rel, nil
 }
 
 func downloadFile(url, dest string) error {

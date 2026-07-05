@@ -24,6 +24,7 @@
     "rows": "rows",
     "version": "Version",
     "ms": "ms",
+    "inDevelopment": "In development",
     "completed": "Completed"
   },
   "nav": {
@@ -228,7 +229,7 @@
     "localInstall": "Local installation",
     "status": "Status",
     "componentsUpdates": "Components & updates",
-    "satellites": "Satellites",
+    "satellites": "Modules",
     "updateStarted": "Update started",
     "errorPrefix": "Error: {error}",
     "componentUpdateStarted": "{name}: update started",
@@ -306,7 +307,7 @@
   "health": {
     "title": "System check",
     "components": "Components",
-    "satellites": "Satellites",
+    "satellites": "Modules",
     "mods": "Mods"
   },
   "checker": {

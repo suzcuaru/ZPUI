@@ -170,9 +170,9 @@ func (a *App) UpdateComponent(name string) map[string]interface{} {
 		if _, err := os.Stat(selfUpdate); err != nil {
 			return map[string]interface{}{"error": "selfupdate.exe не найден"}
 		}
-		go func() {
-			executil.HiddenCmd(selfUpdate).Start()
-		}()
+		if err := executil.DetachedCmd(selfUpdate).Start(); err != nil {
+			return map[string]interface{}{"error": "не удалось запустить selfupdate.exe: " + err.Error()}
+		}
 		return map[string]interface{}{"status": "selfupdate_started"}
 
 	case "Zapret":
@@ -190,13 +190,13 @@ func (a *App) UpdateComponent(name string) map[string]interface{} {
 
 	case "wizard", "autoselect", "selfupdate", "zapretupdate":
 		go func() {
-			if err := updater.ReplaceSatellite(exeDir, name); err != nil {
-				a.log.Error("updater", "Satellite update failed for "+name+": "+err.Error())
+			if err := updater.ReplaceModule(exeDir, name); err != nil {
+				a.log.Error("updater", "Module update failed for "+name+": "+err.Error())
 			} else {
-				a.log.Info("updater", "Satellite "+name+" updated successfully")
+				a.log.Info("updater", "Module "+name+" updated successfully")
 			}
 		}()
-		return map[string]interface{}{"status": "satellite_update_started", "component": name}
+		return map[string]interface{}{"status": "module_update_started", "component": name}
 
 	default:
 		return map[string]interface{}{"error": "unknown component: " + name}

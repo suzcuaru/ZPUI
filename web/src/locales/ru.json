@@ -24,6 +24,7 @@
     "rows": "строк",
     "version": "Версия",
     "ms": "мс",
+    "inDevelopment": "В разработке",
     "completed": "Завершено"
   },
   "nav": {
@@ -228,7 +229,7 @@
     "localInstall": "Локальная установка",
     "status": "Статус",
     "componentsUpdates": "Компоненты и обновления",
-    "satellites": "Сателлиты",
+    "satellites": "Модули",
     "updateStarted": "Обновление запущено",
     "errorPrefix": "Ошибка: {error}",
     "componentUpdateStarted": "{name}: обновление запущено",
@@ -306,7 +307,7 @@
   "health": {
     "title": "Проверка системы",
     "components": "Компоненты",
-    "satellites": "Сателлиты",
+    "satellites": "Модули",
     "mods": "Моды"
   },
   "checker": {

@@ -725,6 +725,7 @@ input, textarea { user-select:text; -webkit-user-select:text; }
 .strat-badge { font-size:9px; padding:2px 6px; border-radius:6px; background:var(--success-bg); color:var(--success); font-weight:600; }
 
 .flt-section { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-md); padding:10px 12px; display:flex; flex-direction:column; gap:6px; }
+.strat-filters { display:flex; flex-direction:column; gap:8px; margin-top:8px; }
 .flt-label { font-size:12px; font-weight:600; color:var(--text-primary); }
 .flt-desc { font-size:10px; color:var(--text-tertiary); }
 .flt-divider { height:1px; background:var(--border); margin:4px 0; }

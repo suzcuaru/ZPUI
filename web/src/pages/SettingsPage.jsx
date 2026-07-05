@@ -4,16 +4,14 @@ import { api, apiCall } from '../api';
 import { useT } from '../i18n';
 import { usePolling } from '../hooks/usePolling';
 import { useDebouncedSave } from '../hooks/useDebouncedSave';
-
-let autoChecked = false;
+import { useUpdateCheck, checkZpuiUpdate, checkZapretUpdate, resetZapretCheck } from '../hooks/useUpdateCheck';
 
 export default function SettingsPage({ status, showToast }) {
   const { t, lang, changeLang } = useT();
   const [config, setConfig] = useState(null);
   const [versions, setVersions] = useState(null);
 
-  const [zpuiCheck, setZpuiCheck] = useState({ state: 'idle', current: null, latest: null });
-  const [zapretCheck, setZapretCheck] = useState({ state: 'idle', current: null, latest: null });
+  const { zpuiCheck, zapretCheck } = useUpdateCheck();
 
   const loadConfig = async () => {
     const d = await api('GET', '/api/config');
@@ -27,33 +25,6 @@ export default function SettingsPage({ status, showToast }) {
 
   useEffect(() => { loadConfig(); }, []);
   usePolling(loadVersions, 10000);
-
-  useEffect(() => {
-    if (autoChecked) return;
-    autoChecked = true;
-    const id = setTimeout(() => {
-      checkZpuiUpdate();
-      checkZapretUpdate();
-    }, 1500);
-    return () => clearTimeout(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    const rt = window.runtime;
-    if (!rt?.EventsOn) return;
-    const handler = (data) => {
-      if (!data?.latest) return;
-      if (data.component === 'ZPUI') {
-        setZpuiCheck({ state: 'available', current: data.current || versions?.zpui, latest: data.latest });
-      } else if (data.component === 'zapret') {
-        setZapretCheck({ state: 'available', current: data.current || status?.zapret?.version, latest: data.latest });
-      }
-    };
-    rt.EventsOn('update:available', handler);
-    return () => { try { rt.EventsOff('update:available'); } catch {} };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [versions, status]);
 
   const saveConfig = useDebouncedSave('/api/config', 500, null);
   const update = useCallback((patch) => {
@@ -81,24 +52,6 @@ export default function SettingsPage({ status, showToast }) {
     await apiCall(() => api('POST', enabled ? '/api/autostart/enable' : '/api/autostart/disable'), null, showToast);
   };
 
-  const checkZpuiUpdate = async () => {
-    setZpuiCheck({ state: 'checking', current: versions?.zpui, latest: null });
-    const d = await api('GET', '/api/updates/check/zpui');
-    if (d?.error) { setZpuiCheck({ state: 'error', current: versions?.zpui, latest: null }); return; }
-    const latest = d?.latest || d?.current || versions?.zpui;
-    const hasUpdate = d?.update_needed === true;
-    setZpuiCheck({ state: hasUpdate ? 'available' : 'latest', current: d?.current || versions?.zpui, latest });
-  };
-
-  const checkZapretUpdate = async () => {
-    setZapretCheck({ state: 'checking', current: status?.zapret?.version, latest: null });
-    const d = await api('GET', '/api/updates/check/zapret');
-    if (d?.error) { setZapretCheck({ state: 'error', current: status?.zapret?.version, latest: null }); return; }
-    const latest = d?.latest_version || d?.latest;
-    const hasUpdate = d?.update_needed === true;
-    setZapretCheck({ state: hasUpdate ? 'available' : 'latest', current: d?.current_version || status?.zapret?.version, latest: latest || status?.zapret?.version });
-  };
-
   const handleApplyUpdate = async () => {
     await apiCall(() => api('POST', '/api/components/update', { name: 'ZPUI' }), t('settings.updateStarted'), showToast);
   };
@@ -108,7 +61,7 @@ export default function SettingsPage({ status, showToast }) {
     if (d?.error) { showToast(t('settings.errorPrefix', { error: d.error }), 'error'); return; }
     showToast(t('settings.componentUpdateStarted', { name }));
     if (name === 'Zapret') {
-      setZapretCheck({ state: 'idle', current: null, latest: null });
+      resetZapretCheck();
       const poll = async () => {
         for (let i = 0; i < 15; i++) {
           await new Promise(r => setTimeout(r, 3000));

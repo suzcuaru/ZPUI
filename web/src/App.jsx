@@ -17,6 +17,7 @@ import XboxDnsPage from './pages/XboxDnsPage';
 import { api } from './api';
 import { useT } from './i18n';
 import { usePolling } from './hooks/usePolling';
+import { useUpdateCheck, checkZpuiUpdate, checkZapretUpdate, shouldNotifyZpui, shouldNotifyZapret, setZpuiCheck, setZapretCheck } from './hooks/useUpdateCheck';
 import './styles/index.css';
 
 const PAGES = {
@@ -115,13 +116,35 @@ export default function App() {
   };
   usePolling(pollHealth, startupDone ? 30000 : 0);
 
-  // Update available notification (from backend startup check)
+  // Update checks: initial delayed + hourly periodic
+  useEffect(() => {
+    if (!startupDone) return;
+    const initId = setTimeout(() => {
+      checkZpuiUpdate();
+      checkZapretUpdate();
+    }, 2000);
+    const hourlyId = setInterval(() => {
+      checkZpuiUpdate();
+      checkZapretUpdate();
+    }, 3600000);
+    return () => { clearTimeout(initId); clearInterval(hourlyId); };
+  }, [startupDone]);
+
+  // Update available notification (dedup by version) + files-missing
   useEffect(() => {
     if (!startupDone) return;
     const handler = (data) => {
-      if (data?.component && data?.latest) {
-        const name = data.component === 'ZPUI' ? 'ZPUI' : t('nav.zapret');
-        showToast(t('toast.updateAvailable', { name, version: data.latest }), 'info');
+      if (!data?.latest) return;
+      if (data.component === 'ZPUI') {
+        setZpuiCheck({ state: 'available', current: data.current, latest: data.latest });
+        if (shouldNotifyZpui(data.latest)) {
+          showToast(t('toast.updateAvailable', { name: 'ZPUI', version: data.latest }), 'info');
+        }
+      } else if (data.component === 'zapret') {
+        setZapretCheck({ state: 'available', current: data.current, latest: data.latest });
+        if (shouldNotifyZapret(data.latest)) {
+          showToast(t('toast.updateAvailable', { name: t('nav.zapret'), version: data.latest }), 'info');
+        }
       }
     };
     const filesHandler = (data) => {
@@ -139,7 +162,7 @@ export default function App() {
         window.runtime.EventsOff('zapret:files-missing');
       }
     };
-  }, [startupDone, showToast]);
+  }, [startupDone, showToast, t]);
 
   const handleStartupComplete = useCallback(() => {
     setStartupDone(true);

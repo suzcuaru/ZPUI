@@ -234,26 +234,11 @@ export default function StartupScreen({ onComplete }) {
           setStepDone(true);
 
           if (decision === 'strategy') {
-            // 7. Авто-подбор
-            if (!await go('auto-strategy', async () => {
-              await new Promise((resolve, reject) => {
-                const es = createStream('/api/autoselect/stream');
-                es.onmessage = (e) => {
-                  const d = JSON.parse(e.data);
-                  if (d.type === 'progress') {
-                    setAutoSelect({ current: d.current, total: d.total, strategy: d.strategy, phase: d.phase });
-                  } else if (d.type === 'result') {
-                    setAutoSelect(prev => ({ ...prev, lastResult: d }));
-                  } else if (d.type === 'done') {
-                    es.close();
-                    if (d.error) reject(new Error(d.error));
-                    else resolve();
-                  }
-                };
-                es.onerror = (err) => { es.close(); reject(err); };
-              });
-            })) return;
-            setAutoSelect(null);
+            setCurrentStep('auto-strategy');
+            setStepDone(false);
+            await sleep(800);
+            if (!aliveRef.current) return;
+            setStepDone(true);
           }
 
           await api('POST', '/api/config', { first_run_done: true }).catch(() => null);
@@ -334,6 +319,7 @@ export default function StartupScreen({ onComplete }) {
             <p>{t('startup.zapretInstalled.version')}<b>{installPrompt.version}</b></p>
             <p>{t('startup.zapretInstalled.strategy')}<b>{installPrompt.strategy}</b></p>
             <p style={{ fontSize: 11, opacity: 0.7 }}>{t('startup.zapretInstalled.desc')}</p>
+            <p style={{ fontSize: 11, opacity: 0.6 }}>{t('common.inDevelopment')}</p>
             <div className="startup-modal-actions">
               <button className="btn btn-accent btn-sm" style={{ flex: 1 }} onClick={handleChooseStrategy}>{t('startup.zapretInstalled.selectStrategy')}</button>
               <button className="btn btn-ghost btn-sm" onClick={handleSkipStrategy}>{t('common.skip')}</button>

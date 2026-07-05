@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import DiagnosticsModal from '../components/DiagnosticsModal';
-import { api, apiCall, createStream } from '../api';
+import { api, apiCall } from '../api';
 import { useT } from '../i18n';
 
 export default function ZapretPage({ status, showToast }) {
@@ -86,25 +86,12 @@ function StrategiesTab({ status, showToast, showColors }) {
   const { t } = useT();
   const [strategies, setStrategies] = useState([]);
   const [changing, setChanging] = useState(null);
-  const [testing, setTesting] = useState(false);
-  const [testProgress, setTestProgress] = useState(null);
-  const [testResults, setTestResults] = useState({});
   const [gameFilter, setGameFilter] = useState('disabled');
   const [ipsetStatus, setIpsetStatus] = useState('loaded');
-  const esRef = useRef(null);
 
   useEffect(() => {
     loadStrategies();
     loadFilters();
-    if (status?.zapret?.auto_test_running) setTesting(true);
-    const rt = window.runtime;
-    if (rt) {
-      rt.EventsOn('strategy:testing', (active) => {
-        setTesting(active);
-        if (!active) loadStrategies();
-      });
-    }
-    return () => { if (esRef.current) { esRef.current.close(); esRef.current = null; } };
   }, []);
 
   const loadStrategies = async () => {
@@ -119,51 +106,7 @@ function StrategiesTab({ status, showToast, showColors }) {
     if (ip) setIpsetStatus(ip.status || 'loaded');
   };
 
-  const getResultColor = (ok, n) => {
-    if (n === 0) return 'bad';
-    const ratio = ok / n;
-    if (ratio >= 0.8) return 'good';
-    if (ratio >= 0.4) return 'mid';
-    return 'bad';
-  };
-
-  const handleStartTest = () => {
-    setTesting(true);
-    setTestProgress(null);
-    setTestResults({});
-    const es = createStream('/api/strategy/stream');
-    esRef.current = es;
-    es.onmessage = (e) => {
-      const d = JSON.parse(e.data);
-      if (d.type === 'done') {
-        es.close(); esRef.current = null; setTesting(false);
-        if (!d.error) showToast(t('zapret.autoTestComplete'), 'success');
-        return;
-      }
-      if (d.type === 'progress') setTestProgress(d);
-      if (d.type === 'result' && d.strategy) {
-        setTestResults(prev => ({
-          ...prev,
-          [d.strategy]: {
-            ok: d.resources_ok || 0,
-            n: d.resources_n || 0,
-            ms: d.response_ms || 0,
-            color: d.error ? 'bad' : getResultColor(d.resources_ok, d.resources_n),
-          }
-        }));
-      }
-    };
-    es.onerror = () => { es.close(); esRef.current = null; setTesting(false); };
-  };
-
-  const cancelTest = async () => {
-    await api('POST', '/api/strategy/cancel');
-    if (esRef.current) { esRef.current.close(); esRef.current = null; }
-    setTesting(false);
-  };
-
   const handleSet = async (fn) => {
-    if (testing) return;
     setChanging(fn);
     await apiCall(() => api('POST', '/api/zapret/set-strategy', { filename: fn }), t('zapret.strategyApplied'), showToast);
     await loadStrategies();
@@ -192,28 +135,19 @@ function StrategiesTab({ status, showToast, showColors }) {
   return (
     <>
       <div className="strat-grid">
-        {strategies.map(s => {
-          const result = testResults[s.filename];
-          const isTestingThis = testing && testProgress?.strategy === s.filename;
-          return (
-            <button
-              key={s.filename}
-              className={'strat-card' + (s.current ? ' active' : '') + (result && showColors ? ' result-' + result.color : '') + (isTestingThis ? ' testing-now' : '')}
-              onClick={() => !s.current && !testing && handleSet(s.filename)}
-              disabled={testing || changing === s.filename}
-            >
-              <span className="strat-card-dot" />
-              <span className="strat-card-name">{s.name}</span>
-              {s.current && <span className="strat-card-badge">✓</span>}
-              {changing === s.filename && <span className="strat-card-spin" />}
-              {result && (
-                <span className="strat-card-stats" data-tooltip={`${result.ok}/${result.n} · ${result.ms}ms`}>
-                  {result.ok}/{result.n}
-                </span>
-              )}
-            </button>
-          );
-        })}
+        {strategies.map(s => (
+          <button
+            key={s.filename}
+            className={'strat-card' + (s.current ? ' active' : '')}
+            onClick={() => !s.current && handleSet(s.filename)}
+            disabled={changing === s.filename}
+          >
+            <span className="strat-card-dot" />
+            <span className="strat-card-name">{s.name}</span>
+            {s.current && <span className="strat-card-badge">✓</span>}
+            {changing === s.filename && <span className="strat-card-spin" />}
+          </button>
+        ))}
         {strategies.length === 0 && <div className="strat-empty">{t('zapret.noStrategies')}</div>}
       </div>
 

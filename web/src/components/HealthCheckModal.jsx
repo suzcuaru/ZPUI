@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import Modal from './ui/Modal';
 import { api } from '../api';
+import { useT } from '../i18n';
 
 export default function HealthCheckModal({ onClose }) {
+  const { t } = useT();
   const [health, setHealth] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -70,9 +72,9 @@ export default function HealthCheckModal({ onClose }) {
           </div>
 
           <div className="health-section">
-            <div className="health-section-title">Сателлиты</div>
+            <div className="health-section-title">{t('health.satellites')}</div>
             <div className="health-sat-row">
-              {Object.entries(health.satellites || {}).map(([name, status]) => (
+              {Object.entries(health.modules || {}).map(([name, status]) => (
                 <div key={name} className={'health-sat-pill ' + status}>
                   <span className="health-sat-dot" />
                   <span className="health-sat-name">{name}.exe</span>
@@ -83,7 +85,7 @@ export default function HealthCheckModal({ onClose }) {
 
           {health.mods?.length > 0 && (
             <div className="health-section">
-              <div className="health-section-title">Моды</div>
+              <div className="health-section-title">{t('health.mods')}</div>
               <div className="health-comp-grid">
                 {health.mods.map(m => (
                   <div key={m.id} className={'health-comp-card ' + m.status}>
