@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
 	"image"
 	"image/png"
@@ -14,9 +13,7 @@ import (
 func main() {
 	root := findRoot()
 	appicon := filepath.Join(root, "build", "appicon.png")
-	iconIco := filepath.Join(root, "build", "windows", "icon.ico")
 
-	// generate 512x512 PNG
 	img := image.NewRGBA(image.Rect(0, 0, 512, 512))
 	tray.DrawShieldIcon(img)
 
@@ -31,69 +28,7 @@ func main() {
 	}
 	f.Close()
 	fmt.Println("Generated:", appicon)
-
-	// generate multi-size ICO
-	sizes := []int{16, 32, 64, 128, 256}
-	var icoBuf bytes.Buffer
-	icoBuf.Write([]byte{0, 0, 1, 0, byte(len(sizes)), 0})
-
-	type imgEntry struct {
-		data   []byte
-		offset int
-	}
-	entries := make([]imgEntry, len(sizes))
-	offset := 6 + len(sizes)*16
-
-	for i, sz := range sizes {
-		m := image.NewRGBA(image.Rect(0, 0, sz, sz))
-		tray.DrawShieldIcon(m)
-
-		var buf bytes.Buffer
-		png.Encode(&buf, m)
-		pngData := buf.Bytes()
-
-		entries[i] = imgEntry{data: pngData, offset: offset}
-		offset += len(pngData)
-	}
-
-	for i, sz := range sizes {
-		e := entries[i]
-		pngData := e.data
-
-		var entry [16]byte
-		if sz >= 256 {
-			entry[0] = 0
-			entry[1] = 0
-		} else {
-			entry[0] = byte(sz)
-			entry[1] = byte(sz)
-		}
-		entry[2] = 0
-		entry[3] = 0
-		entry[4] = 1
-		entry[5] = 0
-		entry[6] = 32
-		entry[7] = 0
-		entry[8] = byte(len(pngData))
-		entry[9] = byte(len(pngData) >> 8)
-		entry[10] = byte(len(pngData) >> 16)
-		entry[11] = byte(len(pngData) >> 24)
-		entry[12] = byte(e.offset)
-		entry[13] = byte(e.offset >> 8)
-		entry[14] = byte(e.offset >> 16)
-		entry[15] = byte(e.offset >> 24)
-		icoBuf.Write(entry[:])
-	}
-
-	for _, e := range entries {
-		icoBuf.Write(e.data)
-	}
-
-	if err := os.WriteFile(iconIco, icoBuf.Bytes(), 0644); err != nil {
-		fmt.Fprintf(os.Stderr, "write ICO: %v\n", err)
-		os.Exit(1)
-	}
-	fmt.Println("Generated:", iconIco)
+	fmt.Println("Place your own icon.ico in build/windows/")
 }
 
 func findRoot() string {
