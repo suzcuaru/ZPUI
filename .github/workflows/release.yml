@@ -214,6 +214,8 @@ jobs:
         run: |
           VER="${{ steps.ver.outputs.version }}"
           TAG="${GITHUB_REF_NAME:-v$VER}"
+          IS_DEV=0
+          if [[ "$VER" == *-* ]]; then IS_DEV=1; fi
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" \
               "build/ZPUI-Setup-$VER-win64.exe" \
@@ -222,10 +224,12 @@ jobs:
               "versions.json" \
               --clobber
           else
+            EXTRA=""
+            if [ "$IS_DEV" = "1" ]; then EXTRA="--draft"; fi
             gh release create "$TAG" \
               "build/ZPUI-Setup-$VER-win64.exe" \
               "build/ZPUI-Setup-$VER-win32.exe" \
               "zpui-win64.zip" "zpui-win32.zip" \
               "versions.json" \
-              --title "ZPUI $VER" --generate-notes
+              --title "ZPUI $VER" --generate-notes $EXTRA
           fi
