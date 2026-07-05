@@ -226,6 +226,7 @@ export default function App() {
           onAutoSelect={() => setAutoSelectOpen(true)}
           onOpenHealth={() => setHealthOpen(true)}
           onOpenDiagnostics={() => setDiagOpen(true)}
+          onOpenHelp={() => setHelpOpen(true)}
           healthWarn={healthWarn}
           status={status}
           showToast={showToast}
