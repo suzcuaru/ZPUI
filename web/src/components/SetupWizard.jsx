@@ -328,10 +328,10 @@ export default function SetupWizard({ onComplete, onCancel }) {
         {step === 'dns' && (
           <div>
             <div className="startup-title" style={{ marginBottom: 8 }}>
-              {t('setup.dns.title') || 'Система DNS (Xbox)'}
+              {t('setup.dns.title') || 'Xbox DNS'}
             </div>
             <p style={{ fontSize: 12, opacity: 0.8, marginBottom: 12 }}>
-              {t('setup.dns.desc') || 'Использовать Яндекс DNS (77.88.8.8) для обхода блокировок на уровне DNS? Это помогает, если ваш провайдер подменяет DNS-ответы.'}
+              {t('setup.dns.desc') || 'Использовать Яндекс DNS (77.88.8.8 / 77.88.8.1) для обхода блокировок на уровне DNS? Помогает, если провайдер подменяет DNS-ответы. Рекомендуется для Xbox и других консолей.'}
             </p>
             <div style={{ display: 'flex', gap: 8 }}>
               <button className="btn btn-accent btn-sm" style={{ flex: 1 }} onClick={() => handleDNSAnswer(true)}>
