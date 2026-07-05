@@ -121,29 +121,27 @@ export default function DashboardPage({ status, showToast, onNavigate }) {
             </button>
           </div>
         </div>
-        <div className="db-avail-row">
+        <div className="db-avail-stats">
           <div className="db-avail-stat">
             <span className="db-avail-pct" style={{ color: defPct >= 80 ? 'var(--success)' : defPct >= 50 ? 'var(--warning)' : 'var(--danger)' }}>
               {defPct >= 0 ? `${defPct}%` : '—'}
             </span>
-            <span className="db-avail-label">{t('dashboard.standard')}</span>
+            <span className="db-avail-label"><span className="db-avail-dot" style={{ background: 'var(--accent)' }} />{t('dashboard.standard')}</span>
+            <span className="db-avail-count">{defOk}/{defRes.length}</span>
           </div>
-          <div className="db-avail-chart">
-            <MiniSpark records={availStd} color="var(--accent)" />
-          </div>
-          <span className="db-avail-count">{defOk}/{defRes.length}</span>
-        </div>
-        <div className="db-avail-row">
           <div className="db-avail-stat">
             <span className="db-avail-pct" style={{ color: userPct >= 80 ? 'var(--success)' : userPct >= 50 ? 'var(--warning)' : 'var(--danger)' }}>
               {userPct >= 0 ? `${userPct}%` : '—'}
             </span>
-            <span className="db-avail-label">{t('dashboard.custom')}</span>
+            <span className="db-avail-label"><span className="db-avail-dot" style={{ background: 'var(--success)' }} />{t('dashboard.custom')}</span>
+            <span className="db-avail-count">{userOk}/{userRes.length}</span>
           </div>
-          <div className="db-avail-chart">
-            <MiniSpark records={availUser} color="var(--success)" />
-          </div>
-          <span className="db-avail-count">{userOk}/{userRes.length}</span>
+        </div>
+        <div className="db-avail-chart">
+          <DualSpark series={[
+            { records: availStd, color: 'var(--accent)' },
+            { records: availUser, color: 'var(--success)' },
+          ]} />
         </div>
       </div>
 
@@ -181,26 +179,36 @@ export default function DashboardPage({ status, showToast, onNavigate }) {
   );
 }
 
-function MiniSpark({ records, color }) {
+function DualSpark({ series }) {
   const data = useMemo(() => {
-    if (!records || records.length < 2) return null;
-    const W = 100, H = 30;
-    const pts = records.map((r, i) => {
-      const x = (i / (records.length - 1)) * W;
-      const y = H - (r.pct / 100) * (H - 4) - 2;
-      return [x, y];
+    const W = 100, H = 40;
+    const valid = series.filter(s => s.records && s.records.length >= 2);
+    if (valid.length === 0) return null;
+
+    const lines = valid.map(s => {
+      const pts = s.records.map((r, i) => {
+        const x = (i / (s.records.length - 1)) * W;
+        const y = H - (r.pct / 100) * (H - 4) - 2;
+        return [x, y];
+      });
+      const line = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' ');
+      const fill = `${line} L${W},${H} L0,${H} Z`;
+      return { line, fill, color: s.color };
     });
-    const line = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' ');
-    const fill = `${line} L${W},${H} L0,${H} Z`;
-    return { line, fill, W, H };
-  }, [records]);
+
+    return { lines, W, H };
+  }, [series]);
 
   if (!data) return <div className="mini-spark-empty" />;
 
   return (
     <svg className="mini-spark-svg" viewBox={`0 0 ${data.W} ${data.H}`} preserveAspectRatio="none">
-      <path d={data.fill} fill={color} fillOpacity="0.1" />
-      <path d={data.line} fill="none" stroke={color} strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinecap="round" strokeLinejoin="round" />
+      {data.lines.map((l, i) => (
+        <path key={`f${i}`} d={l.fill} fill={l.color} fillOpacity="0.06" />
+      ))}
+      {data.lines.map((l, i) => (
+        <path key={`l${i}`} d={l.line} fill="none" stroke={l.color} strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinecap="round" strokeLinejoin="round" />
+      ))}
     </svg>
   );
 }
