@@ -28,12 +28,14 @@ export default function StartupScreen({ state }) {
 
   return (
     <div className="startup-center">
+      <div className="startup-ambient" />
+
       <div className="startup-rings">
         <div className="startup-ring startup-ring-1" />
         <div className="startup-ring startup-ring-2" />
         <div className="startup-ring startup-ring-3" />
         <div className="startup-icon">
-          <svg viewBox="0 0 256 256" width="56" height="56">
+          <svg viewBox="0 0 256 256" width="64" height="64">
             <defs>
               <linearGradient id="sg1" x1="0%" y1="0%" x2="100%" y2="100%">
                 <stop offset="0%" stopColor="#7c4dff"/>
@@ -42,7 +44,8 @@ export default function StartupScreen({ state }) {
             </defs>
             <path d="M128 48 L204 80 L204 140 C204 182 172 214 128 234 C84 214 52 182 52 140 L52 80 Z"
                   fill="none" stroke="url(#sg1)" strokeWidth="3"/>
-            <path d="M108 116 L148 116 L108 164 L148 164"
+            <circle cx="128" cy="144" r="24" fill="url(#sg1)" opacity="0.12"/>
+            <path d="M108 118 L148 118 L108 166 L148 166"
                   fill="none" stroke="#fff" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" opacity="0.9"/>
           </svg>
         </div>
