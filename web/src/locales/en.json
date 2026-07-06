@@ -46,6 +46,8 @@
     "autoStartMods": "Autostart modules on launch",
     "verboseLogging": "Verbose logging",
     "verboseLoggingDesc": "Log all application events",
+    "disableUpdates": "Disable updates",
+    "disableUpdatesDesc": "Skip update check from GitHub on startup",
     "about": "About",
     "version": "Version",
     "modulesDir": "Modules folder",

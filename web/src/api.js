@@ -30,6 +30,7 @@ const GET_ROUTES = {
   '/api/startup/state': (app) => app.GetStartupState(),
   '/api/ui/registrations': (app) => app.GetUIRegistrations(),
   '/api/verbose/logging': (app) => app.GetVerboseLogging(),
+  '/api/disable-updates': (app) => app.GetDisableUpdates(),
 };
 
 const POST_ROUTES = {
@@ -45,6 +46,7 @@ const POST_ROUTES = {
   '/api/modules/data/get': (app, b) => app.GetModuleData(b.module_id || '', b.key || ''),
   '/api/modules/data/delete': (app, b) => app.DeleteModuleData(b.module_id || '', b.key || ''),
   '/api/verbose/logging': (app, b) => app.SetVerboseLogging(b.verbose === true),
+  '/api/disable-updates': (app, b) => app.SetDisableUpdates(b.disabled === true),
 };
 
 export async function api(method, path, body) {

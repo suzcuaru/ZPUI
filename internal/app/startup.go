@@ -116,6 +116,9 @@ func (a *App) setStage(stage StartupStage, sub string, progress float64) {
 }
 
 func (a *App) doUpdateCheck() (updated bool) {
+	if a.cfg.GetDisableUpdates() {
+		return false
+	}
 	a.setStage(StageSelfCheck, "", 0.15)
 	t0 := time.Now()
 
@@ -164,31 +167,34 @@ func (a *App) doUpdateCheck() (updated bool) {
 
 func (a *App) doModuleCheck() {
 	discovered := modules.Discover(a.mgr.RootDir())
-	var updates []ModUpdateInfo
 
-	for _, dm := range discovered {
-		if !dm.EntryOK || dm.Manifest.UpdateURL == "" {
-			continue
-		}
-		rel, err := a.updater.CheckLatest(context.Background())
-		if err != nil {
-			a.log.Warn("startup", fmt.Sprintf("module %s update: %v", dm.Manifest.ID, err))
-			continue
-		}
-		if rel != nil && a.updater.NeedsUpdate(rel) {
-			updates = append(updates, ModUpdateInfo{ID: dm.Manifest.ID, Name: dm.Manifest.Name, Version: rel.TagName})
-		}
-	}
+	if !a.cfg.GetDisableUpdates() {
+		var updates []ModUpdateInfo
 
-	if len(updates) > 0 {
-		a.startup.modsUpdated = true
-		a.setStage(StageModDL, fmt.Sprintf("Обновление модулей (%d)...", len(updates)), 0.6)
-		time.Sleep(1800 * time.Millisecond)
-		for _, upd := range updates {
-			for _, dm := range discovered {
-				if dm.Manifest.ID == upd.ID {
-					a.downloadModuleUpdate(dm)
-					break
+		for _, dm := range discovered {
+			if !dm.EntryOK || dm.Manifest.UpdateURL == "" {
+				continue
+			}
+			rel, err := a.updater.CheckLatest(context.Background())
+			if err != nil {
+				a.log.Warn("startup", fmt.Sprintf("module %s update: %v", dm.Manifest.ID, err))
+				continue
+			}
+			if rel != nil && a.updater.NeedsUpdate(rel) {
+				updates = append(updates, ModUpdateInfo{ID: dm.Manifest.ID, Name: dm.Manifest.Name, Version: rel.TagName})
+			}
+		}
+
+		if len(updates) > 0 {
+			a.startup.modsUpdated = true
+			a.setStage(StageModDL, fmt.Sprintf("Обновление модулей (%d)...", len(updates)), 0.6)
+			time.Sleep(1800 * time.Millisecond)
+			for _, upd := range updates {
+				for _, dm := range discovered {
+					if dm.Manifest.ID == upd.ID {
+						a.downloadModuleUpdate(dm)
+						break
+					}
 				}
 			}
 		}

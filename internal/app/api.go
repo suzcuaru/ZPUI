@@ -55,6 +55,7 @@ func (a *App) GetConfig() map[string]interface{} {
 		"auto_start_mods": a.cfg.AutoStartMods,
 		"disabled_mods":   a.cfg.DisabledMods,
 		"verbose":         a.cfg.Verbose,
+		"disable_updates": a.cfg.DisableUpdates,
 	})
 }
 
@@ -141,6 +142,15 @@ func (a *App) GetVerboseLogging() map[string]interface{} {
 func (a *App) SetVerboseLogging(v bool) map[string]interface{} {
 	a.log.SetVerbose(v)
 	a.cfg.SetVerbose(v)
+	return okResp(nil)
+}
+
+func (a *App) GetDisableUpdates() map[string]interface{} {
+	return okResp(map[string]interface{}{"disabled": a.cfg.GetDisableUpdates()})
+}
+
+func (a *App) SetDisableUpdates(v bool) map[string]interface{} {
+	a.cfg.SetDisableUpdates(v)
 	return okResp(nil)
 }
 

@@ -82,6 +82,13 @@ export default function SettingsPage({ config, status, onConfigChange, showToast
           </div>
           <Switch checked={config?.verbose ?? false} onChange={(v) => { save({ verbose: v }); api('POST', '/api/verbose/logging', { verbose: v }); }} />
         </div>
+        <div className="set-row">
+          <div className="set-row-info">
+            <div className="set-row-title">{t('settings.disableUpdates')}</div>
+            <div className="set-row-desc">{t('settings.disableUpdatesDesc')}</div>
+          </div>
+          <Switch checked={config?.disable_updates ?? false} onChange={(v) => { save({ disable_updates: v }); api('POST', '/api/disable-updates', { disabled: v }); }} />
+        </div>
       </div>
 
       <div className="section">

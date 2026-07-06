@@ -46,6 +46,8 @@
     "autoStartMods": "Автозапуск модулей при старте",
     "verboseLogging": "Подробное логирование",
     "verboseLoggingDesc": "Все события приложения записываются в лог",
+    "disableUpdates": "Отключить обновления",
+    "disableUpdatesDesc": "Не проверять обновления с GitHub при запуске",
     "about": "О приложении",
     "version": "Версия",
     "modulesDir": "Папка модулей",

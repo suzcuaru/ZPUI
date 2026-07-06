@@ -18,6 +18,7 @@ type Config struct {
 	AutoStartMods  bool     `json:"auto_start_mods"`
 	DisabledMods   []string `json:"disabled_mods"`
 	Verbose        bool     `json:"verbose,omitempty"`
+	DisableUpdates bool     `json:"disable_updates,omitempty"`
 }
 
 func defaultConfig() *Config {
@@ -29,6 +30,7 @@ func defaultConfig() *Config {
 		AutoStartMods:  false,
 		DisabledMods:   []string{},
 		Verbose:        false,
+		DisableUpdates: false,
 	}
 }
 
@@ -133,6 +135,19 @@ func (c *Config) SetVerbose(v bool) error {
 	return c.save()
 }
 
+func (c *Config) GetDisableUpdates() bool {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.DisableUpdates
+}
+
+func (c *Config) SetDisableUpdates(v bool) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.DisableUpdates = v
+	return c.save()
+}
+
 func (c *Config) Apply(patch map[string]interface{}) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -153,6 +168,9 @@ func (c *Config) Apply(patch map[string]interface{}) error {
 	}
 	if v, ok := patch["verbose"].(bool); ok {
 		c.Verbose = v
+	}
+	if v, ok := patch["disable_updates"].(bool); ok {
+		c.DisableUpdates = v
 	}
 	return c.save()
 }
