@@ -16,11 +16,6 @@ export default function ModulesPage({ modules, showToast, onChange }) {
     onChange();
   };
 
-  const toggleEnabled = async (m) => {
-    await api('POST', '/api/modules/enabled', { id: m.id, enabled: !m.disabled });
-    onChange();
-  };
-
   if (!modules || modules.length === 0) {
     return (
       <>
@@ -64,14 +59,6 @@ export default function ModulesPage({ modules, showToast, onChange }) {
                   {m.author ? ` · ${t('modules.by', { author: m.author })}` : ''}
                   {m.autostart ? ` · ${t('modules.autostart')}` : ''}
                 </div>
-              </div>
-              <div className="mod-card-status">
-                <button
-                  className={'btn btn-sm ' + (m.disabled ? 'btn-accent' : 'btn-ghost')}
-                  onClick={() => toggleEnabled(m)}
-                >
-                  {m.disabled ? t('modules.enable') : t('modules.disable')}
-                </button>
               </div>
             </div>
             {m.description && <div className="mod-card-desc">{m.description}</div>}

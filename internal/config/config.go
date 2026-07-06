@@ -27,7 +27,7 @@ func defaultConfig() *Config {
 		Language:       "ru",
 		StartMinimized: false,
 		CloseToTray:    true,
-		AutoStartMods:  false,
+		AutoStartMods:  true,
 		DisabledMods:   []string{},
 		Verbose:        false,
 		DisableUpdates: true,

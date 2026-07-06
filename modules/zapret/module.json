@@ -6,13 +6,10 @@
   "description": "Обход DPI блокировок Discord, YouTube и других сервисов. Установка, настройка, управление и автообновление zapret-discord-youtube.",
   "entry": "zapret.exe",
   "args": ["service"],
-  "auto_start": false,
+  "auto_start": true,
   "min_app": "0.0.1",
   "update_url": "https://github.com/suzcuaru/zapret-module/releases/latest/download/zapret.exe",
   "ui": {
-    "sidebar": [
-      { "id": "zapret", "type": "link", "label": "Zapret", "icon": "shield", "action": "mod:zapret" }
-    ],
     "statusbar": [
       { "id": "zapret-status", "type": "badge", "label": "Zapret: —", "color": "#888" }
     ]
