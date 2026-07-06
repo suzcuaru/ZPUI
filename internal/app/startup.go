@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -172,15 +173,20 @@ func (a *App) doModuleCheck() {
 		var updates []ModUpdateInfo
 
 		for _, dm := range discovered {
-			if !dm.EntryOK || dm.Manifest.UpdateURL == "" {
+			if !dm.EntryOK || dm.Manifest.UpdateRepo == "" {
 				continue
 			}
-			rel, err := a.updater.CheckLatest(context.Background())
+			parts := strings.SplitN(dm.Manifest.UpdateRepo, "/", 2)
+			if len(parts) != 2 {
+				continue
+			}
+			mu := updater.New(parts[0], parts[1], dm.Manifest.Version)
+			rel, err := mu.CheckLatest(context.Background())
 			if err != nil {
 				a.log.Warn("startup", fmt.Sprintf("module %s update: %v", dm.Manifest.ID, err))
 				continue
 			}
-			if rel != nil && a.updater.NeedsUpdate(rel) {
+			if rel != nil && mu.NeedsUpdate(rel) {
 				updates = append(updates, ModUpdateInfo{ID: dm.Manifest.ID, Name: dm.Manifest.Name, Version: rel.TagName})
 			}
 		}

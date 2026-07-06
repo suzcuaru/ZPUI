@@ -8,6 +8,7 @@
   "args": ["service"],
   "auto_start": true,
   "min_app": "0.0.1",
+  "update_repo": "suzcuaru/ZPUI",
   "update_url": "https://github.com/suzcuaru/zapret-module/releases/latest/download/zapret.exe",
   "ui": {
     "statusbar": [

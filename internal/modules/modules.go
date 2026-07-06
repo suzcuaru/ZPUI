@@ -36,6 +36,7 @@ type Manifest struct {
 	AutoStart   bool     `json:"auto_start,omitempty"`
 	Placements  []string `json:"placements,omitempty"`
 	MinApp      string   `json:"min_app,omitempty"`
+	UpdateRepo  string   `json:"update_repo,omitempty"`
 	UpdateURL   string   `json:"update_url,omitempty"`
 	UI          ModuleUI `json:"ui,omitempty"`
 

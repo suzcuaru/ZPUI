@@ -168,6 +168,7 @@ func (m *Manager) Status(mod *DiscoveredModule) map[string]interface{} {
 		"entry_ok":    mod.EntryOK,
 		"autostart":   mod.Manifest.AutoStart,
 		"placements":  mod.Manifest.Placements,
+		"update_repo": mod.Manifest.UpdateRepo,
 		"update_url":  mod.Manifest.UpdateURL,
 	}
 	if ui := mod.Manifest.UI; ui.StatusBar != nil || ui.Sidebar != nil || ui.Settings != nil {
