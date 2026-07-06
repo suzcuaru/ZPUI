@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <defs>
+    <linearGradient id="darkGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1a1a2e"/>
+      <stop offset="100%" stop-color="#0f0f23"/>
+    </linearGradient>
+    <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00e5ff"/>
+      <stop offset="50%" stop-color="#7c4dff"/>
+      <stop offset="100%" stop-color="#ff4081"/>
+    </linearGradient>
+  </defs>
+  <!-- outer orbit rings -->
+  <ellipse cx="128" cy="128" rx="100" ry="36" fill="none" stroke="#7c4dff" stroke-width="2" opacity="0.25" transform="rotate(-30 128 128)"/>
+  <ellipse cx="128" cy="128" rx="100" ry="36" fill="none" stroke="#00e5ff" stroke-width="1.5" opacity="0.15" transform="rotate(30 128 128)"/>
+  <!-- orbital dots -->
+  <circle cx="42" cy="76" r="5" fill="#00e5ff" opacity="0.6"/>
+  <circle cx="214" cy="76" r="5" fill="#ff4081" opacity="0.6"/>
+  <circle cx="128" cy="204" r="4" fill="#7c4dff" opacity="0.5"/>
+  <!-- planet core (shield shape) -->
+  <path d="M128 48 L204 80 L204 140 C204 182 172 214 128 234 C84 214 52 182 52 140 L52 80 Z"
+        fill="url(#darkGrad)" stroke="url(#ringGrad)" stroke-width="3"/>
+  <!-- glowing core center -->
+  <circle cx="128" cy="140" r="28" fill="#7c4dff" opacity="0.15"/>
+  <circle cx="128" cy="140" r="12" fill="#00e5ff" opacity="0.2"/>
+  <!-- Z symbol -->
+  <path d="M108 116 L148 116 L108 164 L148 164" fill="none" stroke="#ffffff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+  <!-- energy trails -->
+  <path d="M52 80 Q80 110 108 116" fill="none" stroke="#00e5ff" stroke-width="2" opacity="0.5" stroke-dasharray="4 4"/>
+  <path d="M148 164 Q176 180 204 140" fill="none" stroke="#ff4081" stroke-width="2" opacity="0.5" stroke-dasharray="4 4"/>
+</svg>

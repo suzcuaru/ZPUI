@@ -1,0 +1,63 @@
+{
+  "app": {
+    "name": "ZPUI",
+    "tagline": "Modular shell"
+  },
+  "nav": {
+    "modules": "Modules",
+    "settings": "Settings"
+  },
+  "modules": {
+    "title": "Modules",
+    "subtitle": "Discovered modules in the modules/ folder",
+    "empty": "No modules found",
+    "emptyHint": "Place a module folder (with module.json and a core .exe) into the modules/ folder next to the app and restart.",
+    "openFolder": "Open modules folder",
+    "reload": "Reload",
+    "start": "Start",
+    "stop": "Stop",
+    "restart": "Restart",
+    "enable": "Enable",
+    "disable": "Disable",
+    "running": "Running",
+    "stopped": "Stopped",
+    "error": "Error",
+    "noEntry": "no .exe",
+    "version": "Version",
+    "author": "Author",
+    "autostart": "Autostart",
+    "by": "by {author}",
+    "runningCount": "Active: {count}",
+    "totalCount": "Total: {count}",
+    "started": "Module started",
+    "stopped": "Module stopped"
+  },
+  "settings": {
+    "title": "Settings",
+    "appearance": "Appearance",
+    "theme": "Theme",
+    "themeSystem": "System",
+    "themeDark": "Dark",
+    "themeLight": "Light",
+    "language": "Language",
+    "behavior": "Behavior",
+    "closeToTray": "Minimize to tray on close",
+    "startMinimized": "Start minimized",
+    "autoStartMods": "Autostart modules on launch",
+    "about": "About",
+    "version": "Version",
+    "modulesDir": "Modules folder",
+    "description": "ZPUI is a modular shell. Each feature is a separate module (its own folder with a .exe and module.json). The core app discovers modules automatically on launch."
+  },
+  "footer": {
+    "version": "v{version}",
+    "ready": "Ready"
+  },
+  "toast": {
+    "saved": "Settings saved"
+  },
+  "common": {
+    "close": "Close",
+    "refresh": "Refresh"
+  }
+}

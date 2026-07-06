@@ -1,0 +1,27 @@
+# Build outputs
+/build/bin/
+/build/dist/
+*.exe
+*.exe~
+zpui.exe
+
+# Frontend
+/web/node_modules/
+/web/dist/
+/web/wailsjs/
+
+# Runtime / data
+/logs/
+/config.json
+/modules/*
+!/modules/.gitkeep
+!/modules/README.md
+
+# OS
+Thumbs.db
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+*.swp

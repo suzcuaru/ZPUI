@@ -1,0 +1,63 @@
+{
+  "app": {
+    "name": "ZPUI",
+    "tagline": "Модульная оболочка"
+  },
+  "nav": {
+    "modules": "Модули",
+    "settings": "Настройки"
+  },
+  "modules": {
+    "title": "Модули",
+    "subtitle": "Обнаруженные модули в папке modules/",
+    "empty": "Модули не найдены",
+    "emptyHint": "Поместите папку модуля (с module.json и ядром .exe) в папку modules/ рядом с приложением и перезапустите.",
+    "openFolder": "Открыть папку modules",
+    "reload": "Обновить",
+    "start": "Запустить",
+    "stop": "Остановить",
+    "restart": "Перезапустить",
+    "enable": "Включить",
+    "disable": "Отключить",
+    "running": "Работает",
+    "stopped": "Остановлен",
+    "error": "Ошибка",
+    "noEntry": "нет .exe",
+    "version": "Версия",
+    "author": "Автор",
+    "autostart": "Автозапуск",
+    "by": "от {author}",
+    "runningCount": "Активно: {count}",
+    "totalCount": "Всего: {count}",
+    "started": "Модуль запущен",
+    "stopped": "Модуль остановлен"
+  },
+  "settings": {
+    "title": "Настройки",
+    "appearance": "Внешний вид",
+    "theme": "Тема",
+    "themeSystem": "Системная",
+    "themeDark": "Тёмная",
+    "themeLight": "Светлая",
+    "language": "Язык",
+    "behavior": "Поведение",
+    "closeToTray": "Сворачивать в трей при закрытии",
+    "startMinimized": "Запускать свёрнутым",
+    "autoStartMods": "Автозапуск модулей при старте",
+    "about": "О приложении",
+    "version": "Версия",
+    "modulesDir": "Папка модулей",
+    "description": "ZPUI — модульная оболочка. Каждая функция — отдельный модуль (своя папка с .exe и module.json). Основное приложение само обнаруживает модули при запуске."
+  },
+  "footer": {
+    "version": "v{version}",
+    "ready": "Готово"
+  },
+  "toast": {
+    "saved": "Настройки сохранены"
+  },
+  "common": {
+    "close": "Закрыть",
+    "refresh": "Обновить"
+  }
+}
