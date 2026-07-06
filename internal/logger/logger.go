@@ -19,6 +19,7 @@ type Logger struct {
 	date    string
 	ring    []entry
 	stopCh  chan struct{}
+	verbose bool
 }
 
 type entry struct {
@@ -63,6 +64,14 @@ func (l *Logger) Close() {
 	}
 }
 
+func (l *Logger) SetVerbose(v bool) { l.verbose = v }
+func (l *Logger) IsVerbose() bool   { return l.verbose }
+
+func (l *Logger) Debug(category, msg string) {
+	if l.verbose {
+		l.write("DEBUG", category, msg)
+	}
+}
 func (l *Logger) Info(category, msg string)  { l.write("INFO", category, msg) }
 func (l *Logger) Warn(category, msg string)  { l.write("WARN", category, msg) }
 func (l *Logger) Error(category, msg string) { l.write("ERROR", category, msg) }

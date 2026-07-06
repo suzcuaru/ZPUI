@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
@@ -14,10 +15,12 @@ import (
 
 	"zpui/internal/app"
 	"zpui/internal/config"
+	"zpui/internal/database"
 	"zpui/internal/logger"
 	"zpui/internal/modules"
 	"zpui/internal/singleinstance"
 	"zpui/internal/tray"
+	"zpui/internal/updater"
 )
 
 //go:embed all:web/dist
@@ -29,6 +32,17 @@ var trayIcon []byte
 var version = "0.0.0"
 
 func main() {
+	var skipChecks bool
+	var verbose bool
+	for _, arg := range os.Args[1:] {
+		switch strings.ToLower(arg) {
+		case "--skip-checks", "--skip-startup":
+			skipChecks = true
+		case "--verbose", "-v", "--debug":
+			verbose = true
+		}
+	}
+
 	exePath, err := os.Executable()
 	if err != nil {
 		log.Fatal(err)
@@ -51,7 +65,19 @@ func main() {
 		log.Fatalf("logger: %v", err)
 	}
 	defer logMgr.Close()
+	if verbose || cfg.Verbose {
+		logMgr.SetVerbose(true)
+	}
 	logMgr.Info("main", fmt.Sprintf("ZPUI v%s starting...", version))
+
+	dbPath := filepath.Join(exeDir, "zpui.db")
+	db, err := database.Open(dbPath)
+	if err != nil {
+		logMgr.Error("main", fmt.Sprintf("database: %v", err))
+		log.Fatalf("database: %v", err)
+	}
+	defer db.Close()
+	logMgr.Info("main", "Database initialized")
 
 	modulesDir := modules.DefaultRootDir(exeDir)
 	if err := modules.EnsureModulesDir(modulesDir); err != nil {
@@ -60,21 +86,21 @@ func main() {
 
 	mgr := modules.NewManager(modulesDir, logMgr, cfg.IsModDisabled)
 
-	discovered := modules.Discover(modulesDir)
-	logMgr.Info("main", fmt.Sprintf("Discovered %d module(s)", len(discovered)))
-	for _, dm := range discovered {
-		status := "ok"
-		if !dm.EntryOK {
-			status = "no-entry-exe"
+	upd := updater.New("suzcuaru", "ZPUI", version)
+
+	if !skipChecks {
+		discovered := modules.Discover(modulesDir)
+		logMgr.Info("main", fmt.Sprintf("Discovered %d module(s)", len(discovered)))
+		for _, dm := range discovered {
+			status := "ok"
+			if !dm.EntryOK {
+				status = "no-entry-exe"
+			}
+			logMgr.Debug("main", fmt.Sprintf("  - %s v%s (%s)", dm.Manifest.ID, dm.Manifest.Version, status))
 		}
-		logMgr.Info("main", fmt.Sprintf("  - %s v%s (%s)", dm.Manifest.ID, dm.Manifest.Version, status))
 	}
 
-	if cfg.AutoStartMods {
-		mgr.AutoStartAll(discovered)
-	}
-
-	a := app.New(cfg, logMgr, mgr, version, exeDir)
+	a := app.New(cfg, logMgr, db, mgr, upd, version, exeDir, skipChecks)
 
 	trayApp := tray.New(cfg, logMgr, a, version, trayIcon)
 	go func() {
@@ -93,13 +119,11 @@ func main() {
 
 	logMgr.Info("main", "Starting Wails...")
 	err = wails.Run(&options.App{
-		Title:     "ZPUI",
-		Width:     960,
-		Height:    640,
-		MinWidth:  960,
-		MinHeight: 640,
-		MaxWidth:  960,
-		MaxHeight: 640,
+		Title:    "ZPUI",
+		Width:    960,
+		Height:   640,
+		MinWidth: 800,
+		MinHeight: 600,
 		AssetServer: &assetserver.Options{
 			Assets: distFS,
 		},

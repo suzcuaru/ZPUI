@@ -27,6 +27,9 @@ const GET_ROUTES = {
   '/api/modules': (app) => app.GetModules(),
   '/api/modules/reload': (app) => app.ReloadModules(),
   '/api/logs': (app, p) => app.GetLogs(p.category || '', parseInt(p.lines) || 200),
+  '/api/startup/state': (app) => app.GetStartupState(),
+  '/api/ui/registrations': (app) => app.GetUIRegistrations(),
+  '/api/verbose/logging': (app) => app.GetVerboseLogging(),
 };
 
 const POST_ROUTES = {
@@ -38,6 +41,10 @@ const POST_ROUTES = {
   '/api/modules/enabled': (app, b) => app.SetModuleEnabled(b.id || '', b.enabled === true),
   '/api/modules/open-folder': (app) => app.OpenModulesFolder(),
   '/api/external': (app, b) => app.OpenExternal(b.url || ''),
+  '/api/modules/data/set': (app, b) => app.SetModuleData(b.module_id || '', b.key || '', b.value || ''),
+  '/api/modules/data/get': (app, b) => app.GetModuleData(b.module_id || '', b.key || ''),
+  '/api/modules/data/delete': (app, b) => app.DeleteModuleData(b.module_id || '', b.key || ''),
+  '/api/verbose/logging': (app, b) => app.SetVerboseLogging(b.verbose === true),
 };
 
 export async function api(method, path, body) {

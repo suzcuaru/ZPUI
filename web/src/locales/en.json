@@ -44,6 +44,8 @@
     "closeToTray": "Minimize to tray on close",
     "startMinimized": "Start minimized",
     "autoStartMods": "Autostart modules on launch",
+    "verboseLogging": "Verbose logging",
+    "verboseLoggingDesc": "Log all application events",
     "about": "About",
     "version": "Version",
     "modulesDir": "Modules folder",
@@ -55,6 +57,17 @@
   },
   "toast": {
     "saved": "Settings saved"
+  },
+  "startup": {
+    "welcome": "Welcome to ZPUI",
+    "selfCheck": "Checking for core updates...",
+    "selfDownload": "Downloading core update...",
+    "modCheck": "Checking modules...",
+    "modDownload": "Downloading module updates...",
+    "install": "Installing updates...",
+    "restart": "Restarting application...",
+    "done": "Loading complete",
+    "tagline": "Modular shell"
   },
   "common": {
     "close": "Close",

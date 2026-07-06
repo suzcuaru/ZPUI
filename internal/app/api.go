@@ -48,12 +48,13 @@ func (a *App) GetVersion() string {
 
 func (a *App) GetConfig() map[string]interface{} {
 	return okResp(map[string]interface{}{
-		"theme":          a.cfg.GetTheme(),
-		"language":       a.cfg.GetLanguage(),
+		"theme":           a.cfg.GetTheme(),
+		"language":        a.cfg.GetLanguage(),
 		"start_minimized": a.cfg.StartMinimized,
-		"close_to_tray":  a.cfg.CloseToTray,
+		"close_to_tray":   a.cfg.CloseToTray,
 		"auto_start_mods": a.cfg.AutoStartMods,
-		"disabled_mods":  a.cfg.DisabledMods,
+		"disabled_mods":   a.cfg.DisabledMods,
+		"verbose":         a.cfg.Verbose,
 	})
 }
 
@@ -95,4 +96,54 @@ func (a *App) GetLogs(category string, lines int) map[string]interface{} {
 	}
 	entries := a.log.Recent(category, lines)
 	return okResp(map[string]interface{}{"entries": entries})
+}
+
+func (a *App) GetStartupState() StartupInfo {
+	return a.startup.get()
+}
+
+func (a *App) GetUIRegistrations() UIRegResp {
+	return UIRegResp{Items: a.collectUIRegistrations()}
+}
+
+func (a *App) SetModuleData(moduleID, key, value string) map[string]interface{} {
+	if moduleID == "" || key == "" {
+		return errResp("module_id and key required")
+	}
+	if err := a.db.SetModuleData(moduleID, key, []byte(value)); err != nil {
+		return errResp(err.Error())
+	}
+	return okResp(nil)
+}
+
+func (a *App) GetModuleData(moduleID, key string) map[string]interface{} {
+	if moduleID == "" || key == "" {
+		return errResp("module_id and key required")
+	}
+	val, err := a.db.GetModuleData(moduleID, key)
+	if err != nil {
+		return errResp(err.Error())
+	}
+	return okResp(map[string]interface{}{"key": key, "value": string(val)})
+}
+
+func (a *App) DeleteModuleData(moduleID, key string) map[string]interface{} {
+	if err := a.db.DeleteModuleData(moduleID, key); err != nil {
+		return errResp(err.Error())
+	}
+	return okResp(nil)
+}
+
+func (a *App) GetVerboseLogging() map[string]interface{} {
+	return okResp(map[string]interface{}{"verbose": a.log.IsVerbose()})
+}
+
+func (a *App) SetVerboseLogging(v bool) map[string]interface{} {
+	a.log.SetVerbose(v)
+	a.cfg.SetVerbose(v)
+	return okResp(nil)
+}
+
+type UIRegResp struct {
+	Items []UIRegistration `json:"items"`
 }

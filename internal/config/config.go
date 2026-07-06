@@ -10,13 +10,14 @@ import (
 type Config struct {
 	mu             sync.RWMutex
 	configPath     string
-	AppVersion     string `json:"app_version"`
-	Theme          string `json:"theme"`
-	Language       string `json:"language"`
-	StartMinimized bool   `json:"start_minimized"`
-	CloseToTray    bool   `json:"close_to_tray"`
-	AutoStartMods  bool   `json:"auto_start_mods"`
+	AppVersion     string   `json:"app_version"`
+	Theme          string   `json:"theme"`
+	Language       string   `json:"language"`
+	StartMinimized bool     `json:"start_minimized"`
+	CloseToTray    bool     `json:"close_to_tray"`
+	AutoStartMods  bool     `json:"auto_start_mods"`
 	DisabledMods   []string `json:"disabled_mods"`
+	Verbose        bool     `json:"verbose,omitempty"`
 }
 
 func defaultConfig() *Config {
@@ -27,6 +28,7 @@ func defaultConfig() *Config {
 		CloseToTray:    true,
 		AutoStartMods:  false,
 		DisabledMods:   []string{},
+		Verbose:        false,
 	}
 }
 
@@ -118,6 +120,19 @@ func (c *Config) SetModDisabled(id string, disabled bool) error {
 	return c.save()
 }
 
+func (c *Config) GetVerbose() bool {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.Verbose
+}
+
+func (c *Config) SetVerbose(v bool) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.Verbose = v
+	return c.save()
+}
+
 func (c *Config) Apply(patch map[string]interface{}) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -135,6 +150,9 @@ func (c *Config) Apply(patch map[string]interface{}) error {
 	}
 	if v, ok := patch["auto_start_mods"].(bool); ok {
 		c.AutoStartMods = v
+	}
+	if v, ok := patch["verbose"].(bool); ok {
+		c.Verbose = v
 	}
 	return c.save()
 }

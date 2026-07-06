@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"os/exec"
 
 	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
@@ -77,9 +78,7 @@ func (a *App) SetModuleEnabled(id string, enabled bool) map[string]interface{} {
 }
 
 func (a *App) OpenModulesFolder() map[string]interface{} {
-	if a.ctx != nil {
-		wailsruntime.BrowserOpenURL(a.ctx, a.mgr.RootDir())
-	}
+	_ = exec.Command("explorer", a.mgr.RootDir()).Start()
 	return okResp(nil)
 }
 

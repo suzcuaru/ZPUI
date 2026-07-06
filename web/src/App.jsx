@@ -4,6 +4,7 @@ import Footer from './components/layout/Footer';
 import Toast from './components/feedback/Toast';
 import ModulesPage from './pages/ModulesPage';
 import SettingsPage from './pages/SettingsPage';
+import StartupScreen from './components/StartupScreen';
 import { api } from './api';
 import { useT } from './i18n';
 import { usePolling } from './hooks/usePolling';
@@ -17,6 +18,8 @@ export default function App() {
   const [config, setConfig] = useState(null);
   const [toasts, setToasts] = useState([]);
   const [theme, setTheme] = useState('dark');
+  const [startupState, setStartupState] = useState(null);
+  const [uiRegs, setUiRegs] = useState([]);
   const themeInitRef = useRef(false);
 
   const showToast = useCallback((msg, type) => {
@@ -43,6 +46,18 @@ export default function App() {
     await loadModules();
   }, [loadModules]);
   usePolling(pollModules, 3000);
+
+  const pollStartup = useCallback(async () => {
+    const data = await api('GET', '/api/startup/state');
+    if (data) setStartupState(data);
+  }, []);
+  usePolling(pollStartup, 500);
+
+  const pollUI = useCallback(async () => {
+    const data = await api('GET', '/api/ui/registrations');
+    if (data && data.items) setUiRegs(data.items);
+  }, []);
+  usePolling(pollUI, 3000);
 
   useEffect(() => {
     (async () => {
@@ -94,6 +109,10 @@ export default function App() {
     return <ModulesPage modules={modules} showToast={showToast} onChange={loadModules} />;
   };
 
+  if (startupState && startupState.stage && startupState.stage !== 'done') {
+    return <StartupScreen state={startupState} />;
+  }
+
   return (
     <div className="app">
       <Sidebar
@@ -107,7 +126,7 @@ export default function App() {
         <div className="main-area page-fade" key={activePage}>
           {renderPage()}
         </div>
-        <Footer status={status} />
+        <Footer status={status} uiRegs={uiRegs} />
       </div>
       <Toast toasts={toasts} onRemove={removeToast} />
     </div>

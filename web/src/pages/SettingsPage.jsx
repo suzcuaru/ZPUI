@@ -21,7 +21,6 @@ export default function SettingsPage({ config, status, onConfigChange, showToast
 
       <div className="section">
         <div className="section-title">{t('settings.appearance')}</div>
-
         <div className="set-row">
           <div className="set-row-info">
             <div className="set-row-title">{t('settings.theme')}</div>
@@ -38,7 +37,6 @@ export default function SettingsPage({ config, status, onConfigChange, showToast
             ))}
           </div>
         </div>
-
         <div className="set-row">
           <div className="set-row-info">
             <div className="set-row-title">{t('settings.language')}</div>
@@ -59,27 +57,30 @@ export default function SettingsPage({ config, status, onConfigChange, showToast
 
       <div className="section">
         <div className="section-title">{t('settings.behavior')}</div>
-
         <div className="set-row">
           <div className="set-row-info">
             <div className="set-row-title">{t('settings.closeToTray')}</div>
           </div>
           <Switch checked={config?.close_to_tray ?? true} onChange={(v) => save({ close_to_tray: v })} />
         </div>
-
         <div className="set-row">
           <div className="set-row-info">
             <div className="set-row-title">{t('settings.startMinimized')}</div>
           </div>
           <Switch checked={config?.start_minimized ?? false} onChange={(v) => save({ start_minimized: v })} />
         </div>
-
         <div className="set-row">
           <div className="set-row-info">
             <div className="set-row-title">{t('settings.autoStartMods')}</div>
-            <div className="set-row-desc">{t('settings.description')}</div>
           </div>
           <Switch checked={config?.auto_start_mods ?? false} onChange={(v) => save({ auto_start_mods: v })} />
+        </div>
+        <div className="set-row">
+          <div className="set-row-info">
+            <div className="set-row-title">{t('settings.verboseLogging')}</div>
+            <div className="set-row-desc">{t('settings.verboseLoggingDesc')}</div>
+          </div>
+          <Switch checked={config?.verbose ?? false} onChange={(v) => { save({ verbose: v }); api('POST', '/api/verbose/logging', { verbose: v }); }} />
         </div>
       </div>
 
@@ -93,7 +94,6 @@ export default function SettingsPage({ config, status, onConfigChange, showToast
           <div className="set-row-info"><div className="set-row-title">{t('settings.modulesDir')}</div></div>
           <span className="footer-mono" style={{ color: 'var(--text-secondary)', fontSize: 10 }}>{modulesDir}</span>
         </div>
-        <div className="section-desc">{t('settings.description')}</div>
       </div>
     </>
   );

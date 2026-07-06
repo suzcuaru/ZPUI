@@ -8,6 +8,22 @@ import (
 	"sort"
 )
 
+type UIComponent struct {
+	ID       string `json:"id"`
+	Type     string `json:"type"`
+	Label    string `json:"label,omitempty"`
+	Icon     string `json:"icon,omitempty"`
+	Action   string `json:"action,omitempty"`
+	Color    string `json:"color,omitempty"`
+	Metadata string `json:"metadata,omitempty"`
+}
+
+type ModuleUI struct {
+	StatusBar []UIComponent `json:"statusbar,omitempty"`
+	Sidebar   []UIComponent `json:"sidebar,omitempty"`
+	Settings  []UIComponent `json:"settings,omitempty"`
+}
+
 type Manifest struct {
 	ID          string   `json:"id"`
 	Name        string   `json:"name"`
@@ -20,6 +36,8 @@ type Manifest struct {
 	AutoStart   bool     `json:"auto_start,omitempty"`
 	Placements  []string `json:"placements,omitempty"`
 	MinApp      string   `json:"min_app,omitempty"`
+	UpdateURL   string   `json:"update_url,omitempty"`
+	UI          ModuleUI `json:"ui,omitempty"`
 
 	dir string `json:"-"`
 }

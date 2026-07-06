@@ -159,14 +159,19 @@ func (m *Manager) StopAll() {
 func (m *Manager) Status(mod *DiscoveredModule) map[string]interface{} {
 	state := m.StateOf(mod.Manifest.ID)
 	status := map[string]interface{}{
-		"id":        mod.Manifest.ID,
-		"name":      mod.Manifest.Name,
-		"version":   mod.Manifest.Version,
-		"author":    mod.Manifest.Author,
+		"id":          mod.Manifest.ID,
+		"name":        mod.Manifest.Name,
+		"version":     mod.Manifest.Version,
+		"author":      mod.Manifest.Author,
 		"description": mod.Manifest.Description,
-		"state":     string(state),
-		"entry_ok":  mod.EntryOK,
-		"autostart": mod.Manifest.AutoStart,
+		"state":       string(state),
+		"entry_ok":    mod.EntryOK,
+		"autostart":   mod.Manifest.AutoStart,
+		"placements":  mod.Manifest.Placements,
+		"update_url":  mod.Manifest.UpdateURL,
+	}
+	if ui := mod.Manifest.UI; ui.StatusBar != nil || ui.Sidebar != nil || ui.Settings != nil {
+		status["ui"] = ui
 	}
 	if extra := ReadStatusFile(mod.Dir); extra != nil {
 		for k, v := range extra {
