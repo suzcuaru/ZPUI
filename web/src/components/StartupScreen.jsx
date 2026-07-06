@@ -8,6 +8,7 @@ const STAGE_LABELS = {
   mod_download: 'startup.modDownload',
   install: 'startup.install',
   restart: 'startup.restart',
+  done: '',
 };
 
 export default function StartupScreen({ state }) {
@@ -26,43 +27,49 @@ export default function StartupScreen({ state }) {
 
   const label = STAGE_LABELS[stage] ? t(STAGE_LABELS[stage]) : '';
 
+  const pct = Math.round(progress * 100);
+
   return (
     <div className="startup-center">
-      <div className="startup-ambient" />
+      <div className="startup-glow" />
 
-      <div className="startup-rings">
-        <div className="startup-ring startup-ring-1" />
-        <div className="startup-ring startup-ring-2" />
-        <div className="startup-ring startup-ring-3" />
-        <div className="startup-icon">
-          <svg viewBox="0 0 256 256" width="64" height="64">
-            <defs>
-              <linearGradient id="sg1" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#7c4dff"/>
-                <stop offset="100%" stopColor="#ff4081"/>
-              </linearGradient>
-            </defs>
-            <path d="M128 48 L204 80 L204 140 C204 182 172 214 128 234 C84 214 52 182 52 140 L52 80 Z"
-                  fill="none" stroke="url(#sg1)" strokeWidth="3"/>
-            <circle cx="128" cy="144" r="24" fill="url(#sg1)" opacity="0.12"/>
-            <path d="M108 118 L148 118 L108 166 L148 166"
-                  fill="none" stroke="#fff" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" opacity="0.9"/>
-          </svg>
+      <div className="startup-card">
+        <div className="startup-rings-container">
+          <div className="startup-ring startup-ring-1" />
+          <div className="startup-ring startup-ring-2" />
+          <div className="startup-ring startup-ring-3" />
+          <div className="startup-icon-wrap">
+            <svg viewBox="0 0 256 256" width="60" height="60">
+              <defs>
+                <linearGradient id="sg1" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#7c4dff"/>
+                  <stop offset="100%" stopColor="#ff4081"/>
+                </linearGradient>
+              </defs>
+              <path d="M128 48 L204 80 L204 140 C204 182 172 214 128 234 C84 214 52 182 52 140 L52 80 Z"
+                    fill="none" stroke="url(#sg1)" strokeWidth="3"/>
+              <circle cx="128" cy="144" r="24" fill="url(#sg1)" opacity="0.12"/>
+              <path d="M108 118 L148 118 L108 166 L148 166"
+                    fill="none" stroke="#fff" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" opacity="0.9"/>
+            </svg>
+          </div>
         </div>
+
+        <div className="startup-title">ZPUI</div>
+        <div className="startup-subtitle">{t('startup.tagline')}</div>
+
+        <div className="startup-stage" key={stage}>
+          {label}
+        </div>
+        {detail() && <div className="startup-detail">{detail()}</div>}
+
+        <div className="startup-bar-track">
+          <div className="startup-bar-fill" style={{ width: `${pct}%` }} />
+        </div>
+        <div className="startup-percent">{pct}%</div>
+
+        {state?.error && <div className="startup-error">{state.error}</div>}
       </div>
-
-      <div className="startup-title">ZPUI</div>
-      <div className="startup-subtitle">{t('startup.tagline')}</div>
-
-      <div className="startup-stage">{label}</div>
-      {detail() && <div className="startup-detail">{detail()}</div>}
-
-      <div className="startup-bar-track">
-        <div className="startup-bar-fill" style={{ width: `${Math.round(progress * 100)}%` }} />
-      </div>
-      <div className="startup-percent">{Math.round(progress * 100)}%</div>
-
-      {state?.error && <div className="startup-error">{state.error}</div>}
     </div>
   );
 }

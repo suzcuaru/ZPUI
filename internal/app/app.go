@@ -3,7 +3,10 @@ package app
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 	"runtime"
+	"strconv"
 
 	"zpui/internal/config"
 	"zpui/internal/database"
@@ -24,6 +27,7 @@ type App struct {
 	hidden     bool
 	skipChecks bool
 	startup    *startupState
+	pidPath    string
 }
 
 func New(cfg *config.Config, log *logger.Logger, db *database.DB, mgr *modules.Manager, upd *updater.Updater, version, exeDir string, skipChecks bool) *App {
@@ -37,6 +41,7 @@ func New(cfg *config.Config, log *logger.Logger, db *database.DB, mgr *modules.M
 		exeDir:     exeDir,
 		skipChecks: skipChecks,
 		startup:    &startupState{info: StartupInfo{Stage: StageWelcome, Progress: 0}},
+		pidPath:    filepath.Join(exeDir, "zpui.pid"),
 	}
 }
 
@@ -44,6 +49,8 @@ func (a *App) Startup(ctx context.Context) {
 	a.ctx = ctx
 	a.log.Info("app", fmt.Sprintf("ZPUI v%s started (Go %s %s/%s)", a.version, runtime.Version(), runtime.GOOS, runtime.GOARCH))
 	a.log.Info("app", fmt.Sprintf("Modules dir: %s", a.mgr.RootDir()))
+
+	_ = os.WriteFile(a.pidPath, []byte(strconv.Itoa(os.Getpid())), 0644)
 
 	if !a.skipChecks {
 		go a.runStartupSequence()
@@ -59,6 +66,7 @@ func (a *App) Startup(ctx context.Context) {
 func (a *App) Shutdown(ctx context.Context) {
 	a.log.Info("app", "Stopping all modules...")
 	a.mgr.StopAll()
+	os.Remove(a.pidPath)
 	a.log.Info("app", "Shutdown complete")
 }
 
