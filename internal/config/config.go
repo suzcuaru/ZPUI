@@ -30,7 +30,7 @@ func defaultConfig() *Config {
 		AutoStartMods:  false,
 		DisabledMods:   []string{},
 		Verbose:        false,
-		DisableUpdates: false,
+		DisableUpdates: true,
 	}
 }
 
