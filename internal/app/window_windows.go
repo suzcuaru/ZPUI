@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"os"
 
 	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
@@ -34,10 +35,10 @@ func (a *App) hideWindow() {
 }
 
 func (a *App) Quit() {
-	if a.ctx == nil {
-		return
-	}
-	wailsruntime.Quit(a.ctx)
+	a.log.Info("app", "Force quit requested")
+	a.mgr.StopAll()
+	os.Remove(a.pidPath)
+	os.Exit(0)
 }
 
 func (a *App) BeforeClose(ctx context.Context) bool {
