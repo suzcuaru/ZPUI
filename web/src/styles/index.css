@@ -292,88 +292,57 @@ input, textarea { user-select:text; -webkit-user-select:text; }
 }
 .footer-ui-btn:hover { text-decoration:underline; }
 
-/* Startup screen — polished */
+/* Startup screen — spinning rings */
 .startup-root { width:100vw; height:100vh; overflow:hidden; background:var(--bg-page); }
 .startup-overlay {
   position:relative; width:960px; height:640px; overflow:hidden;
   display:flex; align-items:center; justify-content:center;
   background:var(--bg-page);
 }
-.startup-bg-shine {
-  position:absolute; inset:0; pointer-events:none;
-  background:radial-gradient(ellipse 80% 50% at 50% 30%, var(--accent-soft) 0%, transparent 70%);
-  opacity:0.5; animation:startupPulse 3s ease-in-out infinite;
+.startup-center {
+  display:flex; flex-direction:column; align-items:center; gap:8px;
+  animation:startupFadeIn 600ms ease;
 }
-@keyframes startupPulse { 0%,100%{opacity:0.3} 50%{opacity:0.6} }
-.startup-card {
-  position:relative; display:flex; flex-direction:column; align-items:center;
-  gap:6px; width:340px; text-align:center; animation:startupFadeIn 500ms ease;
+@keyframes startupFadeIn { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+.startup-rings {
+  position:relative; width:120px; height:120px; margin-bottom:8px;
+  display:flex; align-items:center; justify-content:center;
 }
-@keyframes startupFadeIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
-.startup-logo-wrap { position:relative; width:64px; height:64px; margin-bottom:6px; display:flex; align-items:center; justify-content:center; }
-.startup-logo-ring {
-  position:absolute; inset:-4px; border-radius:50%;
-  border:2px solid var(--accent); opacity:0.3;
-  animation:startupRing 2s linear infinite;
+.startup-ring {
+  position:absolute; border-radius:50%; border:2px solid transparent;
+  border-top-color:var(--accent); border-right-color:var(--accent);
+  opacity:0.6;
 }
-@keyframes startupRing { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+.startup-ring-1 { width:120px; height:120px; animation:spinRing 1.8s linear infinite; }
+.startup-ring-2 { width:88px; height:88px; animation:spinRing 2.4s linear infinite reverse; border-top-color:#7b5cff; border-right-color:#7b5cff; border-left-color:var(--accent); opacity:0.45; }
+.startup-ring-3 { width:56px; height:56px; animation:spinRing 3s linear infinite; border-top-color:var(--accent); border-left-color:var(--accent); border-right-color:#7b5cff; opacity:0.3; }
+@keyframes spinRing { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
 .startup-logo {
-  width:56px; height:56px; border-radius:16px;
+  width:48px; height:48px; border-radius:14px;
   background:linear-gradient(135deg, var(--accent), #7b5cff);
   display:flex; align-items:center; justify-content:center;
-  font-size:24px; font-weight:800; color:#fff;
+  font-size:20px; font-weight:800; color:#fff; z-index:1;
   box-shadow:0 4px 20px rgba(79,143,247,0.35);
-  position:relative; z-index:1;
 }
 .startup-title { font-size:24px; font-weight:800; color:var(--text-primary); letter-spacing:-0.5px; }
-.startup-subtitle { font-size:11.5px; color:var(--text-tertiary); margin-bottom:10px; }
-.startup-steps { display:flex; flex-direction:column; gap:5px; width:100%; margin:4px 0; }
-.startup-step {
-  display:flex; align-items:center; gap:10px; padding:4px 10px;
-  font-size:12px; color:var(--text-tertiary);
-  opacity:0; transform:translateY(-6px); transition:all 400ms ease;
-  pointer-events:none; border-radius:8px;
+.startup-subtitle { font-size:11.5px; color:var(--text-tertiary); margin-bottom:4px; }
+.startup-stage {
+  font-size:13px; font-weight:600; color:var(--text-primary);
+  margin-top:4px; min-height:1.4em;
+  transition:opacity 400ms;
 }
-.startup-step.visible { opacity:1; transform:translateY(0); }
-.startup-step.active { color:var(--text-primary); background:var(--accent-soft); }
-.startup-step.done { color:var(--success); opacity:0.85; }
-.startup-step-icon {
-  width:24px; height:24px; border-radius:50%; flex-shrink:0;
-  display:flex; align-items:center; justify-content:center;
-  font-size:12px; font-weight:700; background:var(--bg-inset);
-  transition:all 350ms; position:relative;
-}
-.startup-step.active .startup-step-icon { background:var(--accent-soft); color:var(--accent); }
-.startup-step.done .startup-step-icon { background:var(--success-bg); color:var(--success); }
-.startup-step-glow {
-  position:absolute; inset:-3px; border-radius:50%;
-  background:var(--accent); opacity:0.2;
-  animation:startupGlow 1.2s ease-in-out infinite;
-}
-@keyframes startupGlow { 0%,100%{transform:scale(1);opacity:0.2} 50%{transform:scale(1.3);opacity:0.08} }
-.startup-step-label { font-weight:500; }
-.startup-step-detail { font-size:10px; color:var(--text-tertiary); margin-left:-2px; }
-.startup-check { animation:startupCheckIn 350ms cubic-bezier(0.4,0,0.2,1); }
-@keyframes startupCheckIn { from{transform:scale(0)} to{transform:scale(1)} }
-.startup-spin { animation:startupSpin 1.2s linear infinite; display:inline-block; }
-@keyframes startupSpin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+.startup-detail { font-size:11px; color:var(--text-tertiary); margin-top:-4px; }
 .startup-bar-track {
-  width:100%; height:4px; border-radius:3px; background:var(--bg-inset);
-  overflow:hidden; margin:8px 0 2px; position:relative;
+  width:220px; height:3px; border-radius:2px; background:var(--bg-inset);
+  overflow:hidden; margin:8px 0 2px;
 }
 .startup-bar-fill {
-  height:100%; border-radius:3px; background:linear-gradient(90deg, var(--accent), #7b5cff);
-  transition:width 600ms cubic-bezier(0.4,0,0.2,1); position:relative; overflow:hidden;
+  height:100%; border-radius:2px; background:linear-gradient(90deg, var(--accent), #7b5cff);
+  transition:width 500ms cubic-bezier(0.4,0,0.2,1);
 }
-.startup-bar-glow {
-  position:absolute; right:0; top:0; bottom:0; width:20px;
-  background:linear-gradient(90deg, transparent, rgba(255,255,255,0.4));
-  animation:startupBarShimmer 1.5s ease-in-out infinite;
-}
-@keyframes startupBarShimmer { 0%{transform:translateX(0)} 50%{transform:translateX(30px)} 100%{transform:translateX(0)} }
 .startup-percent { font-size:10px; color:var(--text-tertiary); font-family:var(--font-mono); letter-spacing:0.5px; }
 .startup-error {
   font-size:11px; color:var(--danger); margin-top:6px; padding:6px 12px;
   background:var(--danger-bg); border-radius:var(--radius-sm);
-  display:flex; align-items:center; gap:6px; max-width:100%;
+  max-width:100%;
 }

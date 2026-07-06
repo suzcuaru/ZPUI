@@ -52,6 +52,7 @@ type startupState struct {
 	completed   bool
 	restartBat  string
 	selfUpdated bool
+	modsUpdated bool
 	t0          time.Time
 }
 
@@ -79,8 +80,13 @@ func (a *App) runStartupSequence() {
 		}
 	}
 
-	a.setStage(StageInstall, "", 0.9)
-	time.Sleep(1200 * time.Millisecond)
+	if a.startup.selfUpdated || a.startup.modsUpdated {
+		a.setStage(StageInstall, "Установка...", 0.9)
+		time.Sleep(1200 * time.Millisecond)
+	} else {
+		a.setStage(StageInstall, "Готово", 0.9)
+		time.Sleep(800 * time.Millisecond)
+	}
 
 	a.ensureMinTime()
 
@@ -175,6 +181,7 @@ func (a *App) doModuleCheck() {
 	}
 
 	if len(updates) > 0 {
+		a.startup.modsUpdated = true
 		a.setStage(StageModDL, fmt.Sprintf("Обновление модулей (%d)...", len(updates)), 0.6)
 		time.Sleep(1800 * time.Millisecond)
 		for _, upd := range updates {
