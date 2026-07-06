@@ -16,6 +16,7 @@ zpui.exe
 /modules/*
 !/modules/.gitkeep
 !/modules/README.md
+!/modules/zapret/module.json
 
 # OS
 Thumbs.db

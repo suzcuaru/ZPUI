@@ -4,6 +4,7 @@ import Footer from './components/layout/Footer';
 import Toast from './components/feedback/Toast';
 import ModulesPage from './pages/ModulesPage';
 import SettingsPage from './pages/SettingsPage';
+import ZapretPage from './pages/ZapretPage';
 import StartupScreen from './components/StartupScreen';
 import { api } from './api';
 import { useT } from './i18n';
@@ -113,6 +114,9 @@ export default function App() {
     }
     if (activePage.startsWith('mod:')) {
       const id = activePage.slice(4);
+      if (id === 'zapret') {
+        return <ZapretPage showToast={showToast} />;
+      }
       const mod = modules.find(m => m.id === id);
       if (mod) {
         return (

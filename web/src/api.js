@@ -31,6 +31,7 @@ const GET_ROUTES = {
   '/api/ui/registrations': (app) => app.GetUIRegistrations(),
   '/api/verbose/logging': (app) => app.GetVerboseLogging(),
   '/api/disable-updates': (app) => app.GetDisableUpdates(),
+  '/api/modules/call': (app, b) => app.CallModule(b.id || '', b.command || ''),
 };
 
 const POST_ROUTES = {
@@ -47,6 +48,7 @@ const POST_ROUTES = {
   '/api/modules/data/delete': (app, b) => app.DeleteModuleData(b.module_id || '', b.key || ''),
   '/api/verbose/logging': (app, b) => app.SetVerboseLogging(b.verbose === true),
   '/api/disable-updates': (app, b) => app.SetDisableUpdates(b.disabled === true),
+  '/api/modules/call': (app, b) => app.CallModule(b.id || '', b.command || ''),
 };
 
 export async function api(method, path, body) {

@@ -3,6 +3,7 @@ package app
 import (
 	"fmt"
 	"os/exec"
+	"strings"
 
 	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
@@ -87,4 +88,28 @@ func (a *App) OpenExternal(url string) map[string]interface{} {
 		wailsruntime.BrowserOpenURL(a.ctx, url)
 	}
 	return okResp(nil)
+}
+
+func (a *App) CallModule(id string, command string) map[string]interface{} {
+	for _, dm := range a.mgr.Discover() {
+		if dm.Manifest.ID != id {
+			continue
+		}
+		if !dm.EntryOK {
+			return errResp("entry exe не найден")
+		}
+		entryPath := dm.Manifest.EntryPath()
+		cmd := exec.Command(entryPath, strings.Fields(command)...)
+		cmd.Dir = dm.Dir
+		out, err := cmd.Output()
+		if err != nil {
+			return errResp(fmt.Sprintf("module %q command error: %v", id, err))
+		}
+		return okResp(map[string]interface{}{
+			"output": strings.TrimSpace(string(out)),
+			"id":     id,
+			"cmd":    command,
+		})
+	}
+	return errResp(fmt.Sprintf("module %q not found", id))
 }

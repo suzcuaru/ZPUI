@@ -37,5 +37,15 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
+echo [BUILD] Module: zapret...
+go build -ldflags="-s -w" -trimpath -o build\bin\zapret.exe .\cmd\zapret\
+if %errorlevel% neq 0 (
+    echo [BUILD] Zapret module build error
+    exit /b 1
+)
+if not exist "modules\zapret" mkdir "modules\zapret"
+copy /y "build\bin\zapret.exe" "modules\zapret\zapret.exe" >nul
+echo [BUILD] Module deployed to modules\zapret\
+
 echo [BUILD] Done: build\bin\%APP_NAME%.exe
 exit /b 0

@@ -411,3 +411,28 @@ input, textarea { user-select:text; -webkit-user-select:text; }
   background:var(--danger-bg); border-radius:var(--radius-sm);
   max-width:100%; animation:startupFadeIn 300ms ease;
 }
+
+/* Zapret page */
+.zapret-info {
+  display:flex; align-items:center; gap:8px; margin:4px 0;
+  font-size:12px;
+}
+.zapret-label { color:var(--text-secondary); min-width:60px; }
+.zapret-value { color:var(--text-primary); font-family:var(--font-mono); }
+.zapret-badge {
+  display:inline-block; padding:1px 10px; border-radius:10px;
+  font-size:11px; font-weight:600;
+}
+.badge-ok { background:var(--success-bg); color:var(--success); }
+.badge-warn { background:var(--warning-bg); color:var(--warning); }
+.badge-off { background:var(--bg-inset); color:var(--text-tertiary); }
+.zapret-actions {
+  display:flex; flex-wrap:wrap; gap:6px; margin-top:6px;
+}
+.zapret-actions .btn { font-size:12px; padding:5px 14px; }
+.zapret-select {
+  width:100%; margin-top:4px; padding:5px 8px; font-size:12px;
+  background:var(--bg-inset); color:var(--text-primary);
+  border:1px solid var(--border); border-radius:var(--radius-sm);
+  font-family:var(--font-mono);
+}
