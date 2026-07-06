@@ -122,8 +122,8 @@ func main() {
 		Title:    "ZPUI",
 		Width:    960,
 		Height:   640,
-		MinWidth: 800,
-		MinHeight: 600,
+		MinWidth: 960,
+		MinHeight: 640,
 		AssetServer: &assetserver.Options{
 			Assets: distFS,
 		},

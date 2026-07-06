@@ -27,12 +27,12 @@ const (
 )
 
 type StartupInfo struct {
-	Stage      StartupStage      `json:"stage"`
-	Sub        string            `json:"sub,omitempty"`
-	Progress   float64           `json:"progress"`
-	Error      string            `json:"error,omitempty"`
-	SelfUpdate *UpdateInfo       `json:"self_update,omitempty"`
-	ModUpdates []ModUpdateInfo   `json:"mod_updates,omitempty"`
+	Stage      StartupStage    `json:"stage"`
+	Sub        string          `json:"sub,omitempty"`
+	Progress   float64         `json:"progress"`
+	Error      string          `json:"error,omitempty"`
+	SelfUpdate *UpdateInfo     `json:"self_update,omitempty"`
+	ModUpdates []ModUpdateInfo `json:"mod_updates,omitempty"`
 }
 
 type UpdateInfo struct {
@@ -52,17 +52,21 @@ type startupState struct {
 	completed   bool
 	restartBat  string
 	selfUpdated bool
+	t0          time.Time
 }
 
 func (a *App) runStartupSequence() {
 	a.startup.set(a.startup.info)
+	a.startup.mu.Lock()
+	a.startup.t0 = time.Now()
+	a.startup.mu.Unlock()
 
 	a.setStage(StageWelcome, "", 0)
-	minSleep(2500)
+	time.Sleep(2800 * time.Millisecond)
 
 	if !a.doUpdateCheck() {
 		a.setStage(StageModCheck, "", 0.35)
-		minSleep(2000)
+		time.Sleep(2200 * time.Millisecond)
 		a.doModuleCheck()
 	}
 
@@ -76,12 +80,25 @@ func (a *App) runStartupSequence() {
 	}
 
 	a.setStage(StageInstall, "", 0.9)
-	minSleep(1000)
+	time.Sleep(1200 * time.Millisecond)
+
+	a.ensureMinTime()
 
 	a.startup.mu.Lock()
 	a.startup.completed = true
 	a.startup.mu.Unlock()
 	a.setStage(StageDone, "", 1.0)
+}
+
+func (a *App) ensureMinTime() {
+	a.startup.mu.Lock()
+	t0 := a.startup.t0
+	a.startup.mu.Unlock()
+	elapsed := time.Since(t0)
+	minTotal := 10 * time.Second
+	if elapsed < minTotal {
+		time.Sleep(minTotal - elapsed)
+	}
 }
 
 func (a *App) setStage(stage StartupStage, sub string, progress float64) {
@@ -92,18 +109,15 @@ func (a *App) setStage(stage StartupStage, sub string, progress float64) {
 	})
 }
 
-func minSleep(d time.Duration) {
-	time.Sleep(d)
-}
-
 func (a *App) doUpdateCheck() (updated bool) {
 	a.setStage(StageSelfCheck, "", 0.15)
 	t0 := time.Now()
 
 	release, err := a.updater.CheckLatest(context.Background())
 	elapsed := time.Since(t0)
-	if elapsed < 1800*time.Millisecond {
-		time.Sleep(1800*time.Millisecond - elapsed)
+	minDuration := 2200 * time.Millisecond
+	if elapsed < minDuration {
+		time.Sleep(minDuration - elapsed)
 	}
 
 	if err != nil {
@@ -125,7 +139,7 @@ func (a *App) doUpdateCheck() (updated bool) {
 	if err := a.updater.Download(context.Background(), asset.URL, dlPath); err != nil {
 		a.log.Error("startup", fmt.Sprintf("self-update download: %v", err))
 		a.setStage(StageSelfCheck, "Ошибка загрузки", 0.35)
-		minSleep(1500)
+		time.Sleep(1500 * time.Millisecond)
 		return false
 	}
 
@@ -138,7 +152,7 @@ func (a *App) doUpdateCheck() (updated bool) {
 	a.startup.restartBat = batPath
 	a.startup.selfUpdated = true
 	a.setStage(StageInstall, "Установка обновления...", 0.7)
-	minSleep(1200)
+	time.Sleep(1200 * time.Millisecond)
 	return true
 }
 
@@ -162,7 +176,7 @@ func (a *App) doModuleCheck() {
 
 	if len(updates) > 0 {
 		a.setStage(StageModDL, fmt.Sprintf("Обновление модулей (%d)...", len(updates)), 0.6)
-		minSleep(1500)
+		time.Sleep(1800 * time.Millisecond)
 		for _, upd := range updates {
 			for _, dm := range discovered {
 				if dm.Manifest.ID == upd.ID {
@@ -174,7 +188,7 @@ func (a *App) doModuleCheck() {
 	}
 
 	a.setStage(StageInstall, "", 0.85)
-	minSleep(1000)
+	time.Sleep(1000 * time.Millisecond)
 
 	if a.cfg.AutoStartMods {
 		a.mgr.AutoStartAll(modules.Discover(a.mgr.RootDir()))

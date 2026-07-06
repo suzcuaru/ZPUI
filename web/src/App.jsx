@@ -10,6 +10,9 @@ import { useT } from './i18n';
 import { usePolling } from './hooks/usePolling';
 import './styles/index.css';
 
+const BASE_W = 960;
+const BASE_H = 640;
+
 export default function App() {
   const { t } = useT();
   const [activePage, setActivePage] = useState('modules');
@@ -20,7 +23,20 @@ export default function App() {
   const [theme, setTheme] = useState('dark');
   const [startupState, setStartupState] = useState(null);
   const [uiRegs, setUiRegs] = useState([]);
+  const [scale, setScale] = useState(1);
   const themeInitRef = useRef(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      const s = Math.min(w / BASE_W, h / BASE_H);
+      setScale(Math.max(1, s));
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const showToast = useCallback((msg, type) => {
     const id = Date.now() + Math.random();
@@ -109,12 +125,18 @@ export default function App() {
     return <ModulesPage modules={modules} showToast={showToast} onChange={loadModules} />;
   };
 
+  const rootStyle = scale > 1 ? { zoom: scale } : {};
+
   if (startupState && startupState.stage && startupState.stage !== 'done') {
-    return <StartupScreen state={startupState} />;
+    return (
+      <div className="startup-root" style={rootStyle}>
+        <StartupScreen state={startupState} />
+      </div>
+    );
   }
 
   return (
-    <div className="app">
+    <div className="app" style={rootStyle}>
       <Sidebar
         activePage={activePage}
         onNavigate={setActivePage}

@@ -37,7 +37,7 @@ popd
 echo [BUILD] Бэкенд (%PLATFORM%)...
 set GOARCH=amd64
 set GOOS=windows
-wails build -platform %PLATFORM% %DEVTOOLS% -o "%BUILD_DIR%\%APP_NAME%.exe"
+wails build -platform %PLATFORM% %DEVTOOLS% -o "%CD%\%BUILD_DIR%\%APP_NAME%.exe"
 if %errorlevel% neq 0 (
     echo [BUILD] Ошибка сборки
     exit /b 1
