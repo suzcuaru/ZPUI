@@ -120,10 +120,10 @@ func main() {
 	logMgr.Info("main", "Starting Wails...")
 	err = wails.Run(&options.App{
 		Title:    "ZPUI",
-		Width:    960,
-		Height:   640,
-		MinWidth: 960,
-		MinHeight: 640,
+		Width:    1280,
+		Height:   720,
+		MinWidth: 1280,
+		MinHeight: 720,
 		AssetServer: &assetserver.Options{
 			Assets: distFS,
 		},

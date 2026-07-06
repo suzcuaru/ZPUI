@@ -10,8 +10,9 @@ import { useT } from './i18n';
 import { usePolling } from './hooks/usePolling';
 import './styles/index.css';
 
-const BASE_W = 960;
-const BASE_H = 640;
+const BASE_W = 1280;
+const BASE_H = 720;
+const MAX_SCALE = 1.25;
 
 export default function App() {
   const { t } = useT();
@@ -30,8 +31,8 @@ export default function App() {
     const handleResize = () => {
       const w = window.innerWidth;
       const h = window.innerHeight;
-      const s = Math.min(w / BASE_W, h / BASE_H);
-      setScale(Math.max(1, s));
+      const raw = Math.min(w / BASE_W, h / BASE_H);
+      setScale(Math.max(1, Math.min(raw, MAX_SCALE)));
     };
     handleResize();
     window.addEventListener('resize', handleResize);
@@ -125,18 +126,19 @@ export default function App() {
     return <ModulesPage modules={modules} showToast={showToast} onChange={loadModules} />;
   };
 
-  const rootStyle = scale > 1 ? { zoom: scale } : {};
+  const scaled = scale > 1;
+  const s = scaled ? scale : 1;
 
   if (startupState && startupState.stage && startupState.stage !== 'done') {
     return (
-      <div className="startup-root" style={rootStyle}>
+      <div className="startup-root" style={{ transform: `scale(${s})` }}>
         <StartupScreen state={startupState} />
       </div>
     );
   }
 
   return (
-    <div className="app" style={rootStyle}>
+    <div className="app" style={{ transform: scaled ? `scale(${s})` : undefined }}>
       <Sidebar
         activePage={activePage}
         onNavigate={setActivePage}
