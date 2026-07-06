@@ -10,10 +10,6 @@ import { useT } from './i18n';
 import { usePolling } from './hooks/usePolling';
 import './styles/index.css';
 
-const BASE_W = 1280;
-const BASE_H = 720;
-const MAX_SCALE = 1.25;
-
 export default function App() {
   const { t } = useT();
   const [activePage, setActivePage] = useState('modules');
@@ -24,20 +20,7 @@ export default function App() {
   const [theme, setTheme] = useState('dark');
   const [startupState, setStartupState] = useState(null);
   const [uiRegs, setUiRegs] = useState([]);
-  const [scale, setScale] = useState(1);
   const themeInitRef = useRef(false);
-
-  useEffect(() => {
-    const handleResize = () => {
-      const w = window.innerWidth;
-      const h = window.innerHeight;
-      const raw = Math.min(w / BASE_W, h / BASE_H);
-      setScale(Math.max(1, Math.min(raw, MAX_SCALE)));
-    };
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
 
   const showToast = useCallback((msg, type) => {
     const id = Date.now() + Math.random();
@@ -126,19 +109,12 @@ export default function App() {
     return <ModulesPage modules={modules} showToast={showToast} onChange={loadModules} />;
   };
 
-  const scaled = scale > 1;
-  const s = scaled ? scale : 1;
-
   if (startupState && startupState.stage && startupState.stage !== 'done') {
-    return (
-      <div className="startup-root" style={{ transform: `scale(${s})` }}>
-        <StartupScreen state={startupState} />
-      </div>
-    );
+    return <StartupScreen state={startupState} />;
   }
 
   return (
-    <div className="app" style={{ transform: scaled ? `scale(${s})` : undefined }}>
+    <div className="app">
       <Sidebar
         activePage={activePage}
         onNavigate={setActivePage}

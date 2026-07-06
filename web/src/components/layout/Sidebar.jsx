@@ -13,6 +13,14 @@ export default function Sidebar({ activePage, onNavigate, modules, onToggleTheme
 
   return (
     <aside className="sidebar">
+      <div className="sidebar-logo">
+        <svg viewBox="0 0 256 256" width="18" height="18">
+          <path d="M128 48 L204 80 L204 140 C204 182 172 214 128 234 C84 214 52 182 52 140 L52 80 Z"
+                fill="none" stroke="currentColor" strokeWidth="3"/>
+          <path d="M108 116 L148 116 L108 164 L148 164"
+                fill="none" stroke="currentColor" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </div>
       <nav className="sidebar-nav">
         <button
           className={'sidebar-nav-item' + (activePage === 'modules' ? ' active' : '')}

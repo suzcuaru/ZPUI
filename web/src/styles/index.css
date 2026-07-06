@@ -62,10 +62,9 @@
 *,*::before,*::after { margin:0; padding:0; box-sizing:border-box; }
 html { height:100%; -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; }
 body {
-  background:var(--bg-page); width:100vw; height:100vh; overflow:hidden;
+  background:var(--bg-page); height:100vh; overflow:hidden;
   font-family:var(--font); font-size:12.5px; line-height:1.45; color:var(--text-primary);
   user-select:none; -webkit-user-select:none;
-  display:flex; align-items:center; justify-content:center;
 }
 input, textarea { user-select:text; -webkit-user-select:text; }
 ::-webkit-scrollbar { width:6px; height:6px; }
@@ -73,10 +72,7 @@ input, textarea { user-select:text; -webkit-user-select:text; }
 ::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
 ::-webkit-scrollbar-thumb:hover { background:var(--text-tertiary); }
 
-.app {
-  display:flex; width:1280px; height:720px; overflow:hidden; flex-shrink:0;
-  background:var(--bg-page); transform-origin:center center;
-}
+.app { display:flex; width:100vw; height:100vh; overflow:hidden; background:var(--bg-page); }
 .app-body { flex:1; display:flex; flex-direction:column; min-width:0; overflow:hidden; }
 .main-area {
   flex:1; display:flex; flex-direction:column; min-height:0; overflow:hidden;
@@ -298,13 +294,12 @@ input, textarea { user-select:text; -webkit-user-select:text; }
 
 /* Startup screen — spinning rings */
 .startup-root {
-  width:1280px; height:720px; overflow:hidden; flex-shrink:0;
-  background:var(--bg-page); transform-origin:center center;
+  width:100vw; height:100vh; overflow:hidden; background:var(--bg-page);
+  display:flex; align-items:center; justify-content:center;
 }
 .startup-overlay {
-  width:1280px; height:720px; overflow:hidden;
-  display:flex; align-items:center; justify-content:center;
-  background:var(--bg-page);
+  display:flex; flex-direction:column; align-items:center; gap:8px;
+  animation:startupFadeIn 600ms ease;
 }
 .startup-center {
   display:flex; flex-direction:column; align-items:center; gap:8px;
