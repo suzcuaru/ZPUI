@@ -55,111 +55,114 @@ type startupState struct {
 }
 
 func (a *App) runStartupSequence() {
-	a.startup.set(a.startup.info) // ensure initial state
+	a.startup.set(a.startup.info)
 
-	time.Sleep(1500 * time.Millisecond)
+	a.setStage(StageWelcome, "", 0)
+	minSleep(2500)
 
-	release, err := a.updater.CheckLatest(context.Background())
-	if err != nil {
-		a.log.Warn("startup", fmt.Sprintf("self-update check: %v", err))
-		a.startup.update(func(s *StartupInfo) {
-			s.Stage = StageModCheck
-			s.Progress = 0.35
-			s.Sub = ""
-		})
-	} else if release != nil && a.updater.NeedsUpdate(release) {
-		a.startup.update(func(s *StartupInfo) {
-			s.Stage = StageSelfDL
-			s.Progress = 0.2
-			s.SelfUpdate = &UpdateInfo{Version: release.TagName, Body: truncate(release.Body, 200)}
-		})
-		if asset := a.updater.FindAsset(release, ".exe"); asset != nil {
-			dlPath := filepath.Join(a.exeDir, "zpui.exe.new")
-			if err := a.updater.Download(context.Background(), asset.URL, dlPath); err != nil {
-				a.log.Error("startup", fmt.Sprintf("self-update download: %v", err))
-				a.startup.update(func(s *StartupInfo) { s.Error = "Ошибка загрузки обновления" })
-			} else {
-				batPath, err := a.updater.PrepareSelfUpdate(filepath.Join(a.exeDir, "zpui.exe"), dlPath)
-				if err != nil {
-					a.log.Error("startup", fmt.Sprintf("prepare update: %v", err))
-				} else {
-					a.startup.update(func(s *StartupInfo) {
-						s.Stage = StageInstall
-						s.Progress = 0.65
-						s.Sub = "Установка обновления..."
-					})
-					a.startup.restartBat = batPath
-					a.startup.selfUpdated = true
-				}
-			}
-		}
-	} else {
-		a.startup.update(func(s *StartupInfo) {
-			s.Stage = StageModCheck
-			s.Progress = 0.35
-		})
-	}
-
-	if !a.startup.selfUpdated {
-		a.runModuleCheck()
+	if !a.doUpdateCheck() {
+		a.setStage(StageModCheck, "", 0.35)
+		minSleep(2000)
+		a.doModuleCheck()
 	}
 
 	if a.startup.selfUpdated {
-		a.startup.update(func(s *StartupInfo) {
-			s.Stage = StageRestart
-			s.Progress = 1.0
-			s.Sub = "Перезапуск..."
-		})
-		time.Sleep(500 * time.Millisecond)
+		a.setStage(StageRestart, "Перезапуск...", 1.0)
+		time.Sleep(800 * time.Millisecond)
 		if a.startup.restartBat != "" {
 			updater.RunBat(a.startup.restartBat)
 			os.Exit(0)
 		}
 	}
 
+	a.setStage(StageInstall, "", 0.9)
+	minSleep(1000)
+
 	a.startup.mu.Lock()
 	a.startup.completed = true
 	a.startup.mu.Unlock()
+	a.setStage(StageDone, "", 1.0)
+}
+
+func (a *App) setStage(stage StartupStage, sub string, progress float64) {
 	a.startup.update(func(s *StartupInfo) {
-		s.Stage = StageDone
-		s.Progress = 1.0
-		s.Sub = ""
+		s.Stage = stage
+		s.Sub = sub
+		s.Progress = progress
 	})
 }
 
-func (a *App) runModuleCheck() {
+func minSleep(d time.Duration) {
+	time.Sleep(d)
+}
+
+func (a *App) doUpdateCheck() (updated bool) {
+	a.setStage(StageSelfCheck, "", 0.15)
+	t0 := time.Now()
+
+	release, err := a.updater.CheckLatest(context.Background())
+	elapsed := time.Since(t0)
+	if elapsed < 1800*time.Millisecond {
+		time.Sleep(1800*time.Millisecond - elapsed)
+	}
+
+	if err != nil {
+		a.log.Warn("startup", fmt.Sprintf("self-update check: %v", err))
+		return false
+	}
+
+	if release == nil || !a.updater.NeedsUpdate(release) {
+		return false
+	}
+
+	a.setStage(StageSelfDL, release.TagName, 0.35)
+	asset := a.updater.FindAsset(release, ".exe")
+	if asset == nil {
+		return false
+	}
+
+	dlPath := filepath.Join(a.exeDir, "zpui.exe.new")
+	if err := a.updater.Download(context.Background(), asset.URL, dlPath); err != nil {
+		a.log.Error("startup", fmt.Sprintf("self-update download: %v", err))
+		a.setStage(StageSelfCheck, "Ошибка загрузки", 0.35)
+		minSleep(1500)
+		return false
+	}
+
+	batPath, err := a.updater.PrepareSelfUpdate(filepath.Join(a.exeDir, "zpui.exe"), dlPath)
+	if err != nil {
+		a.log.Error("startup", fmt.Sprintf("prepare update: %v", err))
+		return false
+	}
+
+	a.startup.restartBat = batPath
+	a.startup.selfUpdated = true
+	a.setStage(StageInstall, "Установка обновления...", 0.7)
+	minSleep(1200)
+	return true
+}
+
+func (a *App) doModuleCheck() {
 	discovered := modules.Discover(a.mgr.RootDir())
 	var updates []ModUpdateInfo
 
 	for _, dm := range discovered {
-		if !dm.EntryOK {
-			continue
-		}
-		if dm.Manifest.UpdateURL == "" {
+		if !dm.EntryOK || dm.Manifest.UpdateURL == "" {
 			continue
 		}
 		rel, err := a.updater.CheckLatest(context.Background())
 		if err != nil {
-			a.log.Warn("startup", fmt.Sprintf("module %s update check: %v", dm.Manifest.ID, err))
+			a.log.Warn("startup", fmt.Sprintf("module %s update: %v", dm.Manifest.ID, err))
 			continue
 		}
 		if rel != nil && a.updater.NeedsUpdate(rel) {
-			updates = append(updates, ModUpdateInfo{
-				ID:      dm.Manifest.ID,
-				Name:    dm.Manifest.Name,
-				Version: rel.TagName,
-			})
+			updates = append(updates, ModUpdateInfo{ID: dm.Manifest.ID, Name: dm.Manifest.Name, Version: rel.TagName})
 		}
 	}
 
 	if len(updates) > 0 {
-		a.startup.update(func(s *StartupInfo) {
-			s.Stage = StageModDL
-			s.Progress = 0.65
-			s.ModUpdates = updates
-			s.Sub = fmt.Sprintf("Обновление модулей (%d)...", len(updates))
-		})
-
+		a.setStage(StageModDL, fmt.Sprintf("Обновление модулей (%d)...", len(updates)), 0.6)
+		minSleep(1500)
 		for _, upd := range updates {
 			for _, dm := range discovered {
 				if dm.Manifest.ID == upd.ID {
@@ -170,15 +173,11 @@ func (a *App) runModuleCheck() {
 		}
 	}
 
-	a.startup.update(func(s *StartupInfo) {
-		s.Stage = StageInstall
-		s.Progress = 0.85
-		s.Sub = ""
-	})
+	a.setStage(StageInstall, "", 0.85)
+	minSleep(1000)
 
 	if a.cfg.AutoStartMods {
-		discovered = modules.Discover(a.mgr.RootDir())
-		a.mgr.AutoStartAll(discovered)
+		a.mgr.AutoStartAll(modules.Discover(a.mgr.RootDir()))
 	}
 }
 
@@ -278,13 +277,6 @@ func (a *App) collectUIRegistrations() []UIRegistration {
 		}
 	}
 	return out
-}
-
-func truncate(s string, max int) string {
-	if len(s) > max {
-		return s[:max] + "..."
-	}
-	return s
 }
 
 func (s *startupState) update(fn func(*StartupInfo)) {
