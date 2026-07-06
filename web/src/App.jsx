@@ -10,6 +10,10 @@ import { useT } from './i18n';
 import { usePolling } from './hooks/usePolling';
 import './styles/index.css';
 
+const BASE_W = 1280;
+const BASE_H = 720;
+const MAX_ZOOM = 1.15;
+
 export default function App() {
   const { t } = useT();
   const [activePage, setActivePage] = useState('modules');
@@ -20,7 +24,20 @@ export default function App() {
   const [theme, setTheme] = useState('dark');
   const [startupState, setStartupState] = useState(null);
   const [uiRegs, setUiRegs] = useState([]);
+  const [zoom, setZoom] = useState(1);
   const themeInitRef = useRef(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      const raw = Math.min(w / BASE_W, h / BASE_H);
+      setZoom(Math.max(1, Math.min(raw, MAX_ZOOM)));
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const showToast = useCallback((msg, type) => {
     const id = Date.now() + Math.random();
@@ -110,11 +127,15 @@ export default function App() {
   };
 
   if (startupState && startupState.stage && startupState.stage !== 'done') {
-    return <StartupScreen state={startupState} />;
+    return (
+      <div className="startup-root" style={zoom > 1 ? { zoom } : undefined}>
+        <StartupScreen state={startupState} />
+      </div>
+    );
   }
 
   return (
-    <div className="app">
+    <div className="app" style={zoom > 1 ? { zoom } : undefined}>
       <Sidebar
         activePage={activePage}
         onNavigate={setActivePage}

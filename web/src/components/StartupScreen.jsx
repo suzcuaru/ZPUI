@@ -27,7 +27,7 @@ export default function StartupScreen({ state }) {
   const label = STAGE_LABELS[stage] ? t(STAGE_LABELS[stage]) : '';
 
   return (
-    <div className="startup-overlay">
+    <div className="startup-center">
       <div className="startup-rings">
         <div className="startup-ring startup-ring-1" />
         <div className="startup-ring startup-ring-2" />

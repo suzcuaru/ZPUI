@@ -297,7 +297,7 @@ input, textarea { user-select:text; -webkit-user-select:text; }
   width:100vw; height:100vh; overflow:hidden; background:var(--bg-page);
   display:flex; align-items:center; justify-content:center;
 }
-.startup-overlay {
+.startup-center {
   display:flex; flex-direction:column; align-items:center; gap:8px;
   animation:startupFadeIn 600ms ease;
 }
