@@ -54,20 +54,10 @@ func (c *Checker) checkOne(t BulkTarget) BulkResult {
 	direct := c.Check(t.URL)
 	latency := time.Since(start).Milliseconds()
 
-	blocked := direct.Verdict != VerdictOK
-	method := "direct"
-
-	var bypassWorks bool
-	if blocked && c.proxyAddr != "" {
-		proxyCheck := c.CheckViaProxy(t.URL)
-		bypassWorks = proxyCheck != nil && proxyCheck.Verdict == VerdictOK
-		method = "proxy"
-	}
-
-	ok := !blocked || bypassWorks
+	ok := direct.Verdict == VerdictOK
 
 	reason := ""
-	if blocked && !bypassWorks {
+	if !ok {
 		reason = direct.Verdict
 		if len(direct.Notes) > 0 {
 			reason = direct.Notes[0]
@@ -78,11 +68,9 @@ func (c *Checker) checkOne(t BulkTarget) BulkResult {
 		Name:      t.Name,
 		URL:       t.URL,
 		OK:        ok,
-		Blocked:   blocked,
-		Bypassed:  bypassWorks,
+		Blocked:   !ok,
 		Verdict:   direct.Verdict,
 		LatencyMs: latency,
 		Reason:    reason,
-		Method:    method,
 	}
 }
