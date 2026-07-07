@@ -58,7 +58,7 @@ func (c *Checker) checkOne(t BulkTarget) BulkResult {
 	method := "direct"
 
 	var bypassWorks bool
-	if c.proxyAddr != "" {
+	if blocked && c.proxyAddr != "" {
 		proxyCheck := c.CheckViaProxy(t.URL)
 		bypassWorks = proxyCheck != nil && proxyCheck.Verdict == VerdictOK
 		method = "proxy"
@@ -67,7 +67,7 @@ func (c *Checker) checkOne(t BulkTarget) BulkResult {
 	ok := !blocked || bypassWorks
 
 	reason := ""
-	if blocked {
+	if blocked && !bypassWorks {
 		reason = direct.Verdict
 		if len(direct.Notes) > 0 {
 			reason = direct.Notes[0]

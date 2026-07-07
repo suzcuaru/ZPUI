@@ -12,14 +12,9 @@ type LayerResult struct {
 }
 
 type CheckResult struct {
-	URL        string
-	Host       string
-	DNS        LayerResult
-	DNSDoH     LayerResult
-	DNSMismatch bool
-	TCP        LayerResult
-	TLS        LayerResult
-	HTTP       LayerResult
+	URL     string
+	Host    string
+	HTTP    LayerResult
 
 	Verdict    string
 	Confidence string
@@ -49,14 +44,12 @@ type FullReport struct {
 }
 
 const (
-	VerdictOK        = "OK"
-	VerdictDNSBlock  = "DNS_BLOCK"
-	VerdictTCPReset  = "TCP_RESET"
-	VerdictTLSBlock  = "TLS_BLOCK"
-	VerdictHTTPStub  = "HTTP_STUB"
-	VerdictTimeout   = "TIMEOUT"
-	VerdictDown      = "DOWN"
-	VerdictUnknown   = "UNKNOWN"
+	VerdictOK       = "OK"
+	VerdictTCPReset = "TCP_RESET"
+	VerdictHTTPStub = "HTTP_STUB"
+	VerdictTimeout  = "TIMEOUT"
+	VerdictDown     = "DOWN"
+	VerdictUnknown  = "UNKNOWN"
 
 	ConfHigh   = "HIGH"
 	ConfMedium = "MEDIUM"

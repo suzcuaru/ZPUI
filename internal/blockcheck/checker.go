@@ -9,21 +9,20 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"os"
 	"strings"
 	"time"
 )
 
 type Checker struct {
-	timeout     time.Duration
-	dohClient   *http.Client
-	httpClient  *http.Client
-	proxyAddr   string
+	timeout    time.Duration
+	dohClient  *http.Client
+	httpClient *http.Client
+	proxyAddr  string
 }
 
 func NewChecker(timeoutSec int, proxyAddr string) *Checker {
 	if timeoutSec <= 0 {
-		timeoutSec = 5
+		timeoutSec = 10
 	}
 	t := time.Duration(timeoutSec) * time.Second
 
@@ -34,21 +33,29 @@ func NewChecker(timeoutSec int, proxyAddr string) *Checker {
 	}
 
 	c := &Checker{
-		timeout:   t,
-		proxyAddr: proxyAddr,
-		dohClient: &http.Client{Timeout: t, Transport: tr},
+		timeout:    t,
+		proxyAddr:  proxyAddr,
+		dohClient:  &http.Client{Timeout: t, Transport: tr},
+		httpClient: &http.Client{
+			Timeout:   t,
+			Transport: tr,
+			CheckRedirect: func(req *http.Request, via []*http.Request) error {
+				if len(via) >= 5 {
+					return fmt.Errorf("too many redirects")
+				}
+				return nil
+			},
+		},
 	}
-
-	c.httpClient = &http.Client{Timeout: t, Transport: tr, CheckRedirect: func(req *http.Request, via []*http.Request) error {
-		return fmt.Errorf("redirects disabled")
-	}}
 
 	return c
 }
 
+// Check does a simple HTTP GET to the URL (following redirects).
+// If HTTPS fails (TLS blocked by DPI), falls back to plain HTTP.
+// A resource is considered OK if HTTP status < 400 and response is not a stub page.
 func (c *Checker) Check(rawURL string) CheckResult {
-	parsed, host, fullURL := parseURL(rawURL)
-	_ = parsed
+	_, host, fullURL := parseURL(rawURL)
 	result := CheckResult{
 		URL:  rawURL,
 		Host: host,
@@ -60,27 +67,15 @@ func (c *Checker) Check(rawURL string) CheckResult {
 		return result
 	}
 
-	c.checkDNS(host, &result)
+	c.checkHTTP(fullURL, host, &result)
 
-	port := "443"
-	if strings.HasPrefix(fullURL, "http://") {
-		port = "80"
-	}
-
-	if result.DNS.Ok || result.DNSDoH.Ok {
-		ip := pickIP(result.DNS.IPs, result.DNSDoH.IPs)
-		if ip != "" {
-			c.checkTCP(ip, port, &result)
-			if result.TCP.Ok {
-				if port == "443" {
-					c.checkTLS(host, ip, &result)
-					if result.TLS.Ok {
-						c.checkHTTP(fullURL, host, &result, false)
-					}
-				} else {
-					c.checkHTTP(fullURL, host, &result, false)
-				}
-			}
+	if !result.HTTP.Ok && isTLSFailure(result.HTTP.Error) && strings.HasPrefix(fullURL, "https://") {
+		httpURL := "http://" + strings.TrimPrefix(fullURL, "https://")
+		var httpResult CheckResult
+		c.checkHTTP(httpURL, host, &httpResult)
+		if httpResult.HTTP.Ok {
+			result.HTTP = httpResult.HTTP
+			result.Notes = append(result.Notes, "HTTPS заблокирован (TLS), но HTTP работает")
 		}
 	}
 
@@ -88,13 +83,26 @@ func (c *Checker) Check(rawURL string) CheckResult {
 	return result
 }
 
+func isTLSFailure(err string) bool {
+	if err == "" {
+		return false
+	}
+	lower := strings.ToLower(err)
+	return strings.Contains(lower, "tls") ||
+		strings.Contains(lower, "handshake") ||
+		strings.Contains(lower, "certificate") ||
+		strings.Contains(lower, "ssl") ||
+		strings.Contains(lower, "eof") ||
+		strings.Contains(lower, "reset") ||
+		strings.Contains(lower, "connection_reset")
+}
+
 func (c *Checker) CheckViaProxy(rawURL string) *CheckResult {
 	if c.proxyAddr == "" {
 		return nil
 	}
 
-	parsed, host, fullURL := parseURL(rawURL)
-	_ = parsed
+	_, host, fullURL := parseURL(rawURL)
 	if fullURL == "" {
 		return nil
 	}
@@ -112,14 +120,14 @@ func (c *Checker) CheckViaProxy(rawURL string) *CheckResult {
 	}
 
 	proxyTransport := &http.Transport{
-		DialContext: socksDialer,
+		DialContext:     socksDialer,
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
 	proxyClient := &http.Client{
 		Timeout:   c.timeout,
 		Transport: proxyTransport,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			if len(via) >= 3 {
+			if len(via) >= 5 {
 				return fmt.Errorf("too many redirects")
 			}
 			return nil
@@ -141,7 +149,7 @@ func (c *Checker) CheckViaProxy(rawURL string) *CheckResult {
 	defer resp.Body.Close()
 	body, _ := io.ReadAll(io.LimitReader(resp.Body, 64*1024))
 
-	result.HTTP.Ok = resp.StatusCode < 500
+	result.HTTP.Ok = resp.StatusCode < 400
 	result.HTTP.Status = resp.StatusCode
 	result.HTTP.TimeMs = elapsed
 	result.HTTP.StubPage = detectStubPage(body)
@@ -159,110 +167,7 @@ func (c *Checker) CheckViaProxy(rawURL string) *CheckResult {
 	return result
 }
 
-func (c *Checker) checkDNS(host string, result *CheckResult) {
-	sysStart := time.Now()
-	sysIPs, err := net.LookupIP(host)
-	result.DNS.TimeMs = time.Since(sysStart).Seconds() * 1000
-	if err != nil {
-		result.DNS.Ok = false
-		result.DNS.Error = err.Error()
-	} else {
-		result.DNS.IPs = ipStrings(sysIPs)
-		result.DNS.Ok = len(result.DNS.IPs) > 0
-	}
-
-	dohIPs, err := c.dohResolve(host)
-	if err != nil {
-		result.DNSDoH.Ok = false
-		result.DNSDoH.Error = err.Error()
-	} else {
-		result.DNSDoH.IPs = dohIPs
-		result.DNSDoH.Ok = len(dohIPs) > 0
-	}
-
-	result.DNSMismatch = isDNSMismatch(result.DNS.IPs, result.DNSDoH.IPs)
-}
-
-func (c *Checker) dohResolve(host string) ([]string, error) {
-	req, _ := http.NewRequest("GET", "https://cloudflare-dns.com/dns-query?name="+url.QueryEscape(host)+"&type=A", nil)
-	req.Header.Set("Accept", "application/dns-json")
-	resp, err := c.dohClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	var dohResp struct {
-		Answer []struct {
-			Data string `json:"data"`
-			Type int    `json:"type"`
-		} `json:"Answer"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&dohResp); err != nil {
-		return nil, err
-	}
-
-	var ips []string
-	for _, a := range dohResp.Answer {
-		if a.Type == 1 && a.Data != "" {
-			ips = append(ips, a.Data)
-		}
-	}
-	return ips, nil
-}
-
-func (c *Checker) checkTCP(ip, port string, result *CheckResult) {
-	addr := net.JoinHostPort(ip, port)
-	start := time.Now()
-	conn, err := net.DialTimeout("tcp", addr, c.timeout)
-	result.TCP.TimeMs = time.Since(start).Seconds() * 1000
-	if err != nil {
-		result.TCP.Ok = false
-		errStr := err.Error()
-		if strings.Contains(errStr, "reset") || strings.Contains(errStr, "refused") {
-			result.TCP.Error = "RST"
-		} else {
-			result.TCP.Error = errStr
-		}
-		return
-	}
-	conn.Close()
-	result.TCP.Ok = true
-}
-
-func (c *Checker) checkTLS(host, ip string, result *CheckResult) {
-	addr := net.JoinHostPort(ip, "443")
-	dialer := &net.Dialer{Timeout: c.timeout}
-	start := time.Now()
-	conn, err := tls.DialWithDialer(dialer, "tcp", addr, &tls.Config{
-		ServerName:         host,
-		InsecureSkipVerify: true,
-	})
-	result.TLS.TimeMs = time.Since(start).Seconds() * 1000
-	if err != nil {
-		result.TLS.Ok = false
-		errStr := err.Error()
-		if strings.Contains(errStr, "reset") || strings.Contains(errStr, "EOF") || strings.Contains(errStr, "broken pipe") {
-			result.TLS.Error = "reset_after_clienthello"
-			result.TLS.Detail = "TLS handshake killed after ClientHello — SNI-based DPI"
-		} else if strings.Contains(errStr, "timeout") || strings.Contains(errStr, "deadline") {
-			result.TLS.Error = "timeout"
-			result.TLS.Detail = "TLS handshake timed out — possible DPI silent drop"
-		} else {
-			result.TLS.Error = errStr
-		}
-		return
-	}
-	defer conn.Close()
-
-	state := conn.ConnectionState()
-	result.TLS.Ok = true
-	if len(state.PeerCertificates) > 0 {
-		result.TLS.CertCN = state.PeerCertificates[0].Subject.CommonName
-	}
-}
-
-func (c *Checker) checkHTTP(fullURL, host string, result *CheckResult, viaProxy bool) {
+func (c *Checker) checkHTTP(fullURL, host string, result *CheckResult) {
 	req, err := http.NewRequest("GET", fullURL, nil)
 	if err != nil {
 		result.HTTP.Ok = false
@@ -278,14 +183,21 @@ func (c *Checker) checkHTTP(fullURL, host string, result *CheckResult, viaProxy 
 	result.HTTP.TimeMs = time.Since(start).Seconds() * 1000
 	if err != nil {
 		result.HTTP.Ok = false
-		result.HTTP.Error = err.Error()
+		errStr := err.Error()
+		if strings.Contains(errStr, "timeout") || strings.Contains(errStr, "deadline") {
+			result.HTTP.Error = "timeout"
+		} else if strings.Contains(errStr, "connection refused") || strings.Contains(errStr, "reset") {
+			result.HTTP.Error = "connection_reset"
+		} else {
+			result.HTTP.Error = errStr
+		}
 		return
 	}
 	defer resp.Body.Close()
 
 	body, _ := io.ReadAll(io.LimitReader(resp.Body, 64*1024))
 	result.HTTP.Status = resp.StatusCode
-	result.HTTP.Ok = resp.StatusCode < 500
+	result.HTTP.Ok = resp.StatusCode < 400
 	result.HTTP.StubPage = detectStubPage(body)
 
 	if resp.StatusCode == 451 {
@@ -295,50 +207,6 @@ func (c *Checker) checkHTTP(fullURL, host string, result *CheckResult, viaProxy 
 }
 
 func (c *Checker) classify(result *CheckResult) {
-	if !result.DNS.Ok && result.DNSDoH.Ok {
-		result.Verdict = VerdictDNSBlock
-		result.Confidence = ConfHigh
-		result.Notes = append(result.Notes, "системный DNS не резолвится, DoH резолвится — отравление DNS")
-		return
-	}
-
-	if result.DNSMismatch {
-		result.Verdict = VerdictDNSBlock
-		result.Confidence = ConfHigh
-		result.Notes = append(result.Notes, "адреса системного DNS и DoH полностью не совпадают — подмена DNS")
-		return
-	}
-
-	if result.TCP.Error == "RST" {
-		result.Verdict = VerdictTCPReset
-		result.Confidence = ConfHigh
-		result.Notes = append(result.Notes, "TCP handshake отклонён RST — блэкхолинг на IP-уровне")
-		return
-	}
-
-	if !result.TCP.Ok && result.DNS.Ok {
-		if strings.Contains(result.TCP.Error, "timeout") {
-			result.Verdict = VerdictTimeout
-			result.Confidence = ConfLow
-			result.Notes = append(result.Notes, "TCP handshake таймаут")
-		} else {
-			result.Verdict = VerdictDown
-			result.Confidence = ConfMedium
-		}
-		return
-	}
-
-	if !result.TLS.Ok && result.TCP.Ok {
-		result.Verdict = VerdictTLSBlock
-		result.Confidence = ConfMedium
-		if result.TLS.Detail != "" {
-			result.Notes = append(result.Notes, result.TLS.Detail)
-		} else {
-			result.Notes = append(result.Notes, "TCP работает, TLS убит — DPI по SNI")
-		}
-		return
-	}
-
 	if result.HTTP.StubPage {
 		result.Verdict = VerdictHTTPStub
 		result.Confidence = ConfHigh
@@ -350,24 +218,40 @@ func (c *Checker) classify(result *CheckResult) {
 		return
 	}
 
-	if !result.HTTP.Ok && result.TLS.Ok {
-		result.Verdict = VerdictDown
+	if result.HTTP.Error == "timeout" {
+		result.Verdict = VerdictTimeout
 		result.Confidence = ConfMedium
-		result.Notes = append(result.Notes, fmt.Sprintf("HTTP статус %d", result.HTTP.Status))
+		result.Notes = append(result.Notes, "таймаут соединения")
 		return
 	}
 
-	if result.HTTP.Ok && result.TLS.Ok {
+	if result.HTTP.Error == "connection_reset" {
+		result.Verdict = VerdictTCPReset
+		result.Confidence = ConfHigh
+		result.Notes = append(result.Notes, "соединение сброшено — DPI или блокировка по IP")
+		return
+	}
+
+	if result.HTTP.Ok {
 		result.Verdict = VerdictOK
 		result.Confidence = ConfHigh
 		result.Notes = append(result.Notes, "ресурс доступен")
 		return
 	}
 
-	result.Verdict = VerdictUnknown
-	result.Confidence = ConfLow
-	if len(result.Notes) == 0 {
-		result.Notes = append(result.Notes, "не удалось классифицировать")
+	if result.HTTP.Status > 0 {
+		result.Verdict = VerdictDown
+		result.Confidence = ConfMedium
+		result.Notes = append(result.Notes, fmt.Sprintf("HTTP статус %d", result.HTTP.Status))
+		return
+	}
+
+	result.Verdict = VerdictDown
+	result.Confidence = ConfMedium
+	if result.HTTP.Error != "" {
+		result.Notes = append(result.Notes, result.HTTP.Error)
+	} else {
+		result.Notes = append(result.Notes, "соединение не установлено")
 	}
 }
 
@@ -381,9 +265,8 @@ func (c *Checker) GetProviderInfo() ProviderInfo {
 		},
 	}
 
-	// Try multiple provider APIs
 	providers := []struct {
-		url string
+		url   string
 		parse func(body []byte, info *ProviderInfo) bool
 	}{
 		{"https://ipinfo.io/json", parseIPInfo},
@@ -432,12 +315,12 @@ func parseIPInfo(body []byte, info *ProviderInfo) bool {
 
 func parseIPAPI(body []byte, info *ProviderInfo) bool {
 	var d struct {
-		Query    string `json:"query"`
-		City     string `json:"city"`
-		Country  string `json:"country"`
-		Org      string `json:"org"`
-		Isp      string `json:"isp"`
-		As       string `json:"as"`
+		Query   string `json:"query"`
+		City    string `json:"city"`
+		Country string `json:"country"`
+		Org     string `json:"org"`
+		Isp     string `json:"isp"`
+		As      string `json:"as"`
 	}
 	if err := json.Unmarshal(body, &d); err != nil || d.Query == "" {
 		return false
@@ -491,42 +374,6 @@ func parseURL(raw string) (parsed *url.URL, host, full string) {
 	return parsed, host, raw
 }
 
-func ipStrings(ips []net.IP) []string {
-	var result []string
-	for _, ip := range ips {
-		if v4 := ip.To4(); v4 != nil {
-			result = append(result, v4.String())
-		}
-	}
-	return result
-}
-
-func pickIP(a, b []string) string {
-	if len(a) > 0 {
-		return a[0]
-	}
-	if len(b) > 0 {
-		return b[0]
-	}
-	return ""
-}
-
-func isDNSMismatch(sysIPs, dohIPs []string) bool {
-	if len(sysIPs) == 0 || len(dohIPs) == 0 {
-		return false
-	}
-	sysSet := make(map[string]bool)
-	for _, ip := range sysIPs {
-		sysSet[ip] = true
-	}
-	for _, ip := range dohIPs {
-		if sysSet[ip] {
-			return false
-		}
-	}
-	return true
-}
-
 func detectStubPage(body []byte) bool {
 	text := strings.ToLower(string(body))
 	for _, marker := range stubMarkers {
@@ -548,5 +395,3 @@ func socks5Dialer(proxyAddr string, timeout time.Duration) (func(ctx context.Con
 	}
 	return dialer.DialContext, nil
 }
-
-var _ = os.Getenv
