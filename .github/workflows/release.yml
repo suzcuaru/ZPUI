@@ -36,9 +36,21 @@ jobs:
         shell: bash
         run: |
           cd dist
-          zip -r ../zpui-win64.zip .
+          zip -r ../zpui-win32.zip .
           cd ..
-          ls -la zpui-win64.zip
+          ls -la zpui-win32.zip
+
+      - name: Find installer
+        id: installer
+        shell: bash
+        run: |
+          INSTALLER=$(find dist/ -name "ZPUI-Setup-*.exe" | head -1)
+          if [ -n "$INSTALLER" ]; then
+            echo "path=$INSTALLER" >> "$GITHUB_OUTPUT"
+            echo "Found installer: $INSTALLER"
+          else
+            echo "No installer found in dist/"
+          fi
 
       - name: Create GitHub Release
         env:
@@ -47,20 +59,18 @@ jobs:
         run: |
           VER="${{ steps.ver.outputs.version }}"
           TAG="${GITHUB_REF_NAME}"
-          IS_DEV=0
-          if [[ "$VER" == *-* ]]; then IS_DEV=1; fi
+
+          ASSETS=("zpui-win32.zip" "dist/versions.json")
+          if [ -n "${{ steps.installer.outputs.path }}" ]; then
+            ASSETS+=("${{ steps.installer.outputs.path }}")
+          fi
 
           EXTRA=""
-          if [ "$IS_DEV" = "1" ]; then EXTRA="--draft"; fi
+          if [[ "$VER" == *-* ]]; then EXTRA="--draft"; fi
 
           if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" \
-              "zpui-win64.zip" \
-              "dist/versions.json" \
-              --clobber
+            gh release upload "$TAG" "${ASSETS[@]}" --clobber
           else
-            gh release create "$TAG" \
-              "zpui-win64.zip" \
-              "dist/versions.json" \
+            gh release create "$TAG" "${ASSETS[@]}" \
               --title "ZPUI $VER" --generate-notes $EXTRA
           fi

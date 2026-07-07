@@ -31,9 +31,11 @@ echo.
 
 REM --- Step 4: Tag and push ---
 echo [4/4] Creating tag %TAG% and pushing...
+for /f "delims=" %%b in ('git rev-parse --abbrev-ref HEAD') do set "BRANCH=%%b"
+echo [INFO] Branch: %BRANCH%
 git tag -d "%TAG%" 2>nul
 git tag "%TAG%"
-git push origin main
+git push origin "%BRANCH%"
 git push origin "%TAG%" --force
 if errorlevel 1 (echo [ERROR] Push failed & exit /b 1)
 
