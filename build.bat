@@ -54,12 +54,8 @@ timeout /t 1 /nobreak > nul
 
 if exist "%DIST%" rmdir /s /q "%DIST%"
 if exist "%BAT_DIR%build\bin\zpui.exe" del /f /q "%BAT_DIR%build\bin\zpui.exe"
-del /f /q "%BAT_DIR%zpui.exe" 2>nul
-del /f /q "%BAT_DIR%wizard.exe" 2>nul
-del /f /q "%BAT_DIR%autoselect.exe" 2>nul
-del /f /q "%BAT_DIR%selfupdate.exe" 2>nul
-del /f /q "%BAT_DIR%zapretupdate.exe" 2>nul
-del /f /q "%BAT_DIR%dist\ZPUI-Setup-*.exe" 2>nul
+del /f /q "%BAT_DIR%build\ZPUI-Setup-*.exe" 2>nul
+mkdir "%DIST%"
 echo Done.
 echo.
 
@@ -77,45 +73,35 @@ echo [3/8] Building ZPUI core (win32)...
 "%WAILS%" build -platform windows/386 -s -skipbindings -o zpui.exe ^
     -ldflags "-s -w -H windowsgui -X main.version=%VERSION%" -trimpath
 if errorlevel 1 (echo [ERROR] Wails build failed & timeout /t 10 > nul & exit /b 1)
-copy /y "build\bin\zpui.exe" "zpui.exe" > nul
+copy /y "build\bin\zpui.exe" "%DIST%\zpui.exe" > nul
 echo.
 
-REM === STEP 4: Build module exes (32-bit) ===
+REM === STEP 4: Build module exes (32-bit, directly to dist) ===
 echo [4/8] Building module tools (win32)...
 set "GOARCH=386"
 set "LDFLAGS=-s -w -H windowsgui"
 
-go build -o wizard.exe       -ldflags "%LDFLAGS%" -trimpath ./cmd/wizard/
+go build -o "%DIST%\wizard.exe"       -ldflags "%LDFLAGS%" -trimpath ./cmd/wizard/
 if errorlevel 1 (echo [ERROR] wizard.exe build failed & timeout /t 10 > nul & exit /b 1)
 echo   [OK] wizard.exe
 
-go build -o autoselect.exe   -ldflags "%LDFLAGS%" -trimpath ./cmd/autoselect/
+go build -o "%DIST%\autoselect.exe"   -ldflags "%LDFLAGS%" -trimpath ./cmd/autoselect/
 if errorlevel 1 (echo [ERROR] autoselect.exe build failed & timeout /t 10 > nul & exit /b 1)
 echo   [OK] autoselect.exe
 
-go build -o selfupdate.exe   -ldflags "%LDFLAGS%" -trimpath ./cmd/selfupdate/
+go build -o "%DIST%\selfupdate.exe"   -ldflags "%LDFLAGS%" -trimpath ./cmd/selfupdate/
 if errorlevel 1 (echo [ERROR] selfupdate.exe build failed & timeout /t 10 > nul & exit /b 1)
 echo   [OK] selfupdate.exe
 
-go build -o zapretupdate.exe -ldflags "%LDFLAGS}" -trimpath ./cmd/zapretupdate/
+go build -o "%DIST%\zapretupdate.exe" -ldflags "%LDFLAGS%" -trimpath ./cmd/zapretupdate/
 if errorlevel 1 (echo [ERROR] zapretupdate.exe build failed & timeout /t 10 > nul & exit /b 1)
 echo   [OK] zapretupdate.exe
 echo.
 
-REM === STEP 5: Assemble dist package ===
-echo [5/8] Assembling dist package...
-mkdir "%DIST%"
-
-copy /y "zpui.exe"           "%DIST%\" > nul
-copy /y "wizard.exe"         "%DIST%\" > nul
-copy /y "autoselect.exe"     "%DIST%\" > nul
-copy /y "selfupdate.exe"     "%DIST%\" > nul
-copy /y "zapretupdate.exe"   "%DIST%\" > nul
-
-REM --- Generate versions.json ---
+REM === STEP 5: Generate versions.json ===
+echo [5/8] Generating versions.json...
 powershell -NoProfile -Command "$v='%VERSION%'; function g($p){ if((Get-Content $p -Raw) -match 'var version\s*=\s*\x22([^\x22]+)\x22'){ $matches[1].Trim() } else { '0.0.0' } }; $wz=g '%BAT_DIR%cmd\wizard\main.go'; $as=g '%BAT_DIR%cmd\autoselect\main.go'; $su=g '%BAT_DIR%cmd\selfupdate\main.go'; $zu=g '%BAT_DIR%cmd\zapretupdate\main.go'; $j=[ordered]@{zpui=$v;wizard=$wz;autoselect=$as;selfupdate=$su;zapretupdate=$zu}|ConvertTo-Json; [IO.File]::WriteAllText('%DIST%\versions.json',$j,(New-Object Text.UTF8Encoding $false))"
 if errorlevel 1 (echo [ERROR] versions.json generation failed & timeout /t 10 > nul & exit /b 1)
-
 echo Done.
 echo.
 
@@ -124,12 +110,9 @@ echo [6/8] Copying Zapret...
 if exist "%BAT_DIR%zapret" (
     xcopy /e /i /y /q "%BAT_DIR%zapret" "%DIST%\zapret" > nul
     echo   [OK] zapret copied
-) else if exist "%BAT_DIR%build\zapret" (
-    xcopy /e /i /y /q "%BAT_DIR%build\zapret" "%DIST%\zapret" > nul
-    echo   [OK] zapret copied from build\
 ) else (
     mkdir "%DIST%\zapret"
-    echo   [INFO] No local zapret found, created empty dir
+    echo   [INFO] No local zapret found
 )
 echo.
 
@@ -140,7 +123,7 @@ if exist "%BAT_DIR%mods" (
     echo   [OK] mods copied
 ) else (
     mkdir "%DIST%\mods"
-    echo   [INFO] No mods directory found, created empty
+    echo   [INFO] No mods found
 )
 echo.
 
@@ -168,7 +151,7 @@ if errorlevel 1 (
 :nsis_skip
 echo.
 
-REM --- Copy to dist/ for release ---
+REM --- Copy everything to dist/ for release ---
 if exist "%BAT_DIR%dist" rmdir /s /q "%BAT_DIR%dist"
 mkdir "%BAT_DIR%dist"
 xcopy /e /i /y /q "%DIST%" "%BAT_DIR%dist" > nul
@@ -178,7 +161,7 @@ if exist "%BAT_DIR%build\ZPUI-Setup-%VERSION%-win32.exe" (
 
 REM --- Summary ---
 echo ========================================
-echo   Output: build\dist\ and dist\
+echo   Output: build\dist\
 echo.
 echo   Core:
 for %%f in ("%DIST%\*.exe") do (
