@@ -1,8 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { api } from '../api';
-import { formatBytes } from '../utils';
 import { useT } from '../i18n';
-import { ArrowDown, ArrowUp } from 'lucide-react';
 
 export default function DashboardPage({ status, showToast, onNavigate }) {
   const { t } = useT();
@@ -62,12 +60,6 @@ export default function DashboardPage({ status, showToast, onNavigate }) {
   const userFails = userRes.filter(r => !r.ok);
   const fails = [...defFails, ...userFails];
   const allOk = fails.length === 0;
-
-  const mon = status?.monitor || {};
-  const dlSpeed = mon.dl_speed_fmt || '0 B/s';
-  const ulSpeed = mon.ul_speed_fmt || '0 B/s';
-  const dlTotal = mon.download_fmt || formatBytes(mon.download_bytes || 0);
-  const ulTotal = mon.upload_fmt || formatBytes(mon.upload_bytes || 0);
 
   return (
     <>
@@ -143,24 +135,6 @@ export default function DashboardPage({ status, showToast, onNavigate }) {
             { records: availStd, color: 'var(--accent)' },
             { records: availUser, color: 'var(--success)' },
           ]} />
-        </div>
-      </div>
-
-      <div className="card-section">
-        <div className="card-section-title">{t('dashboard.traffic')}</div>
-        <div className="db-traffic-grid">
-          <div className="db-traffic-box">
-            <span className="db-traffic-arrow down"><ArrowDown size={18} strokeWidth={2.5} /></span>
-            <span className="db-traffic-val">{dlSpeed}</span>
-          </div>
-          <div className="db-traffic-box">
-            <span className="db-traffic-arrow up"><ArrowUp size={18} strokeWidth={2.5} /></span>
-            <span className="db-traffic-val">{ulSpeed}</span>
-          </div>
-        </div>
-        <div className="db-traffic-totals">
-          <span className="db-total-item"><ArrowDown size={12} strokeWidth={2.5} /> {dlTotal}</span>
-          <span className="db-total-item"><ArrowUp size={12} strokeWidth={2.5} /> {ulTotal}</span>
         </div>
       </div>
 
