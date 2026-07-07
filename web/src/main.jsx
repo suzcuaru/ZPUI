@@ -3,6 +3,12 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import ErrorBoundary from './components/ErrorBoundary';
 import { I18nProvider } from './i18n';
+import { installDevMock } from './dev-mock';
+
+// Dev-only: stub Wails backend so the UI is navigable without the Go backend.
+if (import.meta.env.DEV && !(window.go && window.go.app && window.go.app.App)) {
+  installDevMock();
+}
 
 // Применяем тему синхронно до первого paint, иначе на тёмной Windows
 // приложение мелькает/грузится светлым (data-theme ставится только после status).

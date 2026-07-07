@@ -26,7 +26,13 @@
     "version": "Version",
     "ms": "ms",
     "inDevelopment": "In development",
-    "completed": "Completed"
+    "completed": "Completed",
+    "next": "Next",
+    "back": "Back",
+    "yes": "Yes",
+    "no": "No",
+    "done": "Done",
+    "continue": "Continue"
   },
   "nav": {
     "dashboard": "Home",
@@ -283,6 +289,75 @@
       "selectStrategy": "Select strategy"
     },
     "installLog": "Install log"
+  },
+  "setup": {
+    "boot": "Starting ZPUI",
+    "selfcheck": {
+      "checking": "Verifying file integrity…",
+      "repairing": "Files corrupted. Downloading from GitHub…",
+      "ok": "All files are fine"
+    },
+    "envscan": {
+      "scanning": "Scanning environment: third-party Zapret, VPN, conflicts…",
+      "foundThirdParty": "Third-party Zapret found",
+      "foundVpn": "VPN is active",
+      "clean": "No conflicts found"
+    },
+    "download": {
+      "downloading": "Downloading Zapret…",
+      "verifying": "Verifying Zapret files…"
+    },
+    "thirdparty": {
+      "title": "Third-party Zapret detected",
+      "desc": "A separate Zapret installation was found. It is recommended to remove it to avoid conflicts.",
+      "vpnWarn": "Warning: an active VPN may negatively affect the Zapret service.",
+      "remove": "Remove third-party Zapret",
+      "keep": "Keep and continue"
+    },
+    "firstrun": {
+      "title": "Welcome",
+      "desc": "First launch. Quickly set up the system: bypass strategy, filters, DNS, proxy and notifications?",
+      "setup": "Quick setup",
+      "skip": "Skip"
+    },
+    "test": {
+      "title": "Strategy selection",
+      "control": "Control resource check without Zapret…",
+      "testing": "Testing strategy: {name}",
+      "waiting": "Waiting for strategy to apply…",
+      "done": "Strategy check complete"
+    },
+    "verdict": {
+      "green": "Ideal",
+      "yellow": "Medium",
+      "red": "Poor",
+      "white": "Does not work"
+    },
+    "results": {
+      "title": "Choose a strategy",
+      "desc": "Strategies tested for resource availability. Border color = bypass quality.",
+      "best": "Recommended",
+      "apply": "Apply"
+    },
+    "config": {
+      "title": "Quick setup",
+      "gameFilter": "Game filter",
+      "gameFilterDesc": "Speeds up online games, may reduce download speed",
+      "ipset": "IP-list mode",
+      "customResources": "Custom resources",
+      "customResourcesPh": "One domain per line…",
+      "dns": "Xbox DNS",
+      "dnsDesc": "Switch DNS to xbox-dns.ru servers",
+      "proxy": "SOCKS5 proxy",
+      "proxyDesc": "For apps with SOCKS5 support",
+      "notifications": "Windows notifications",
+      "autostart": "Autostart with Windows",
+      "apply": "Apply and continue"
+    },
+    "done": {
+      "title": "Done",
+      "desc": "System configured. Launching the app…"
+    }
   },
   "offline": {
     "title": "Backend unavailable",
