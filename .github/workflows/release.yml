@@ -46,10 +46,16 @@ jobs:
       - name: Install Wails CLI
         run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0
 
+      - name: Build frontend
+        run: |
+          cd web
+          npm ci
+          npm run build
+
       # ── 64-bit build ─────────────────────────────────────
       - name: Build ZPUI core (win64)
         run: >
-          wails build -platform windows/amd64 -s -o zpui.exe
+          wails build -platform windows/amd64 -s -skipbindings -o zpui.exe
           -ldflags "-s -w -H windowsgui -X main.version=${{ steps.ver.outputs.version }}"
           -trimpath
 
@@ -123,7 +129,7 @@ jobs:
 
       - name: Build ZPUI core (win32)
         run: >
-          wails build -platform windows/386 -s -o zpui.exe
+          wails build -platform windows/386 -s -skipbindings -o zpui.exe
           -ldflags "-s -w -H windowsgui -X main.version=${{ steps.ver.outputs.version }}"
           -trimpath
 
