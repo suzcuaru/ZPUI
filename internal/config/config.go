@@ -33,6 +33,13 @@ type LogConfig struct {
 	Level    string `json:"level"`
 }
 
+type BlockCheckConfig struct {
+	CheckTCP    bool `json:"check_tcp"`
+	CheckTLS    bool `json:"check_tls"`
+	CheckHTTP   bool `json:"check_http"`
+	TimeoutSec  int  `json:"timeout_sec"`
+}
+
 type Config struct {
 	mu              sync.RWMutex
 	ZapretPath      string        `json:"zapret_path"`
@@ -61,6 +68,8 @@ type Config struct {
 	AutoStartZapret  bool `json:"auto_start_zapret"`
 	AutoStartProxy   bool `json:"auto_start_proxy"`
 	AutoStartXboxDns bool `json:"auto_start_xbox_dns"`
+
+	BlockCheck       BlockCheckConfig `json:"block_check"`
 
 	NotificationsEnabled bool `json:"notifications_enabled"`
 
@@ -118,6 +127,12 @@ func defaultConfig(zapretDir string) *Config {
 		NotificationsEnabled: true,
 
 		NotifyStrategyTest: false,
+		BlockCheck: BlockCheckConfig{
+			CheckTCP:   false,
+			CheckTLS:   true,
+			CheckHTTP:  true,
+			TimeoutSec: 8,
+		},
 
 		NotifyZPUIUpdates:   true,
 		NotifyZapretUpdates: true,
@@ -390,4 +405,20 @@ func (c *Config) StrategyPath(name string) string {
 		name += ".bat"
 	}
 	return filepath.Join(c.GetZapretPath(), name)
+}
+
+func (c *Config) GetBlockCheckConfig() BlockCheckConfig {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.BlockCheck
+}
+
+func (c *Config) SetBlockCheckConfig(b BlockCheckConfig) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if b.TimeoutSec <= 0 {
+		b.TimeoutSec = 8
+	}
+	c.BlockCheck = b
+	return c.save()
 }

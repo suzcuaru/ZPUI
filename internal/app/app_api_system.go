@@ -46,7 +46,8 @@ func (a *App) GetResourceStatus() map[string]interface{} {
 		proxyAddr = fmt.Sprintf("127.0.0.1:%d", pcfg.Port)
 	}
 
-	checker := blockcheck.NewChecker(8, proxyAddr)
+	bc := a.cfg.GetBlockCheckConfig()
+	checker := blockcheck.NewChecker(bc.CheckTCP, bc.CheckTLS, bc.CheckHTTP, bc.TimeoutSec, proxyAddr)
 	report := checker.BulkCheck(defaultTargets, userTargets)
 
 	a.resourceCacheMu.Lock()
@@ -164,7 +165,8 @@ func (a *App) GetNetworkInfo() map[string]interface{} {
 		"local_ips": []string{},
 	}
 
-	checker := blockcheck.NewChecker(8, "")
+	bc := a.cfg.GetBlockCheckConfig()
+	checker := blockcheck.NewChecker(bc.CheckTCP, bc.CheckTLS, bc.CheckHTTP, bc.TimeoutSec, "")
 	info := checker.GetProviderInfo()
 	result["public_ip"] = info.IP
 	result["isp"] = info.ISP
@@ -202,7 +204,8 @@ func (a *App) CheckResource(rawURL string) map[string]interface{} {
 		proxyAddr = fmt.Sprintf("127.0.0.1:%d", pcfg.Port)
 	}
 
-	checker := blockcheck.NewChecker(5, proxyAddr)
+	bc2 := a.cfg.GetBlockCheckConfig()
+	checker := blockcheck.NewChecker(bc2.CheckTCP, bc2.CheckTLS, bc2.CheckHTTP, bc2.TimeoutSec, proxyAddr)
 
 	provider := checker.GetProviderInfo()
 	direct := checker.Check(rawURL)

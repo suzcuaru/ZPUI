@@ -20,7 +20,7 @@ func main() {
 	}
 
 	proxyAddr := "127.0.0.1:1080"
-	checker := blockcheck.NewChecker(8, proxyAddr)
+	checker := blockcheck.NewChecker(false, true, true, 8, proxyAddr)
 	report := checker.BulkCheck(targets, nil)
 
 	fmt.Println("=== Resource Blocking Report ===")

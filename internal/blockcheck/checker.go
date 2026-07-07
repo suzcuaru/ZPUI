@@ -14,15 +14,17 @@ import (
 )
 
 type Checker struct {
+	checkTCP   bool
+	checkTLS   bool
+	checkHTTP  bool
 	timeout    time.Duration
-	dohClient  *http.Client
-	httpClient *http.Client
 	proxyAddr  string
+	httpClient *http.Client
 }
 
-func NewChecker(timeoutSec int, proxyAddr string) *Checker {
+func NewChecker(checkTCP, checkTLS, checkHTTP bool, timeoutSec int, proxyAddr string) *Checker {
 	if timeoutSec <= 0 {
-		timeoutSec = 10
+		timeoutSec = 8
 	}
 	t := time.Duration(timeoutSec) * time.Second
 
@@ -32,10 +34,12 @@ func NewChecker(timeoutSec int, proxyAddr string) *Checker {
 		DisableKeepAlives: true,
 	}
 
-	c := &Checker{
-		timeout:    t,
-		proxyAddr:  proxyAddr,
-		dohClient:  &http.Client{Timeout: t, Transport: tr},
+	return &Checker{
+		checkTCP:  checkTCP,
+		checkTLS:  checkTLS,
+		checkHTTP: checkHTTP,
+		timeout:   t,
+		proxyAddr: proxyAddr,
 		httpClient: &http.Client{
 			Timeout:   t,
 			Transport: tr,
@@ -47,13 +51,8 @@ func NewChecker(timeoutSec int, proxyAddr string) *Checker {
 			},
 		},
 	}
-
-	return c
 }
 
-// Check does a simple HTTP GET to the URL (following redirects).
-// If HTTPS fails (TLS blocked by DPI), falls back to plain HTTP.
-// A resource is considered OK if HTTP status < 400 and response is not a stub page.
 func (c *Checker) Check(rawURL string) CheckResult {
 	_, host, fullURL := parseURL(rawURL)
 	result := CheckResult{
@@ -67,34 +66,164 @@ func (c *Checker) Check(rawURL string) CheckResult {
 		return result
 	}
 
-	c.checkHTTP(fullURL, host, &result)
+	port := 443
+	if strings.HasPrefix(fullURL, "http://") {
+		port = 80
+	}
 
-	if !result.HTTP.Ok && isTLSFailure(result.HTTP.Error) && strings.HasPrefix(fullURL, "https://") {
-		httpURL := "http://" + strings.TrimPrefix(fullURL, "https://")
-		var httpResult CheckResult
-		c.checkHTTP(httpURL, host, &httpResult)
-		if httpResult.HTTP.Ok {
-			result.HTTP = httpResult.HTTP
-			result.Notes = append(result.Notes, "HTTPS заблокирован (TLS), но HTTP работает")
+	if c.checkTCP {
+		result.TCP = c.checkTCPConn(host, port)
+		if !result.TCP.Ok {
+			c.classify(&result)
+			return result
 		}
+	}
+
+	if c.checkTLS && port == 443 {
+		result.TLS = c.checkTLSConn(host)
+		if !result.TLS.Ok {
+			c.classify(&result)
+			return result
+		}
+	}
+
+	if c.checkHTTP {
+		c.checkHTTPGet(fullURL, &result)
 	}
 
 	c.classify(&result)
 	return result
 }
 
-func isTLSFailure(err string) bool {
-	if err == "" {
-		return false
+func (c *Checker) checkTCPConn(host string, port int) LayerResult {
+	addr := net.JoinHostPort(host, fmt.Sprintf("%d", port))
+	start := time.Now()
+	conn, err := net.DialTimeout("tcp", addr, c.timeout)
+	elapsed := time.Since(start).Seconds() * 1000
+	if err != nil {
+		return LayerResult{Ok: false, TimeMs: elapsed, Error: classifyErr(err)}
 	}
-	lower := strings.ToLower(err)
-	return strings.Contains(lower, "tls") ||
-		strings.Contains(lower, "handshake") ||
-		strings.Contains(lower, "certificate") ||
-		strings.Contains(lower, "ssl") ||
-		strings.Contains(lower, "eof") ||
-		strings.Contains(lower, "reset") ||
-		strings.Contains(lower, "connection_reset")
+	conn.Close()
+	return LayerResult{Ok: true, TimeMs: elapsed}
+}
+
+func (c *Checker) checkTLSConn(host string) LayerResult {
+	addr := net.JoinHostPort(host, "443")
+	start := time.Now()
+	conn, err := tls.DialWithDialer(
+		&net.Dialer{Timeout: c.timeout},
+		"tcp",
+		addr,
+		&tls.Config{InsecureSkipVerify: true, ServerName: host},
+	)
+	elapsed := time.Since(start).Seconds() * 1000
+	if err != nil {
+		return LayerResult{Ok: false, TimeMs: elapsed, Error: classifyErr(err)}
+	}
+	conn.Close()
+	return LayerResult{Ok: true, TimeMs: elapsed}
+}
+
+func (c *Checker) checkHTTPGet(fullURL string, result *CheckResult) {
+	req, err := http.NewRequest("GET", fullURL, nil)
+	if err != nil {
+		result.HTTP = LayerResult{Ok: false, Error: err.Error()}
+		return
+	}
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+	req.Header.Set("Accept-Language", "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7")
+
+	start := time.Now()
+	resp, err := c.httpClient.Do(req)
+	result.HTTP.TimeMs = time.Since(start).Seconds() * 1000
+	if err != nil {
+		result.HTTP.Ok = false
+		result.HTTP.Error = classifyErr(err)
+		return
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, 64*1024))
+	result.HTTP.Status = resp.StatusCode
+	result.HTTP.Ok = resp.StatusCode < 400
+	result.HTTP.StubPage = detectStubPage(body)
+	if resp.StatusCode == 451 {
+		result.HTTP.Ok = false
+		result.HTTP.StubPage = true
+	}
+}
+
+func (c *Checker) classify(result *CheckResult) {
+	if c.checkTCP && !result.TCP.Ok {
+		if result.TCP.Error == "dns_failure" {
+			result.Verdict = VerdictDNSBlock
+			result.Confidence = ConfHigh
+			result.Notes = append(result.Notes, "DNS не резолвится")
+			return
+		}
+		if isTimeout(result.TCP.Error) {
+			result.Verdict = VerdictTimeout
+			result.Confidence = ConfMedium
+		} else {
+			result.Verdict = VerdictTCPBlock
+			result.Confidence = ConfHigh
+		}
+		result.Notes = append(result.Notes, "TCP: "+result.TCP.Error)
+		return
+	}
+
+	if c.checkTLS && !result.TLS.Ok {
+		if result.TLS.Error == "dns_failure" {
+			result.Verdict = VerdictDNSBlock
+			result.Confidence = ConfHigh
+			result.Notes = append(result.Notes, "DNS не резолвится — блокировка по DNS или нет записи")
+			return
+		}
+		if isTimeout(result.TLS.Error) {
+			result.Verdict = VerdictTimeout
+			result.Confidence = ConfMedium
+			result.Notes = append(result.Notes, "TLS таймаут")
+		} else {
+			result.Verdict = VerdictTLSBlock
+			result.Confidence = ConfHigh
+			result.Notes = append(result.Notes, "TLS: "+result.TLS.Error+" — DPI сбрасывает handshake")
+		}
+		return
+	}
+
+	if c.checkHTTP {
+		if result.HTTP.StubPage {
+			result.Verdict = VerdictHTTPStub
+			result.Confidence = ConfHigh
+			if result.HTTP.Status == 451 {
+				result.Notes = append(result.Notes, "HTTP 451 — юридически недоступен")
+			} else {
+				result.Notes = append(result.Notes, "заглушка РКН/TSPU")
+			}
+			return
+		}
+		if result.HTTP.Ok {
+			result.Verdict = VerdictOK
+			result.Confidence = ConfHigh
+			result.Notes = append(result.Notes, "ресурс доступен")
+			return
+		}
+		if isTimeout(result.HTTP.Error) {
+			result.Verdict = VerdictTimeout
+			result.Confidence = ConfMedium
+			result.Notes = append(result.Notes, "HTTP таймаут")
+			return
+		}
+	}
+
+	result.Verdict = VerdictDown
+	result.Confidence = ConfMedium
+	if result.HTTP.Error != "" {
+		result.Notes = append(result.Notes, result.HTTP.Error)
+	} else {
+		result.Notes = append(result.Notes, "недоступен")
+	}
 }
 
 func (c *Checker) CheckViaProxy(rawURL string) *CheckResult {
@@ -126,21 +255,13 @@ func (c *Checker) CheckViaProxy(rawURL string) *CheckResult {
 	proxyClient := &http.Client{
 		Timeout:   c.timeout,
 		Transport: proxyTransport,
-		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			if len(via) >= 5 {
-				return fmt.Errorf("too many redirects")
-			}
-			return nil
-		},
 	}
 
 	start := time.Now()
 	resp, err := proxyClient.Get(fullURL)
 	elapsed := time.Since(start).Seconds() * 1000
-
 	if err != nil {
-		result.HTTP.Ok = false
-		result.HTTP.Error = err.Error()
+		result.HTTP = LayerResult{Ok: false, Error: classifyErr(err), TimeMs: elapsed}
 		result.Verdict = VerdictTimeout
 		result.Confidence = ConfLow
 		result.Notes = []string{"через обход: " + err.Error()}
@@ -149,10 +270,12 @@ func (c *Checker) CheckViaProxy(rawURL string) *CheckResult {
 	defer resp.Body.Close()
 	body, _ := io.ReadAll(io.LimitReader(resp.Body, 64*1024))
 
-	result.HTTP.Ok = resp.StatusCode < 400
-	result.HTTP.Status = resp.StatusCode
-	result.HTTP.TimeMs = elapsed
-	result.HTTP.StubPage = detectStubPage(body)
+	result.HTTP = LayerResult{
+		Ok:       resp.StatusCode < 400,
+		Status:   resp.StatusCode,
+		TimeMs:   elapsed,
+		StubPage: detectStubPage(body),
+	}
 
 	if result.HTTP.Ok && !result.HTTP.StubPage {
 		result.Verdict = VerdictOK
@@ -165,94 +288,6 @@ func (c *Checker) CheckViaProxy(rawURL string) *CheckResult {
 	}
 
 	return result
-}
-
-func (c *Checker) checkHTTP(fullURL, host string, result *CheckResult) {
-	req, err := http.NewRequest("GET", fullURL, nil)
-	if err != nil {
-		result.HTTP.Ok = false
-		result.HTTP.Error = err.Error()
-		return
-	}
-	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
-	req.Header.Set("Accept-Language", "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7")
-
-	start := time.Now()
-	resp, err := c.httpClient.Do(req)
-	result.HTTP.TimeMs = time.Since(start).Seconds() * 1000
-	if err != nil {
-		result.HTTP.Ok = false
-		errStr := err.Error()
-		if strings.Contains(errStr, "timeout") || strings.Contains(errStr, "deadline") {
-			result.HTTP.Error = "timeout"
-		} else if strings.Contains(errStr, "connection refused") || strings.Contains(errStr, "reset") {
-			result.HTTP.Error = "connection_reset"
-		} else {
-			result.HTTP.Error = errStr
-		}
-		return
-	}
-	defer resp.Body.Close()
-
-	body, _ := io.ReadAll(io.LimitReader(resp.Body, 64*1024))
-	result.HTTP.Status = resp.StatusCode
-	result.HTTP.Ok = resp.StatusCode < 400
-	result.HTTP.StubPage = detectStubPage(body)
-
-	if resp.StatusCode == 451 {
-		result.HTTP.Ok = false
-		result.HTTP.StubPage = true
-	}
-}
-
-func (c *Checker) classify(result *CheckResult) {
-	if result.HTTP.StubPage {
-		result.Verdict = VerdictHTTPStub
-		result.Confidence = ConfHigh
-		if result.HTTP.Status == 451 {
-			result.Notes = append(result.Notes, "HTTP 451 — юридически недоступен")
-		} else {
-			result.Notes = append(result.Notes, "тело ответа содержит маркер заглушки РКН/TSPU")
-		}
-		return
-	}
-
-	if result.HTTP.Error == "timeout" {
-		result.Verdict = VerdictTimeout
-		result.Confidence = ConfMedium
-		result.Notes = append(result.Notes, "таймаут соединения")
-		return
-	}
-
-	if result.HTTP.Error == "connection_reset" {
-		result.Verdict = VerdictTCPReset
-		result.Confidence = ConfHigh
-		result.Notes = append(result.Notes, "соединение сброшено — DPI или блокировка по IP")
-		return
-	}
-
-	if result.HTTP.Ok {
-		result.Verdict = VerdictOK
-		result.Confidence = ConfHigh
-		result.Notes = append(result.Notes, "ресурс доступен")
-		return
-	}
-
-	if result.HTTP.Status > 0 {
-		result.Verdict = VerdictDown
-		result.Confidence = ConfMedium
-		result.Notes = append(result.Notes, fmt.Sprintf("HTTP статус %d", result.HTTP.Status))
-		return
-	}
-
-	result.Verdict = VerdictDown
-	result.Confidence = ConfMedium
-	if result.HTTP.Error != "" {
-		result.Notes = append(result.Notes, result.HTTP.Error)
-	} else {
-		result.Notes = append(result.Notes, "соединение не установлено")
-	}
 }
 
 func (c *Checker) GetProviderInfo() ProviderInfo {
@@ -287,6 +322,33 @@ func (c *Checker) GetProviderInfo() ProviderInfo {
 	}
 
 	return info
+}
+
+func classifyErr(err error) string {
+	if err == nil {
+		return ""
+	}
+	s := strings.ToLower(err.Error())
+	switch {
+	case strings.Contains(s, "timeout") || strings.Contains(s, "deadline"):
+		return "timeout"
+	case strings.Contains(s, "connection refused"):
+		return "connection_refused"
+	case strings.Contains(s, "reset") || strings.Contains(s, "broken pipe"):
+		return "connection_reset"
+	case strings.Contains(s, "no such host"):
+		return "dns_failure"
+	case strings.Contains(s, "eof"):
+		return "eof"
+	case strings.Contains(s, "tls") || strings.Contains(s, "handshake") || strings.Contains(s, "certificate"):
+		return "tls_error"
+	default:
+		return s
+	}
+}
+
+func isTimeout(errStr string) bool {
+	return errStr == "timeout"
 }
 
 func parseIPInfo(body []byte, info *ProviderInfo) bool {
@@ -379,13 +441,12 @@ func detectStubPage(body []byte) bool {
 		return false
 	}
 	text := strings.ToLower(string(body))
-	matches := 0
 	for _, marker := range stubMarkers {
 		if strings.Contains(text, marker) {
-			matches++
+			return true
 		}
 	}
-	return matches >= 1
+	return false
 }
 
 func socks5Dialer(proxyAddr string, timeout time.Duration) (func(ctx context.Context, network, addr string) (net.Conn, error), error) {

@@ -18,6 +18,9 @@ type BulkResult struct {
 	Verdict   string `json:"verdict"`
 	LatencyMs int64  `json:"latency_ms"`
 	Reason    string `json:"reason,omitempty"`
+	TCP       LayerResult `json:"tcp,omitempty"`
+	TLS       LayerResult `json:"tls,omitempty"`
+	HTTP      LayerResult `json:"http,omitempty"`
 }
 
 type BulkReport struct {
@@ -79,5 +82,8 @@ func (c *Checker) checkOne(t BulkTarget) BulkResult {
 		Verdict:   direct.Verdict,
 		LatencyMs: latency,
 		Reason:    reason,
+		TCP:       direct.TCP,
+		TLS:       direct.TLS,
+		HTTP:      direct.HTTP,
 	}
 }

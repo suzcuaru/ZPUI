@@ -59,10 +59,12 @@ youtube.com
 }
 
 func TestCheckLive(t *testing.T) {
-	checker := NewChecker(10, "")
+	checker := NewChecker(false, true, true, 10, "")
 	result := checker.Check("https://www.google.com")
 
 	t.Logf("Google: verdict=%s confidence=%s", result.Verdict, result.Confidence)
+	t.Logf("  TCP: ok=%v err=%s", result.TCP.Ok, result.TCP.Error)
+	t.Logf("  TLS: ok=%v err=%s", result.TLS.Ok, result.TLS.Error)
 	t.Logf("  HTTP: ok=%v status=%d stub=%v err=%s", result.HTTP.Ok, result.HTTP.Status, result.HTTP.StubPage, result.HTTP.Error)
 	t.Logf("  Notes: %v", result.Notes)
 
@@ -78,7 +80,7 @@ func TestBulkCheck(t *testing.T) {
 		{Name: "GITHUB", URL: "https://github.com"},
 	}
 
-	checker := NewChecker(10, "")
+	checker := NewChecker(false, true, true, 10, "")
 	report := checker.BulkCheck(targets, nil)
 
 	if len(report.Default) != 3 {
@@ -100,7 +102,7 @@ func TestBulkCheck(t *testing.T) {
 }
 
 func TestCheckBlockedResource(t *testing.T) {
-	checker := NewChecker(5, "")
+	checker := NewChecker(false, true, true, 5, "")
 
 	result := checker.Check("https://192.0.2.1")
 	t.Logf("Fake IP: verdict=%s http_err=%s", result.Verdict, result.HTTP.Error)
@@ -113,27 +115,31 @@ func TestCheckBlockedResource(t *testing.T) {
 func TestClassifyLogic(t *testing.T) {
 	cases := []struct {
 		name     string
+		tlsOk    bool
+		tlsErr   string
 		httpOK   bool
 		stubPage bool
 		httpErr  string
 		status   int
 		want     string
 	}{
-		{"all_ok", true, false, "", 200, VerdictOK},
-		{"redirect_ok", true, false, "", 301, VerdictOK},
-		{"http_stub", false, true, "", 451, VerdictHTTPStub},
-		{"timeout", false, false, "timeout", 0, VerdictTimeout},
-		{"connection_reset", false, false, "connection_reset", 0, VerdictTCPReset},
-		{"server_error", false, false, "", 503, VerdictDown},
-		{"not_found", false, false, "", 404, VerdictDown},
+		{"all_ok", true, "", true, false, "", 200, VerdictOK},
+		{"redirect_ok", true, "", true, false, "", 301, VerdictOK},
+		{"tls_block", false, "connection_reset", false, false, "", 0, VerdictTLSBlock},
+		{"tls_timeout", false, "timeout", false, false, "", 0, VerdictTimeout},
+		{"http_stub", true, "", false, true, "", 451, VerdictHTTPStub},
+		{"http_timeout", true, "", false, false, "timeout", 0, VerdictTimeout},
+		{"server_error", true, "", false, false, "", 503, VerdictDown},
+		{"not_found", true, "", false, false, "", 404, VerdictDown},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			r := &CheckResult{
-				HTTP: LayerResult{Ok: tc.httpOK, StubPage: tc.stubPage, Error: tc.httpErr, Status: tc.status},
+				TLS:   LayerResult{Ok: tc.tlsOk, Error: tc.tlsErr},
+				HTTP:  LayerResult{Ok: tc.httpOK, StubPage: tc.stubPage, Error: tc.httpErr, Status: tc.status},
 			}
-			c := &Checker{}
+			c := &Checker{checkTLS: true, checkHTTP: true}
 			c.classify(r)
 			if r.Verdict != tc.want {
 				t.Errorf("classify(%s): expected %s, got %s (notes: %v)", tc.name, tc.want, r.Verdict, r.Notes)

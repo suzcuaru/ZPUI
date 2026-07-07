@@ -24,7 +24,7 @@ set "DIST=%BAT_DIR%build\dist"
 
 echo ========================================
 echo   ZPUI Build System v%VERSION% (win32)
-echo   Core + Modules + Zapret + Installer
+echo   Core + Modules + Installer
 echo ========================================
 echo.
 
@@ -43,7 +43,7 @@ echo [INFO] Wails: %WAILS%
 echo.
 
 REM === STEP 1: Clean ===
-echo [1/9] Cleaning old builds...
+echo [1/8] Cleaning old builds...
 
 taskkill /IM zpui.exe /F > nul 2>&1
 taskkill /IM wizard.exe /F > nul 2>&1
@@ -64,7 +64,7 @@ echo Done.
 echo.
 
 REM === STEP 2: Build frontend ===
-echo [2/9] Building frontend...
+echo [2/8] Building frontend...
 pushd web
 call npm install --silent 2>nul
 call npm run build
@@ -73,7 +73,7 @@ popd
 echo.
 
 REM === STEP 3: Build main app (Wails, 32-bit) ===
-echo [3/9] Building ZPUI core (win32)...
+echo [3/8] Building ZPUI core (win32)...
 "%WAILS%" build -platform windows/386 -s -skipbindings -o zpui.exe ^
     -ldflags "-s -w -H windowsgui -X main.version=%VERSION%" -trimpath
 if errorlevel 1 (echo [ERROR] Wails build failed & timeout /t 10 > nul & exit /b 1)
@@ -81,7 +81,7 @@ copy /y "build\bin\zpui.exe" "zpui.exe" > nul
 echo.
 
 REM === STEP 4: Build module exes (32-bit) ===
-echo [4/9] Building module tools (win32)...
+echo [4/8] Building module tools (win32)...
 set "GOARCH=386"
 set "LDFLAGS=-s -w -H windowsgui"
 
@@ -97,13 +97,13 @@ go build -o selfupdate.exe   -ldflags "%LDFLAGS%" -trimpath ./cmd/selfupdate/
 if errorlevel 1 (echo [ERROR] selfupdate.exe build failed & timeout /t 10 > nul & exit /b 1)
 echo   [OK] selfupdate.exe
 
-go build -o zapretupdate.exe -ldflags "%LDFLAGS%" -trimpath ./cmd/zapretupdate/
+go build -o zapretupdate.exe -ldflags "%LDFLAGS}" -trimpath ./cmd/zapretupdate/
 if errorlevel 1 (echo [ERROR] zapretupdate.exe build failed & timeout /t 10 > nul & exit /b 1)
 echo   [OK] zapretupdate.exe
 echo.
 
 REM === STEP 5: Assemble dist package ===
-echo [5/9] Assembling dist package...
+echo [5/8] Assembling dist package...
 mkdir "%DIST%"
 
 copy /y "zpui.exe"           "%DIST%\" > nul
@@ -119,55 +119,22 @@ if errorlevel 1 (echo [ERROR] versions.json generation failed & timeout /t 10 > 
 echo Done.
 echo.
 
-REM === STEP 6: Download latest Zapret ===
-echo [6/9] Downloading latest Zapret...
-powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-  "$ProgressPreference='SilentlyContinue';" ^
-  "$api='https://api.github.com/repos/Flowseal/zapret-discord-youtube/releases/latest';" ^
-  "try { $rel = Invoke-RestMethod -Uri $api -Headers @{'User-Agent'='ZPUI'} -TimeoutSec 30 } catch { Write-Host '[WARN] GitHub API failed:' $_.Exception.Message; exit 0 };" ^
-  "$tag = $rel.tag_name;" ^
-  "$zipName = 'zapret-discord-youtube-' + $tag + '.zip';" ^
-  "$asset = $rel.assets | Where-Object { $_.name -eq $zipName } | Select-Object -First 1;" ^
-  "if (-not $asset) { Write-Host '[WARN] Asset not found:' $zipName; exit 0 };" ^
-  "$tmp = Join-Path $env:TEMP 'zapret-build-download.zip';" ^
-  "Write-Host '  Downloading' $asset.name '('$tag')...';" ^
-  "Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $tmp -UseBasicParsing;" ^
-  "Add-Type -AssemblyName System.IO.Compression.FileSystem;" ^
-  "$z = [System.IO.Compression.ZipFile]::OpenRead($tmp);" ^
-  "$entries = $z.Entries | Where-Object { $_.FullName.TrimEnd('/\') -ne '' };" ^
-  "$dirs = ($entries | ForEach-Object { ($_.FullName -split '[/\\]')[0] } | Sort-Object -Unique);" ^
-  "if (($dirs | Measure-Object).Count -eq 1 -and ($entries | ForEach-Object { $_.FullName -split '[/\\]' }).Count -gt 1) {" ^
-  "  $root = ($dirs | Select-Object -First 1);" ^
-  "} else { $root = '' };" ^
-  "$dest = '%DIST%\zapret';" ^
-  "New-Item -ItemType Directory -Force -Path $dest | Out-Null;" ^
-  "foreach ($e in $entries) {" ^
-  "  $rel = $e.FullName;" ^
-  "  if ($root -and $rel.StartsWith($root)) { $rel = $rel.Substring($root.Length) };" ^
-  "  $rel = $rel.TrimStart('/\');" ^
-  "  if (-not $rel) { continue };" ^
-  "  $outPath = Join-Path $dest ($rel -replace '/','\');" ^
-  "  $dir = Split-Path $outPath -Parent;" ^
-  "  if ($dir -and -not (Test-Path $dir)) { New-Item -ItemType Directory -Force -Path $dir | Out-Null };" ^
-  "  if (-not $e.FullName.EndsWith('/') -and -not $e.FullName.EndsWith('\')) {" ^
-  "    [System.IO.Compression.ZipFileExtensions]::ExtractToFile($e, $outPath, $true);" ^
-  "  };" ^
-  "};" ^
-  "$z.Dispose();" ^
-  "Remove-Item $tmp -Force;" ^
-  "$verFile = Join-Path $dest '.service\version.txt';" ^
-  "if (-not (Test-Path (Split-Path $verFile -Parent))) { New-Item -ItemType Directory -Force -Path (Split-Path $verFile -Parent) | Out-Null };" ^
-  "Set-Content -Path $verFile -Value $tag.TrimStart('v') -NoNewline -Encoding UTF8;" ^
-  "Write-Host ('  [OK] Zapret ' + $tag + ' extracted to dist\zapret\')"
-if errorlevel 1 (
-    echo [WARN] Zapret download failed, build will continue without it
+REM === STEP 6: Copy local Zapret ===
+echo [6/8] Copying Zapret...
+if exist "%BAT_DIR%zapret" (
+    xcopy /e /i /y /q "%BAT_DIR%zapret" "%DIST%\zapret" > nul
+    echo   [OK] zapret copied
+) else if exist "%BAT_DIR%build\zapret" (
+    xcopy /e /i /y /q "%BAT_DIR%build\zapret" "%DIST%\zapret" > nul
+    echo   [OK] zapret copied from build\
 ) else (
-    echo Done.
+    mkdir "%DIST%\zapret"
+    echo   [INFO] No local zapret found, created empty dir
 )
 echo.
 
 REM === STEP 7: Copy mods ===
-echo [7/9] Copying mods...
+echo [7/8] Copying mods...
 if exist "%BAT_DIR%mods" (
     xcopy /e /i /y /q "%BAT_DIR%mods" "%DIST%\mods" > nul
     echo   [OK] mods copied
@@ -178,9 +145,8 @@ if exist "%BAT_DIR%mods" (
 echo.
 
 REM === STEP 8: Build installer (NSIS) ===
-echo [8/9] Building installer...
+echo [8/8] Building installer...
 
-REM --- Find makensis ---
 set "MAKENSIS="
 where makensis > nul 2>&1 && for /f "delims=" %%A in ('where makensis') do (set "MAKENSIS=%%A" & goto :nsis_found)
 if exist "C:\Program Files (x86)\NSIS\makensis.exe" (set "MAKENSIS=C:\Program Files (x86)\NSIS\makensis.exe" & goto :nsis_found)
@@ -202,20 +168,17 @@ if errorlevel 1 (
 :nsis_skip
 echo.
 
-REM === STEP 9: Copy to dist/ for release ===
-echo [9/9] Copying to dist/ for release...
+REM --- Copy to dist/ for release ---
 if exist "%BAT_DIR%dist" rmdir /s /q "%BAT_DIR%dist"
 mkdir "%BAT_DIR%dist"
 xcopy /e /i /y /q "%DIST%" "%BAT_DIR%dist" > nul
 if exist "%BAT_DIR%build\ZPUI-Setup-%VERSION%-win32.exe" (
     copy /y "%BAT_DIR%build\ZPUI-Setup-%VERSION%-win32.exe" "%BAT_DIR%dist\" > nul
 )
-echo Done.
-echo.
 
 REM --- Summary ---
 echo ========================================
-echo   Output: %DIST%\
+echo   Output: build\dist\ and dist\
 echo.
 echo   Core:
 for %%f in ("%DIST%\*.exe") do (
@@ -227,17 +190,14 @@ if exist "%BAT_DIR%build\ZPUI-Setup-%VERSION%-win32.exe" (
     echo   Installer:
     for %%s in ("%BAT_DIR%build\ZPUI-Setup-%VERSION%-win32.exe") do echo     ZPUI-Setup-%VERSION%-win32.exe  %%~zs bytes
 ) else (
-    echo   Installer: (not built - NSIS not found)
+    echo   Installer: (not built)
 )
-echo.
-echo   Mods:
-dir /b /ad "%DIST%\mods" 2>nul || echo     (none)
 echo.
 echo   Zapret:
 if exist "%DIST%\zapret\bin\winws.exe" (
     echo     [OK] included
 ) else (
-    echo     (not included)
+    echo     (empty)
 )
 echo.
 echo   ZPUI v%VERSION% (win32) + 4 modules

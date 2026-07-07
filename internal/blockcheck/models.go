@@ -1,24 +1,23 @@
 package blockcheck
 
 type LayerResult struct {
-	Ok       bool
-	TimeMs   float64
-	Error    string
-	Detail   string
-	IPs      []string
-	CertCN   string
-	Status   int
-	StubPage bool
+	Ok       bool    `json:"ok"`
+	TimeMs   float64 `json:"time_ms"`
+	Error    string  `json:"error,omitempty"`
+	Status   int     `json:"status,omitempty"`
+	StubPage bool    `json:"stub_page,omitempty"`
 }
 
 type CheckResult struct {
-	URL     string
-	Host    string
-	HTTP    LayerResult
+	URL  string `json:"url"`
+	Host string `json:"host"`
+	TCP  LayerResult `json:"tcp"`
+	TLS  LayerResult `json:"tls"`
+	HTTP LayerResult `json:"http"`
 
-	Verdict    string
-	Confidence string
-	Notes      []string
+	Verdict    string   `json:"verdict"`
+	Confidence string   `json:"confidence"`
+	Notes      []string `json:"notes"`
 }
 
 type ProviderInfo struct {
@@ -45,7 +44,9 @@ type FullReport struct {
 
 const (
 	VerdictOK       = "OK"
-	VerdictTCPReset = "TCP_RESET"
+	VerdictTCPBlock = "TCP_BLOCK"
+	VerdictTLSBlock = "TLS_BLOCK"
+	VerdictDNSBlock = "DNS_BLOCK"
 	VerdictHTTPStub = "HTTP_STUB"
 	VerdictTimeout  = "TIMEOUT"
 	VerdictDown     = "DOWN"
@@ -63,7 +64,5 @@ var stubMarkers = []string{
 	"roskomnadzor",
 	"сайт заблокирован",
 	"реестр доменных имен",
-	"access denied by rkn",
-	"forbidden by law",
 	"доступ к информационному ресурсу ограничен",
 }

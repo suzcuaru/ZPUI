@@ -171,7 +171,8 @@ func (a *App) checkResourcesOnStrategy(strategy string) []blockcheck.BulkResult 
 		proxyAddr = fmt.Sprintf("127.0.0.1:%d", pcfg.Port)
 	}
 
-	checker := blockcheck.NewChecker(8, proxyAddr)
+	bc := a.cfg.GetBlockCheckConfig()
+	checker := blockcheck.NewChecker(bc.CheckTCP, bc.CheckTLS, bc.CheckHTTP, bc.TimeoutSec, proxyAddr)
 	report := checker.BulkCheck(targets, nil)
 	return report.Default
 }
@@ -192,7 +193,8 @@ func (a *App) SetupControlCheck() map[string]interface{} {
 		return errResp("не найдены ресурсы для проверки (lists/list-general.txt)")
 	}
 
-	checker := blockcheck.NewChecker(8, "")
+	bc2 := a.cfg.GetBlockCheckConfig()
+	checker := blockcheck.NewChecker(bc2.CheckTCP, bc2.CheckTLS, bc2.CheckHTTP, bc2.TimeoutSec, "")
 	report := checker.BulkCheck(targets, nil)
 
 	baseline := make(map[string]bool)
@@ -251,7 +253,8 @@ func (a *App) SetupTestStrategy(strategy string) map[string]interface{} {
 		pcfg := a.cfg.GetProxyConfig()
 		proxyAddr = fmt.Sprintf("127.0.0.1:%d", pcfg.Port)
 	}
-	checker := blockcheck.NewChecker(8, proxyAddr)
+	bc3 := a.cfg.GetBlockCheckConfig()
+	checker := blockcheck.NewChecker(bc3.CheckTCP, bc3.CheckTLS, bc3.CheckHTTP, bc3.TimeoutSec, proxyAddr)
 	report := checker.BulkCheck(targets, nil)
 
 	baseline := a.controlBaseline
