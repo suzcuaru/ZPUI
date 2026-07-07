@@ -62,11 +62,8 @@ var stubMarkers = []string{
 	"роскомнадзор",
 	"roskomnadzor",
 	"сайт заблокирован",
-	"в соответствии с",
-	"федеральным законом",
 	"реестр доменных имен",
-	"access denied",
+	"access denied by rkn",
 	"forbidden by law",
-	"rkn",
-	"tspu",
+	"доступ к информационному ресурсу ограничен",
 }

@@ -15,11 +15,9 @@ type BulkResult struct {
 	URL       string `json:"url"`
 	OK        bool   `json:"ok"`
 	Blocked   bool   `json:"blocked"`
-	Bypassed  bool   `json:"bypassed"`
 	Verdict   string `json:"verdict"`
 	LatencyMs int64  `json:"latency_ms"`
 	Reason    string `json:"reason,omitempty"`
-	Method    string `json:"method,omitempty"`
 }
 
 type BulkReport struct {
@@ -55,6 +53,15 @@ func (c *Checker) checkOne(t BulkTarget) BulkResult {
 	latency := time.Since(start).Milliseconds()
 
 	ok := direct.Verdict == VerdictOK
+
+	if !ok && c.proxyAddr != "" {
+		proxyResult := c.CheckViaProxy(t.URL)
+		if proxyResult != nil && proxyResult.Verdict == VerdictOK {
+			ok = true
+			direct.Verdict = VerdictOK
+			direct.Notes = append(direct.Notes, "доступен через прокси")
+		}
+	}
 
 	reason := ""
 	if !ok {

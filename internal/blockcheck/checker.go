@@ -375,13 +375,17 @@ func parseURL(raw string) (parsed *url.URL, host, full string) {
 }
 
 func detectStubPage(body []byte) bool {
+	if len(body) > 8192 {
+		return false
+	}
 	text := strings.ToLower(string(body))
+	matches := 0
 	for _, marker := range stubMarkers {
 		if strings.Contains(text, marker) {
-			return true
+			matches++
 		}
 	}
-	return false
+	return matches >= 1
 }
 
 func socks5Dialer(proxyAddr string, timeout time.Duration) (func(ctx context.Context, network, addr string) (net.Conn, error), error) {
