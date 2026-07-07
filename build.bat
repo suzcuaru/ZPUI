@@ -128,8 +128,16 @@ if exist "%BAT_DIR%mods" (
 )
 echo.
 
-REM === STEP 7: Done ===
-echo [7/7] Build complete!
+REM === STEP 7: Copy to dist/ for release ===
+echo [7/8] Copying to dist/ for release...
+if exist "%BAT_DIR%dist" rmdir /s /q "%BAT_DIR%dist"
+mkdir "%BAT_DIR%dist"
+xcopy /e /i /y /q "%DIST%" "%BAT_DIR%dist" > nul
+echo Done.
+echo.
+
+REM === STEP 8: Done ===
+echo [8/8] Build complete!
 echo.
 
 REM --- Summary ---
