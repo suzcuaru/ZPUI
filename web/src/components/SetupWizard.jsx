@@ -36,7 +36,7 @@ export default function SetupWizard({ onComplete, onCancel }) {
   // Step 1: Detect third-party
   const runDetect = useCallback(async () => {
     const r = await api('GET', '/api/setup/detect-thirdparty');
-    if (r?.error) {
+    if (!r || r.error) {
       setThirdParty({ has_third_party: false, third_party_detail: '' });
       setStep('install');
       return;
@@ -158,6 +158,11 @@ export default function SetupWizard({ onComplete, onCancel }) {
   }, [wantFilters, wantDNS, wantProxy, onComplete]);
 
   useEffect(() => { runDetect(); }, [runDetect]);
+
+  // Шаг 'install' — транзитный: сразу запускаем установку (у него нет своего UI).
+  useEffect(() => {
+    if (step === 'install') runInstall();
+  }, [step, runInstall]);
 
   const blockedResources = resourceResults.filter(r => r.blocked && !r.bypassed);
   const okResources = resourceResults.filter(r => r.ok);

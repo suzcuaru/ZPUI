@@ -68,6 +68,7 @@ export default function App() {
     const next = theme === 'dark' ? 'light' : 'dark';
     setTheme(next);
     document.documentElement.setAttribute('data-theme', next);
+    try { localStorage.setItem('zpui-theme', next); } catch {}
     // При выходе из режима "system" переходим на явную тему.
     if (themeMode === 'system') {
       setThemeMode('manual');
@@ -81,13 +82,16 @@ export default function App() {
     themeInitRef.current = true;
     const savedTheme = status.mod.theme || 'system';
     if (savedTheme === 'system') {
+      try { localStorage.removeItem('zpui-theme'); } catch {}
       api('GET', '/api/system-theme').then(sysTheme => {
         if (sysTheme) {
-          setTheme(sysTheme === 'dark' ? 'dark' : 'light');
-          document.documentElement.setAttribute('data-theme', sysTheme === 'dark' ? 'dark' : 'light');
+          const resolved = sysTheme === 'dark' ? 'dark' : 'light';
+          setTheme(resolved);
+          document.documentElement.setAttribute('data-theme', resolved);
         }
       });
     } else {
+      try { localStorage.setItem('zpui-theme', savedTheme); } catch {}
       setTheme(savedTheme === 'dark' ? 'dark' : 'light');
       setThemeMode(savedTheme);
       document.documentElement.setAttribute('data-theme', savedTheme);
