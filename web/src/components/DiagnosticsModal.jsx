@@ -2,6 +2,13 @@ import { useState, useEffect, useCallback } from 'react';
 import Modal from './ui/Modal';
 import { api } from '../api';
 import { useT } from '../i18n';
+import { Check, AlertTriangle, X, RotateCw, Circle } from 'lucide-react';
+
+const statusIcon = (s, size = 14) =>
+  s === 'ok' ? <Check size={size} strokeWidth={3} /> :
+  s === 'warn' ? <AlertTriangle size={size} strokeWidth={2.5} /> :
+  s === 'error' ? <X size={size} strokeWidth={3} /> :
+  <Circle size={size} strokeWidth={2} />;
 
 export default function DiagnosticsModal({ open, onClose, showToast }) {
   const { t } = useT();
@@ -52,11 +59,11 @@ export default function DiagnosticsModal({ open, onClose, showToast }) {
           </span>
         ) : (
           <>
-            {okCount > 0 && <span className="diag-pill ok">✓ {okCount}</span>}
-            {warnCount > 0 && <span className="diag-pill warn">⚠ {warnCount}</span>}
-            {errorCount > 0 && <span className="diag-pill error">✕ {errorCount}</span>}
+            {okCount > 0 && <span className="diag-pill ok"><Check size={12} strokeWidth={3} /> {okCount}</span>}
+            {warnCount > 0 && <span className="diag-pill warn"><AlertTriangle size={12} strokeWidth={2.5} /> {warnCount}</span>}
+            {errorCount > 0 && <span className="diag-pill error"><X size={12} strokeWidth={3} /> {errorCount}</span>}
             <span className="diag-spacer" />
-            <button className="btn btn-xs btn-ghost" onClick={runDiag}>↻</button>
+            <button className="btn btn-xs btn-ghost" onClick={runDiag}><RotateCw size={13} strokeWidth={2.5} /></button>
           </>
         )}
       </div>
@@ -65,7 +72,7 @@ export default function DiagnosticsModal({ open, onClose, showToast }) {
         {checks.map(([key, val]) => (
           <div key={key} className={'diag-item ' + (val?.status || 'ok')}>
             <span className="diag-item-icon">
-              {val?.status === 'ok' ? '✓' : val?.status === 'warn' ? '⚠' : val?.status === 'error' ? '✕' : '○'}
+              {statusIcon(val?.status)}
             </span>
             <span className="diag-item-label">{val?.label || key}</span>
             <span className="diag-item-detail">{val?.detail || ''}</span>

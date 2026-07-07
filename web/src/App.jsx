@@ -8,7 +8,6 @@ import ResourceChecker from './components/ResourceChecker';
 import HealthCheckModal from './components/HealthCheckModal';
 import AutoSelectModal from './components/AutoSelectModal';
 import SetupWizard from './components/SetupWizard';
-import HelpModal from './components/HelpModal';
 import DiagnosticsModal from './components/DiagnosticsModal';
 import DashboardPage from './pages/DashboardPage';
 import ZapretPage from './pages/ZapretPage';
@@ -16,6 +15,7 @@ import SettingsPage from './pages/SettingsPage';
 import MonitorPage from './pages/MonitorPage';
 import ProxyPage from './pages/ProxyPage';
 import XboxDnsPage from './pages/XboxDnsPage';
+import DocsPage from './pages/DocsPage';
 import { api } from './api';
 import { useT } from './i18n';
 import { usePolling } from './hooks/usePolling';
@@ -29,6 +29,7 @@ const PAGES = {
   xboxdns: XboxDnsPage,
   settings: SettingsPage,
   monitor: MonitorPage,
+  docs: DocsPage,
 };
 
 export default function App() {
@@ -46,7 +47,6 @@ export default function App() {
   const [healthOpen, setHealthOpen] = useState(false);
   const [healthWarn, setHealthWarn] = useState(null);
   const [diagOpen, setDiagOpen] = useState(false);
-  const [helpOpen, setHelpOpen] = useState(false);
   const failCountRef = useRef(0);
   const themeInitRef = useRef(false);
 
@@ -175,7 +175,8 @@ export default function App() {
   const handleStartupComplete = useCallback(() => {
     setStartupDone(true);
     if (!localStorage.getItem('zpui-manual-seen')) {
-      setHelpOpen(true);
+      localStorage.setItem('zpui-manual-seen', '1');
+      setActivePage('docs');
     }
   }, []);
 
@@ -230,7 +231,7 @@ export default function App() {
           onAutoSelect={() => setAutoSelectOpen(true)}
           onOpenHealth={() => setHealthOpen(true)}
           onOpenDiagnostics={() => setDiagOpen(true)}
-          onOpenHelp={() => setHelpOpen(true)}
+          onOpenHelp={() => setActivePage('docs')}
           healthWarn={healthWarn}
           status={status}
           showToast={showToast}
@@ -247,7 +248,6 @@ export default function App() {
       {healthOpen && <HealthCheckModal onClose={() => setHealthOpen(false)} />}
       <AutoSelectModal open={autoSelectOpen} onClose={() => setAutoSelectOpen(false)} showToast={showToast} />
       <DiagnosticsModal open={diagOpen} onClose={() => setDiagOpen(false)} showToast={showToast} />
-      {helpOpen && <HelpModal onClose={() => setHelpOpen(false)} />}
       <Toast toasts={toasts} onRemove={removeToast} version={status?.mod?.version} />
     </div>
   );

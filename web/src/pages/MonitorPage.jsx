@@ -3,6 +3,7 @@ import { api } from '../api';
 import { formatBytes } from '../utils';
 import { useT } from '../i18n';
 import { usePolling } from '../hooks/usePolling';
+import { ArrowDown, ArrowUp } from 'lucide-react';
 
 function TrafficChart({ data, color, height }) {
   const canvasRef = useRef(null);
@@ -150,7 +151,7 @@ export default function MonitorPage({ status, showToast }) {
         </div>
         <div className="mon-stat">
           <span className="mon-stat-label">{t('monitor.viaProxy')}</span>
-          <span className="mon-stat-val mono">↓{formatBytes(totalDown)} ↑{formatBytes(totalUp)}</span>
+          <span className="mon-stat-val mono"><ArrowDown size={12} strokeWidth={2.5} />{formatBytes(totalDown)} <ArrowUp size={12} strokeWidth={2.5} />{formatBytes(totalUp)}</span>
         </div>
         <div className="mon-stat">
           <span className="mon-stat-label">{t('monitor.devices')}</span>

@@ -97,6 +97,8 @@ const GET_ROUTES = {
   '/api/logs/debug': (app) => app.GetLogDebug(),
   '/api/setup/detect-thirdparty': (app) => app.DetectThirdPartyZapret(),
   '/api/setup/strategies': (app, p) => app.SetupListStrategies(p.strategy || ''),
+  '/api/setup/test-strategy': (app, p) => app.SetupTestStrategy(p.strategy || ''),
+  '/api/setup/control-check': (app) => app.SetupControlCheck(),
 };
 
 /**

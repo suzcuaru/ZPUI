@@ -92,6 +92,7 @@ func main() {
 	// Создаём tray (контроллер = app, управляет окном через Wails runtime)
 	trayApp := tray.New(cfg, logMgr, zapretMgr, proxyServer, app, version, trayIcon)
 	go func() {
+		runtime.LockOSThread()
 		defer func() {
 			if r := recover(); r != nil {
 				logMgr.Error("tray", fmt.Sprintf("Tray panic: %v", r))

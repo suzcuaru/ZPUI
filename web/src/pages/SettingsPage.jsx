@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Switch from '../components/ui/Switch';
 import { api, apiCall } from '../api';
 import { useT } from '../i18n';
+import { ArrowRight } from 'lucide-react';
 import { usePolling } from '../hooks/usePolling';
 import { useDebouncedSave } from '../hooks/useDebouncedSave';
 import { useUpdateCheck, resetZapretCheck, checkZapretUpdate } from '../hooks/useUpdateCheck';
@@ -77,8 +78,6 @@ export default function SettingsPage({ status, showToast, onOpenLogs }) {
 
   if (!config) return null;
 
-  const modules = (versions?.components || []).filter(c => c.name !== 'ZPUI');
-
   return (
     <div className="settings-page">
       <div className="page-title">{t('settings.title')}</div>
@@ -128,7 +127,7 @@ export default function SettingsPage({ status, showToast, onOpenLogs }) {
               <div className="upd-ver-row">
                 <span className="upd-ver">v{zpuiCheck.current || versions?.zpui || '—'}</span>
                 {zpuiCheck.state === 'available' && zpuiCheck.latest && (
-                  <span className="upd-ver-new">→ v{zpuiCheck.latest}</span>
+                  <span className="upd-ver-new"><ArrowRight size={11} strokeWidth={2.5} /> v{zpuiCheck.latest}</span>
                 )}
               </div>
             </div>
@@ -155,7 +154,7 @@ export default function SettingsPage({ status, showToast, onOpenLogs }) {
               <div className="upd-ver-row">
                 <span className="upd-ver">v{status?.zapret?.version || zapretCheck.current || '—'}</span>
                 {zapretCheck.state === 'available' && zapretCheck.latest && (
-                  <span className="upd-ver-new">→ v{zapretCheck.latest}</span>
+                  <span className="upd-ver-new"><ArrowRight size={11} strokeWidth={2.5} /> v{zapretCheck.latest}</span>
                 )}
               </div>
             </div>
@@ -175,22 +174,6 @@ export default function SettingsPage({ status, showToast, onOpenLogs }) {
             ) : zapretCheck.state === 'latest' ? (
               <span className="upd-status latest" style={{ fontSize: 9, padding: '1px 6px' }}>{t('status.upToDate')}</span>
             ) : null}
-          </div>
-          <div className="section-title" style={{ marginTop: 8, fontSize: 10 }}>{t('settings.satellites')}</div>
-          <div className="sat-grid">
-            {modules.map(m => {
-              const key = m.name.toLowerCase();
-              const isInstalled = versions?.installed?.[key] !== false;
-              return (
-                <div key={key} className="sat-card" style={{ padding: '5px 8px' }}>
-                  <span className="sat-name" style={{ fontSize: 10, minWidth: 65 }}>{m.name}</span>
-                  <span className="sat-ver" style={{ fontSize: 9, color: isInstalled ? 'var(--text-secondary)' : 'var(--text-tertiary)' }}>
-                    {!isInstalled ? '—' : m.version && m.version !== '0.0.0' ? 'v' + m.version : '—'}
-                  </span>
-                  <span className="sat-file" style={{ fontSize: 8 }}>{m.file}</span>
-                </div>
-              );
-            })}
           </div>
         </div>
 

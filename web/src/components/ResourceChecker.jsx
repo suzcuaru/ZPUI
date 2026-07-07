@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import Modal from './ui/Modal';
 import { api, apiCall } from '../api';
+import { Check } from 'lucide-react';
 
 const VERDICT_LABELS = {
   OK: { label: 'Доступен', color: 'var(--success)', icon: '✓' },
@@ -224,15 +225,15 @@ export default function ResourceChecker({ onClose, showToast, proxyRunning }) {
             )}
             {report.InUserList && (
               <div className="rc-add-card" style={{ background: 'var(--success-bg)' }}>
-                <span style={{ color: 'var(--success)', fontSize: 12, fontWeight: 600 }}>
-                  ✓ {report.Host} уже в пользовательском списке
+                <span style={{ color: 'var(--success)', fontSize: 12, fontWeight: 600, display:'inline-flex', alignItems:'center', gap:4 }}>
+                  <Check size={13} strokeWidth={3} /> {report.Host} уже в пользовательском списке
                 </span>
               </div>
             )}
             {report.BypassWorks && (
               <div className="rc-add-card" style={{ background: 'var(--success-bg)' }}>
-                <span style={{ color: 'var(--success)', fontSize: 12, fontWeight: 600 }}>
-                  ✓ Обход работает для этого ресурса
+                <span style={{ color: 'var(--success)', fontSize: 12, fontWeight: 600, display:'inline-flex', alignItems:'center', gap:4 }}>
+                  <Check size={13} strokeWidth={3} /> Обход работает для этого ресурса
                 </span>
               </div>
             )}

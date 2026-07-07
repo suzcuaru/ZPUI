@@ -111,16 +111,8 @@ copy /y "selfupdate.exe"     "%DIST%\" > nul
 copy /y "zapretupdate.exe"   "%DIST%\" > nul
 
 REM --- Generate versions.json (module versions read from source code) ---
-powershell -NoProfile -Command "& {
-  $v = '%VERSION%'
-  function GetModVer($p) { if ((Get-Content $p -Raw) -match 'var version = .([^\x22\x27]+).') { $matches[1].Trim() } else { '0.0.0' } }
-  $wz = GetModVer '%BAT_DIR%cmd\wizard\main.go'
-  $as = GetModVer '%BAT_DIR%cmd\autoselect\main.go'
-  $su = GetModVer '%BAT_DIR%cmd\selfupdate\main.go'
-  $zu = GetModVer '%BAT_DIR%cmd\zapretupdate\main.go'
-  $j = [ordered]@{ zpui=$v; wizard=$wz; autoselect=$as; selfupdate=$su; zapretupdate=$zu } | ConvertTo-Json
-  [System.IO.File]::WriteAllLines('%DIST%\versions.json', $j, (New-Object System.Text.UTF8Encoding $false))
-}"
+powershell -NoProfile -Command "$v='%VERSION%'; function g($p){ if((Get-Content $p -Raw) -match 'var version\s*=\s*\x22([^\x22]+)\x22'){ $matches[1].Trim() } else { '0.0.0' } }; $wz=g '%BAT_DIR%cmd\wizard\main.go'; $as=g '%BAT_DIR%cmd\autoselect\main.go'; $su=g '%BAT_DIR%cmd\selfupdate\main.go'; $zu=g '%BAT_DIR%cmd\zapretupdate\main.go'; $j=[ordered]@{zpui=$v;wizard=$wz;autoselect=$as;selfupdate=$su;zapretupdate=$zu}|ConvertTo-Json; [IO.File]::WriteAllText('%DIST%\versions.json',$j,(New-Object Text.UTF8Encoding $false))"
+if errorlevel 1 (echo [ERROR] versions.json generation failed & timeout /t 10 > nul & exit /b 1)
 
 echo Done.
 echo.

@@ -192,9 +192,13 @@ export function SetupConfigureFilters(arg1:string):Promise<Record<string, any>>;
 
 export function SetupConfigureProxy(arg1:boolean,arg2:number,arg3:string):Promise<Record<string, any>>;
 
+export function SetupControlCheck():Promise<Record<string, any>>;
+
 export function SetupListStrategies(arg1:string):Promise<Record<string, any>>;
 
 export function SetupSkip():Promise<Record<string, any>>;
+
+export function SetupTestStrategy(arg1:string):Promise<Record<string, any>>;
 
 export function ShowWindow():Promise<void>;
 

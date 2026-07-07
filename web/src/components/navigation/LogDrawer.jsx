@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { api } from '../../api';
 import { useT } from '../../i18n';
+import { X, SlidersHorizontal, Trash2, Copy } from 'lucide-react';
 
 const CATS = ['all', 'app', 'zapret', 'network', 'availability', 'config', 'tray', 'xboxdns'];
 const ALL_FETCH = ['app', 'zapret', 'network', 'availability', 'tray', 'config', 'xboxdns'];
@@ -167,7 +168,7 @@ export default function LogDrawer({ open, onClose }) {
             </button>
           </div>
           <div className="lg-spacer" />
-          <button className="lg-head-close" data-tooltip={t('common.close')} onClick={onClose}>✕</button>
+          <button className="lg-head-close" data-tooltip={t('common.close')} onClick={onClose}><X size={16} strokeWidth={2.5} /></button>
         </div>
 
         {tab === 'live' && (
@@ -185,9 +186,9 @@ export default function LogDrawer({ open, onClose }) {
                   className={'lg-btn' + (showDebug || Object.values(debugState).some(Boolean) ? ' on' : '')}
                   onClick={() => setShowDebug(!showDebug)}
                   data-tooltip={t('logs.debugMode', { defaultValue: 'Debug mode' })}
-                >⚙</button>
-                <button className="lg-btn" onClick={clearAll} data-tooltip={t('common.clear')}>⊘</button>
-                <button className="lg-btn" onClick={copyAll} data-tooltip={t('common.copy')}>⎘</button>
+                ><SlidersHorizontal size={15} strokeWidth={2} /></button>
+                <button className="lg-btn" onClick={clearAll} data-tooltip={t('common.clear')}><Trash2 size={15} strokeWidth={2} /></button>
+                <button className="lg-btn" onClick={copyAll} data-tooltip={t('common.copy')}><Copy size={15} strokeWidth={2} /></button>
               </div>
             </div>
             {showDebug && (

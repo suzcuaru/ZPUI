@@ -295,26 +295,24 @@ func (c *Checker) checkHTTP(fullURL, host string, result *CheckResult, viaProxy 
 }
 
 func (c *Checker) classify(result *CheckResult) {
-	notes := []string{}
-
 	if !result.DNS.Ok && result.DNSDoH.Ok {
 		result.Verdict = VerdictDNSBlock
 		result.Confidence = ConfHigh
-		notes = append(notes, "системный DNS не резолвится, DoH резолвится — отравление DNS")
+		result.Notes = append(result.Notes, "системный DNS не резолвится, DoH резолвится — отравление DNS")
 		return
 	}
 
 	if result.DNSMismatch {
 		result.Verdict = VerdictDNSBlock
 		result.Confidence = ConfHigh
-		notes = append(notes, "адреса системного DNS и DoH полностью не совпадают — подмена DNS")
+		result.Notes = append(result.Notes, "адреса системного DNS и DoH полностью не совпадают — подмена DNS")
 		return
 	}
 
 	if result.TCP.Error == "RST" {
 		result.Verdict = VerdictTCPReset
 		result.Confidence = ConfHigh
-		notes = append(notes, "TCP handshake отклонён RST — блэкхолинг на IP-уровне")
+		result.Notes = append(result.Notes, "TCP handshake отклонён RST — блэкхолинг на IP-уровне")
 		return
 	}
 
@@ -322,7 +320,7 @@ func (c *Checker) classify(result *CheckResult) {
 		if strings.Contains(result.TCP.Error, "timeout") {
 			result.Verdict = VerdictTimeout
 			result.Confidence = ConfLow
-			notes = append(notes, "TCP handshake таймаут")
+			result.Notes = append(result.Notes, "TCP handshake таймаут")
 		} else {
 			result.Verdict = VerdictDown
 			result.Confidence = ConfMedium
@@ -334,9 +332,9 @@ func (c *Checker) classify(result *CheckResult) {
 		result.Verdict = VerdictTLSBlock
 		result.Confidence = ConfMedium
 		if result.TLS.Detail != "" {
-			notes = append(notes, result.TLS.Detail)
+			result.Notes = append(result.Notes, result.TLS.Detail)
 		} else {
-			notes = append(notes, "TCP работает, TLS убит — DPI по SNI")
+			result.Notes = append(result.Notes, "TCP работает, TLS убит — DPI по SNI")
 		}
 		return
 	}
@@ -345,9 +343,9 @@ func (c *Checker) classify(result *CheckResult) {
 		result.Verdict = VerdictHTTPStub
 		result.Confidence = ConfHigh
 		if result.HTTP.Status == 451 {
-			notes = append(notes, "HTTP 451 — юридически недоступен")
+			result.Notes = append(result.Notes, "HTTP 451 — юридически недоступен")
 		} else {
-			notes = append(notes, "тело ответа содержит маркер заглушки РКН/TSPU")
+			result.Notes = append(result.Notes, "тело ответа содержит маркер заглушки РКН/TSPU")
 		}
 		return
 	}
@@ -355,23 +353,22 @@ func (c *Checker) classify(result *CheckResult) {
 	if !result.HTTP.Ok && result.TLS.Ok {
 		result.Verdict = VerdictDown
 		result.Confidence = ConfMedium
-		notes = append(notes, fmt.Sprintf("HTTP статус %d", result.HTTP.Status))
+		result.Notes = append(result.Notes, fmt.Sprintf("HTTP статус %d", result.HTTP.Status))
 		return
 	}
 
 	if result.HTTP.Ok && result.TLS.Ok {
 		result.Verdict = VerdictOK
 		result.Confidence = ConfHigh
-		notes = append(notes, "ресурс доступен")
+		result.Notes = append(result.Notes, "ресурс доступен")
 		return
 	}
 
 	result.Verdict = VerdictUnknown
 	result.Confidence = ConfLow
-	if len(notes) == 0 {
-		notes = append(notes, "не удалось классифицировать")
+	if len(result.Notes) == 0 {
+		result.Notes = append(result.Notes, "не удалось классифицировать")
 	}
-	result.Notes = notes
 }
 
 func (c *Checker) GetProviderInfo() ProviderInfo {

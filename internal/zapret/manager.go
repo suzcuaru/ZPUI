@@ -359,6 +359,20 @@ func (m *Manager) VerifyFiles() *VerifyResult {
 	return result
 }
 
+func (m *Manager) verifyEssential() error {
+	vr := m.VerifyFiles()
+	if vr.AllPresent {
+		return nil
+	}
+	var missing []string
+	for _, fc := range vr.Files {
+		if !fc.Exists {
+			missing = append(missing, fc.Path)
+		}
+	}
+	return fmt.Errorf("отсутствуют обязательные файлы: %s", strings.Join(missing, ", "))
+}
+
 // DefaultStrategyName возвращает стратегию по умолчанию (первый general* ALT).
 func (m *Manager) DefaultStrategyName() string {
 	strategies := m.ListStrategies()

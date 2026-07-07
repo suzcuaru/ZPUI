@@ -107,8 +107,7 @@ func (a *App) handleClicks() {
 			}()
 		case <-a.mQuit.ClickedCh:
 			a.log.Info("tray", "Quit requested from tray")
-			a.controller.Quit()
-			systray.Quit()
+			go a.controller.Quit()
 			return
 		}
 	}

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { api } from '../api';
 import { formatBytes } from '../utils';
 import { useT } from '../i18n';
+import { ArrowDown, ArrowUp } from 'lucide-react';
 
 export default function DashboardPage({ status, showToast, onNavigate }) {
   const { t } = useT();
@@ -149,17 +150,17 @@ export default function DashboardPage({ status, showToast, onNavigate }) {
         <div className="card-section-title">{t('dashboard.traffic')}</div>
         <div className="db-traffic-grid">
           <div className="db-traffic-box">
-            <span className="db-traffic-arrow down">↓</span>
+            <span className="db-traffic-arrow down"><ArrowDown size={18} strokeWidth={2.5} /></span>
             <span className="db-traffic-val">{dlSpeed}</span>
           </div>
           <div className="db-traffic-box">
-            <span className="db-traffic-arrow up">↑</span>
+            <span className="db-traffic-arrow up"><ArrowUp size={18} strokeWidth={2.5} /></span>
             <span className="db-traffic-val">{ulSpeed}</span>
           </div>
         </div>
         <div className="db-traffic-totals">
-          <span className="db-total-item">↓ {dlTotal}</span>
-          <span className="db-total-item">↑ {ulTotal}</span>
+          <span className="db-total-item"><ArrowDown size={12} strokeWidth={2.5} /> {dlTotal}</span>
+          <span className="db-total-item"><ArrowUp size={12} strokeWidth={2.5} /> {ulTotal}</span>
         </div>
       </div>
 

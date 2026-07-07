@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -189,58 +190,111 @@ func (m *Manager) extractUpdate(zipPath string) error {
 	}
 	defer r.Close()
 
-	// Определяем общий корневой префикс (если zip содержит одну папку)
 	prefix := detectZipRoot(r.File)
 
+	type entry struct {
+		f       *zip.File
+		relPath string
+	}
+
+	var entries []entry
 	for _, f := range r.File {
 		name := f.Name
 		if prefix != "" && len(name) >= len(prefix) && name[:len(prefix)] == prefix {
 			name = name[len(prefix):]
 		}
 		name = strings.TrimLeft(name, "/\\")
-
 		if name == "" {
 			continue
 		}
-
-		fpath := filepath.Join(zapretDir, name)
-
 		if f.FileInfo().IsDir() {
-			os.MkdirAll(fpath, 0755)
+			os.MkdirAll(filepath.Join(zapretDir, name), 0755)
 			continue
 		}
+		entries = append(entries, entry{f, name})
+	}
 
-		if err := os.MkdirAll(filepath.Dir(fpath), 0755); err != nil {
-			return err
-		}
-
-		outFile, err := os.OpenFile(fpath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
-		if err != nil {
-			m.log.Warn("updater", fmt.Sprintf("Cannot open %s for writing: %v — trying rename workaround", name, err))
-			oldPath := fpath + ".old"
-			os.Rename(fpath, oldPath)
-			os.Remove(oldPath)
-			outFile, err = os.OpenFile(fpath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
-			if err != nil {
-				m.log.Warn("updater", fmt.Sprintf("Skipping locked file: %s", name))
-				continue
-			}
-		}
-
-		rc, err := f.Open()
-		if err != nil {
-			outFile.Close()
-			return err
-		}
-
-		_, err = io.Copy(outFile, rc)
-		outFile.Close()
-		rc.Close()
-		if err != nil {
-			return err
+	failed := make(map[string]*entry)
+	for i := range entries {
+		e := &entries[i]
+		dest := filepath.Join(zapretDir, e.relPath)
+		if err := writeZipEntry(e.f, dest); err != nil {
+			m.log.Warn("updater", fmt.Sprintf("Файл занят, будет повтор: %s", e.relPath))
+			failed[e.relPath] = e
 		}
 	}
 
+	if len(failed) > 0 {
+		m.log.Info("updater", fmt.Sprintf("%d файлов заняты, останавливаем процессы и повторяем по одному...", len(failed)))
+		killWinws()
+		executil.HiddenCmd("sc", "stop", "WinDivert").Run()
+		executil.HiddenCmd("sc", "stop", "WinDivert14").Run()
+		time.Sleep(2 * time.Second)
+
+		for relPath, e := range failed {
+			dest := filepath.Join(zapretDir, relPath)
+			if err := m.forceWriteEntry(e.f, dest, relPath); err != nil {
+				m.log.Error("updater", fmt.Sprintf("Не удалось записать после повтора: %s: %v", relPath, err))
+				continue
+			}
+			delete(failed, relPath)
+		}
+	}
+
+	if len(failed) > 0 {
+		names := make([]string, 0, len(failed))
+		for n := range failed {
+			names = append(names, n)
+		}
+		sort.Strings(names)
+		return fmt.Errorf("не удалось распаковать (заняты процессом): %s", strings.Join(names, ", "))
+	}
+
+	m.log.Info("updater", fmt.Sprintf("Распаковано файлов: %d", len(entries)))
+	return nil
+}
+
+func writeZipEntry(f *zip.File, dest string) error {
+	if err := os.MkdirAll(filepath.Dir(dest), 0755); err != nil {
+		return err
+	}
+	out, err := os.OpenFile(dest, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+	rc, err := f.Open()
+	if err != nil {
+		return err
+	}
+	defer rc.Close()
+	_, err = io.Copy(out, rc)
+	return err
+}
+
+// forceWriteEntry пробует rename-трюк: занятый файл переименовывается
+// в .zpui-old, новый пишется на его место. На Windows работающий .exe
+// можно переименовать (но не удалить), поэтому трюк помогает для winws.exe.
+func (m *Manager) forceWriteEntry(f *zip.File, dest, relPath string) error {
+	if err := os.MkdirAll(filepath.Dir(dest), 0755); err != nil {
+		return err
+	}
+
+	if err := writeZipEntry(f, dest); err == nil {
+		return nil
+	}
+
+	oldPath := dest + ".zpui-old"
+	os.Remove(oldPath)
+	if err := os.Rename(dest, oldPath); err != nil {
+		return fmt.Errorf("невозможно ни записать, ни переименовать %s: %w", relPath, err)
+	}
+
+	m.log.Info("updater", fmt.Sprintf("Переименован занятый файл: %s", relPath))
+	if err := writeZipEntry(f, dest); err != nil {
+		return fmt.Errorf("запись после rename не удалась %s: %w", relPath, err)
+	}
+	os.Remove(oldPath)
 	return nil
 }
 
@@ -347,6 +401,35 @@ func verifyZip(path string) error {
 	return nil
 }
 
+func verifyZipContents(path string) error {
+	r, err := zip.OpenReader(path)
+	if err != nil {
+		return err
+	}
+	defer r.Close()
+
+	prefix := detectZipRoot(r.File)
+	have := make(map[string]bool)
+	for _, f := range r.File {
+		name := f.Name
+		if prefix != "" && len(name) >= len(prefix) && name[:len(prefix)] == prefix {
+			name = name[len(prefix):]
+		}
+		name = strings.TrimLeft(name, "/\\")
+		have[name] = true
+	}
+	var missing []string
+	for _, rel := range essentialFiles {
+		if !have[rel] {
+			missing = append(missing, rel)
+		}
+	}
+	if len(missing) > 0 {
+		return fmt.Errorf("архив неполный, отсутствует: %s", strings.Join(missing, ", "))
+	}
+	return nil
+}
+
 func (m *Manager) cloneFromGitHub(destDir string) error {
 	if err := executil.HiddenCmd("git", "--version").Run(); err != nil {
 		return fmt.Errorf("git не найден — установите Git для альтернативного способа скачивания")
@@ -387,75 +470,89 @@ func sendProgress(ch chan<- UpdateProgress, step string, pct int) {
 }
 
 func (m *Manager) DownloadAndInstall(progressFn ProgressFn) error {
-	m.log.Info("updater", "Checking latest version...")
-	info, err := m.CheckForUpdates()
-	if err != nil {
-		return fmt.Errorf("проверка обновлений: %w", err)
-	}
-
 	m.log.Info("updater", "Backing up state...")
 	snap := m.CaptureState()
 
-	m.log.Info("updater", "Downloading zapret...")
+	zapretDir := m.cfg.GetZapretPath()
 	tempZip := filepath.Join(os.TempDir(), "zapret-download.zip")
 
-	urls := []string{info.DownloadURL}
-	urls = append(urls, info.FallbackURLs...)
+	zipOK := false
+	info, checkErr := m.CheckForUpdates()
+	if checkErr != nil {
+		m.log.Warn("updater", "GitHub API недоступен, пропуск zip: "+checkErr.Error())
+	} else {
+		urls := []string{info.DownloadURL}
+		urls = append(urls, info.FallbackURLs...)
 
-	var lastErr error
-	for _, u := range urls {
-		m.log.Info("updater", "Trying: "+u[:min(len(u), 80)])
-		if err := downloadFileWithProgress(u, tempZip, progressFn); err != nil {
-			lastErr = err
-			m.log.Warn("updater", "Download failed: "+err.Error())
-			continue
+		for _, u := range urls {
+			if u == "" {
+				continue
+			}
+			m.log.Info("updater", "Скачивание: "+u[:min(len(u), 80)])
+			if err := downloadFileWithProgress(u, tempZip, progressFn); err != nil {
+				m.log.Warn("updater", "Download failed: "+err.Error())
+				continue
+			}
+			if err := verifyZip(tempZip); err != nil {
+				m.log.Warn("updater", "Downloaded file is not a valid zip")
+				os.Remove(tempZip)
+				continue
+			}
+			if err := verifyZipContents(tempZip); err != nil {
+				m.log.Warn("updater", "Incomplete zip: "+err.Error())
+				os.Remove(tempZip)
+				continue
+			}
+			zipOK = true
+			break
 		}
-
-		if err := verifyZip(tempZip); err != nil {
-			m.log.Warn("updater", "Downloaded file is not a valid zip")
-			os.Remove(tempZip)
-			lastErr = fmt.Errorf("скачанный файл повреждён (невалидный zip)")
-			continue
-		}
-
-		lastErr = nil
-		break
 	}
 
-	if lastErr != nil {
-		m.log.Info("updater", "Downloads failed, trying git clone as fallback...")
-		if progressFn != nil {
-			progressFn(-1, -1) // signal: cloning from git
-		}
-		zapretDir := m.cfg.GetZapretPath()
-		if err := m.cloneFromGitHub(zapretDir); err != nil {
-			return fmt.Errorf("все способы скачивания не удались: %w", lastErr)
-		}
+	if zipOK {
+		defer os.Remove(tempZip)
+
+		m.log.Info("updater", "Stopping zapret before extraction...")
+		m.RemoveService()
 		killWinws()
-		m.version = detectZapretVersion(m.cfg)
-		m.RestoreState(snap)
-		m.log.Info("updater", fmt.Sprintf("Zapret installed via git clone, version: %s", m.version))
-		return nil
+		executil.HiddenCmd("sc", "stop", "WinDivert").Run()
+		executil.HiddenCmd("sc", "stop", "WinDivert14").Run()
+		time.Sleep(3 * time.Second)
+
+		m.log.Info("updater", "Extracting zapret...")
+		if err := m.extractUpdate(tempZip); err != nil {
+			m.log.Warn("updater", "Extract failed, fallback to git: "+err.Error())
+		} else if err := m.verifyEssential(); err != nil {
+			m.log.Warn("updater", "Verify after extract failed: "+err.Error())
+		} else {
+			killWinws()
+			m.version = detectZapretVersion(m.cfg)
+			m.RestoreState(snap)
+			m.log.Info("updater", fmt.Sprintf("Zapret installed via zip, version: %s", m.version))
+			return nil
+		}
 	}
 
-	defer os.Remove(tempZip)
-
-	m.log.Info("updater", "Stopping zapret before extraction...")
-	m.RemoveService()
+	m.log.Info("updater", "Git clone fallback...")
+	if progressFn != nil {
+		progressFn(-1, -1)
+	}
 	killWinws()
+	m.RemoveService()
 	executil.HiddenCmd("sc", "stop", "WinDivert").Run()
 	executil.HiddenCmd("sc", "stop", "WinDivert14").Run()
-	time.Sleep(3 * time.Second)
+	time.Sleep(2 * time.Second)
 
-	m.log.Info("updater", "Extracting zapret...")
-	if err := m.extractUpdate(tempZip); err != nil {
-		return fmt.Errorf("распаковка архива не удалась: %w", err)
+	if err := m.cloneFromGitHub(zapretDir); err != nil {
+		m.log.Error("updater", "Git clone failed: "+err.Error())
+		return fmt.Errorf("не удалось скачать zapret ни через zip, ни через git clone: %w", err)
 	}
-
+	if err := m.verifyEssential(); err != nil {
+		return fmt.Errorf("неполная установка (git clone): %w", err)
+	}
 	killWinws()
 	m.version = detectZapretVersion(m.cfg)
 	m.RestoreState(snap)
-	m.log.Info("updater", fmt.Sprintf("Zapret installed, version: %s", m.version))
+	m.log.Info("updater", fmt.Sprintf("Zapret installed via git clone, version: %s", m.version))
 	return nil
 }
 
@@ -491,6 +588,11 @@ func (m *Manager) InstallZapret(sourceDir string, progress chan<- UpdateProgress
 	if output, err := copyDir.CombinedOutput(); err != nil {
 		m.RestoreState(snap)
 		return fmt.Errorf("copy files: %v: %s", err, string(output))
+	}
+
+	if err := m.verifyEssential(); err != nil {
+		m.RestoreState(snap)
+		return fmt.Errorf("источник неполон: %w", err)
 	}
 
 	m.version = detectZapretVersion(m.cfg)

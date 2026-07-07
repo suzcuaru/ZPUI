@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { api, apiCall } from '../api';
 import { useT } from '../i18n';
+import { Check } from 'lucide-react';
 
 export default function ZapretPage({ status, showToast }) {
   const { t } = useT();
@@ -115,7 +116,7 @@ function StrategiesTab({ status, showToast }) {
           >
             <span className="strat-card-dot" />
             <span className="strat-card-name">{s.name}</span>
-            {s.current && <span className="strat-card-badge">✓</span>}
+            {s.current && <span className="strat-card-badge"><Check size={11} strokeWidth={3.5} /></span>}
             {changing === s.filename && <span className="strat-card-spin" />}
           </button>
         ))}

@@ -54,6 +54,9 @@ type App struct {
 	resourceCacheTime time.Time
 	resourceCacheMu   sync.Mutex
 
+	// Эталон: какие ресурсы заблокированы без запрета (для wizard)
+	controlBaseline map[string]bool
+
 	// Видимость окна (для tray toggle)
 	windowVisible bool
 	windowMu      sync.Mutex

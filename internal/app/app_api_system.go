@@ -33,46 +33,11 @@ func (a *App) GetResourceStatus() map[string]interface{} {
 	}
 	a.resourceCacheMu.Unlock()
 
-	var defaultTargets []blockcheck.BulkTarget
-	targetsPath := filepath.Join(a.cfg.GetZapretPath(), "utils", "targets.txt")
-	if body, err := os.ReadFile(targetsPath); err == nil {
-		for _, line := range strings.Split(string(body), "\n") {
-			line = strings.TrimSpace(line)
-			if line == "" || strings.HasPrefix(line, "#") {
-				continue
-			}
-			parts := strings.SplitN(line, "=", 2)
-			if len(parts) != 2 {
-				continue
-			}
-			key := strings.TrimSpace(parts[0])
-			val := strings.TrimSpace(strings.Trim(parts[1], `"`))
-			if strings.HasPrefix(val, "PING:") {
-				continue
-			}
-			if !strings.HasPrefix(val, "http://") && !strings.HasPrefix(val, "https://") {
-				continue
-			}
-			defaultTargets = append(defaultTargets, blockcheck.BulkTarget{Name: key, URL: val})
-		}
-	}
+	defaultTargets, _ := blockcheck.ReadTargets(blockcheck.DefaultTargetsPath(a.cfg.GetZapretPath()))
 
 	var userTargets []blockcheck.BulkTarget
 	if body, err := os.ReadFile(filepath.Join(a.cfg.ListsDir(), "list-general-user.txt")); err == nil {
-		for _, line := range strings.Split(string(body), "\n") {
-			line = strings.TrimSpace(line)
-			if line != "" && !strings.HasPrefix(line, "#") {
-				url := line
-				if !strings.HasPrefix(url, "http://") && !strings.HasPrefix(url, "https://") {
-					url = "https://" + url
-				}
-				host := strings.TrimPrefix(strings.TrimPrefix(url, "https://"), "http://")
-				if idx := strings.IndexAny(host, "/:"); idx > 0 {
-					host = host[:idx]
-				}
-				userTargets = append(userTargets, blockcheck.BulkTarget{Name: host, URL: url})
-			}
-		}
+		userTargets = blockcheck.ParseTargets(string(body))
 	}
 
 	var proxyAddr string

@@ -322,22 +322,20 @@
     },
     "test": {
       "title": "Strategy selection",
+      "baseline": "Control check without Zapret…",
       "control": "Control resource check without Zapret…",
       "testing": "Testing strategy: {name}",
       "waiting": "Waiting for strategy to apply…",
       "done": "Strategy check complete"
     },
-    "verdict": {
-      "green": "Ideal",
-      "yellow": "Medium",
-      "red": "Poor",
-      "white": "Does not work"
-    },
     "results": {
       "title": "Choose a strategy",
-      "desc": "Strategies tested for resource availability. Border color = bypass quality.",
+      "desc": "Showing strategies with 70%+ availability. Hover a card for blocked resources.",
       "best": "Recommended",
-      "apply": "Apply"
+      "apply": "Apply",
+      "blocked": "blocked",
+      "allOk": "All resources accessible",
+      "noViable": "No strategy reached 70%. Showing all."
     },
     "config": {
       "title": "Quick setup",

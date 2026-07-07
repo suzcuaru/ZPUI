@@ -2,15 +2,6 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { api } from '../api';
 import { useT } from '../i18n';
 
-// Demo verdicts (until the real strategy-test backend is wired in).
-const MOCK_VERDICTS = {
-  'general (ALT).bat': 'green',
-  'general (discord).bat': 'yellow',
-  'quic (ALT).bat': 'green',
-  'discord_voice.bat': 'red',
-  'youtube_unblock.bat': 'white',
-};
-
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
 export default function SetupWizard({ onComplete, onCancel }) {
@@ -20,17 +11,14 @@ export default function SetupWizard({ onComplete, onCancel }) {
   const [status, setStatus] = useState('');
   const [error, setError] = useState(null);
 
-  // env scan results
   const [env, setEnv] = useState({ thirdParty: false, vpn: false });
 
-  // strategy test
-  const [strategies, setStrategies] = useState([]);
-  const [testCurrent, setTestCurrent] = useState('');
   const [results, setResults] = useState([]);
   const [selected, setSelected] = useState('');
   const [bestStrategy, setBestStrategy] = useState('');
+  const [testIdx, setTestIdx] = useState(0);
+  const [testTotal, setTestTotal] = useState(0);
 
-  // config
   const [gameFilter, setGameFilter] = useState(true);
   const [ipsetMode, setIpsetMode] = useState('all');
   const [customRes, setCustomRes] = useState('');
@@ -60,13 +48,11 @@ export default function SetupWizard({ onComplete, onCancel }) {
   }), []);
 
   const run = useCallback(async () => {
-    // ── boot ──────────────────────────────
     setPhase('boot');
     setStatus(t('setup.boot'));
     await tickProgress(0, 15, 1100);
     if (!aliveRef.current) return;
 
-    // ── self-check ────────────────────────
     setPhase('selfcheck');
     setStatus(t('setup.selfcheck.checking'));
     await tickProgress(15, 28, 700);
@@ -79,18 +65,16 @@ export default function SetupWizard({ onComplete, onCancel }) {
     }
     if (!aliveRef.current) return;
 
-    // ── env scan ──────────────────────────
     setPhase('envscan');
     setStatus(t('setup.envscan.scanning'));
     await tickProgress(28, 38, 700);
     const tp = await api('GET', '/api/setup/detect-thirdparty').catch(() => null);
     const hasThird = !!(tp && tp.has_third_party);
-    const hasVpn = false; // TODO: backend VPN detection
+    const hasVpn = false;
     setEnv({ thirdParty: hasThird, vpn: hasVpn });
     await sleep(300);
     if (!aliveRef.current) return;
 
-    // ── download zapret ───────────────────
     setPhase('download');
     const local = await api('GET', '/api/zapret/local').catch(() => null);
     if (!(local === true || local?.result === true)) {
@@ -103,7 +87,6 @@ export default function SetupWizard({ onComplete, onCancel }) {
     await tickProgress(58, 64, 600);
     if (!aliveRef.current) return;
 
-    // ── third-party prompt ────────────────
     if (hasThird) {
       setPhase('thirdparty');
       const decision = await waitForUser();
@@ -115,7 +98,6 @@ export default function SetupWizard({ onComplete, onCancel }) {
       if (!aliveRef.current) return;
     }
 
-    // ── first-run offer ───────────────────
     const cfg = await api('GET', '/api/config').catch(() => null);
     const firstRun = !(cfg && cfg.first_run_done);
     let wantSetup = false;
@@ -126,52 +108,67 @@ export default function SetupWizard({ onComplete, onCancel }) {
       if (!aliveRef.current) return;
     }
 
-    // ── strategy auto-test ────────────────
+    if (!wantSetup) {
+      setPhase('done');
+      setStatus(t('setup.done.desc'));
+      await tickProgress(85, 100, 600);
+      await api('POST', '/api/setup/complete').catch(() => null);
+      if (aliveRef.current && onComplete) onComplete();
+      return;
+    }
+
+    // ── control check (baseline without zapret) ──
     setPhase('test');
-    setStatus(t('setup.test.control'));
-    await tickProgress(64, 70, 700);
+    setStatus(t('setup.test.baseline'));
+    await tickProgress(64, 70, 800);
+    await api('GET', '/api/setup/control-check').catch(() => null);
+    if (!aliveRef.current) return;
+
+    // ── strategy test ──────────────────────
     const sRes = await api('GET', '/api/setup/strategies').catch(() => null);
     const list = (sRes && sRes.strategies) || [];
-    const current = (sRes && sRes.current) || (list[0] || '');
-    setStrategies(list);
+    setTestTotal(list.length);
+
     const scored = [];
-    const span = list.length ? Math.min(25, 95 - 70) / list.length : 0;
+    const fromP = 70, toP = 92;
+    const span = list.length ? (toP - fromP) / list.length : 0;
+
     for (let i = 0; i < list.length; i++) {
       const name = list[i];
-      setTestCurrent(name);
+      setTestIdx(i + 1);
       setStatus(t('setup.test.testing', { name: name.replace('.bat', '') }));
-      const fromP = 70 + span * i;
-      await tickProgress(fromP, fromP + span, 650);
-      setStatus(t('setup.test.waiting'));
-      await api('POST', '/api/setup/apply-strategy', { strategy: name }).catch(() => null);
-      await sleep(250);
-      const verdict = (MOCK_VERDICTS[name]) || ['green', 'yellow', 'red', 'white'][i % 4];
-      scored.push({ name, verdict });
+      await tickProgress(fromP + span * i, fromP + span * (i + 1), 400);
+
+      const result = await api('GET', `/api/setup/test-strategy?strategy=${encodeURIComponent(name)}`).catch(() => null);
+
+      if (result && !result.error) {
+        scored.push({
+          name,
+          percentage: result.percentage ?? 0,
+          blocked: result.still_blocked || [],
+        });
+      }
       if (!aliveRef.current) return;
     }
-    setResults(scored);
+
+    scored.sort((a, b) => b.percentage - a.percentage);
+    const viable = scored.filter(s => s.percentage >= 70);
+    const display = viable.length > 0 ? viable : scored;
+    setResults(display);
+    setBestStrategy(display[0] ? display[0].name : '');
+    setSelected(display[0] ? display[0].name : '');
+
     setStatus(t('setup.test.done'));
     setProgress(95);
 
-    // pick best (green > yellow > red > white)
-    const rank = { green: 0, yellow: 1, red: 2, white: 3 };
-    const best = [...scored].sort((a, b) => rank[a.verdict] - rank[b.verdict])[0];
-    setBestStrategy(best ? best.name : current);
-    setSelected(best ? best.name : current);
-
-    // ── results selection ─────────────────
     setPhase('results');
     await waitForUser();
     if (!aliveRef.current) return;
 
-    // ── quick config (first run only) ─────
-    if (wantSetup) {
-      setPhase('config');
-      await waitForUser();
-      if (!aliveRef.current) return;
-    }
+    setPhase('config');
+    await waitForUser();
+    if (!aliveRef.current) return;
 
-    // ── done ──────────────────────────────
     setPhase('done');
     setStatus(t('setup.done.desc'));
     await tickProgress(95, 100, 500);
@@ -191,7 +188,15 @@ export default function SetupWizard({ onComplete, onCancel }) {
     if (onCancel) onCancel();
   }, [onCancel]);
 
-  // ── interactive screens ──────────────────
+  const pct = Math.round(progress);
+
+  const pctColor = (p) => p >= 90 ? '#34d058' : p >= 70 ? '#5b9cf5' : '#f55e5e';
+
+  const blockedTitle = (r) => {
+    if (!r.blocked || r.blocked.length === 0) return t('setup.results.allOk');
+    return r.blocked.map(b => b.name || b.url).join('\n');
+  };
+
   const interactive = (() => {
     if (phase === 'thirdparty') {
       return (
@@ -218,21 +223,37 @@ export default function SetupWizard({ onComplete, onCancel }) {
         </div>
       );
     }
+    if (phase === 'test') {
+      return (
+        <div className="zw-test-info">
+          {testTotal > 0 && (
+            <span className="zw-test-counter">{testIdx} / {testTotal}</span>
+          )}
+        </div>
+      );
+    }
     if (phase === 'results') {
+      const allViable = results.length > 0 && results.every(r => r.percentage >= 70);
       return (
         <div className="zw-card zw-card-wide">
           <div className="zw-card-title">{t('setup.results.title')}</div>
-          <p className="zw-card-desc">{t('setup.results.desc')}</p>
+          <p className="zw-card-desc">
+            {allViable ? t('setup.results.desc') : t('setup.results.noViable')}
+          </p>
           <div className="zw-strategies">
             {results.map(r => (
               <button
                 key={r.name}
-                className={'zw-strategy zw-v-' + r.verdict + (selected === r.name ? ' selected' : '')}
+                className={'zw-strategy' + (selected === r.name ? ' selected' : '')}
                 onClick={() => setSelected(r.name)}
+                title={blockedTitle(r)}
               >
+                <span className="zw-strategy-pct" style={{ color: pctColor(r.percentage) }}>{r.percentage}%</span>
                 <span className="zw-strategy-name">{r.name.replace('.bat', '')}</span>
                 {r.name === bestStrategy && <span className="zw-best">{t('setup.results.best')}</span>}
-                <span className="zw-strategy-verdict">{t('setup.verdict.' + r.verdict)}</span>
+                {r.blocked && r.blocked.length > 0 && (
+                  <span className="zw-blocked-badge">{r.blocked.length} {t('setup.results.blocked')}</span>
+                )}
               </button>
             ))}
           </div>
@@ -269,18 +290,17 @@ export default function SetupWizard({ onComplete, onCancel }) {
     return null;
   })();
 
-  const pct = Math.round(progress);
-
   return (
     <div className="zw-overlay">
-      <button className="zw-cancel" onClick={handleCancel} aria-label="cancel">✕</button>
       <div className="zw-brand">
         <img src="logo.svg" alt="ZPUI" className="zw-logo" />
       </div>
-      <div className="zw-bar"><div className="zw-bar-fill" style={{ width: pct + '%' }} /></div>
-      <div className="zw-status-line">
-        <span className="zw-pct">{pct}%</span>
-        <span className="zw-status">{status}{testCurrent && phase === 'test' ? '' : ''}</span>
+      <div className="zw-progress-section">
+        <div className="zw-bar"><div className="zw-bar-fill" style={{ width: pct + '%' }} /></div>
+        <div className="zw-status-row">
+          <span className="zw-status">{status}</span>
+          <span className="zw-pct">{pct}%</span>
+        </div>
       </div>
       {interactive}
       {error && <div className="zw-error">{error}</div>}

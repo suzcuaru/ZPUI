@@ -2,9 +2,7 @@ package app
 
 import (
 	"fmt"
-	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -157,29 +155,7 @@ func (a *App) SetupListStrategies(strategy string) map[string]interface{} {
 }
 
 func (a *App) checkResourcesOnStrategy(strategy string) []blockcheck.BulkResult {
-	var targets []blockcheck.BulkTarget
-	targetsPath := filepath.Join(a.cfg.GetZapretPath(), "utils", "targets.txt")
-	if body, err := os.ReadFile(targetsPath); err == nil {
-		for _, line := range strings.Split(string(body), "\n") {
-			line = strings.TrimSpace(line)
-			if line == "" || strings.HasPrefix(line, "#") {
-				continue
-			}
-			parts := strings.SplitN(line, "=", 2)
-			if len(parts) != 2 {
-				continue
-			}
-			key := strings.TrimSpace(parts[0])
-			val := strings.TrimSpace(strings.Trim(parts[1], `"`))
-			if strings.HasPrefix(val, "PING:") {
-				continue
-			}
-			if !strings.HasPrefix(val, "http://") && !strings.HasPrefix(val, "https://") {
-				continue
-			}
-			targets = append(targets, blockcheck.BulkTarget{Name: key, URL: val})
-		}
-	}
+	targets, _ := blockcheck.ReadTargets(blockcheck.DefaultTargetsPath(a.cfg.GetZapretPath()))
 
 	if strategy != "" {
 		a.cfg.SetCurrentStrategy(strategy)
@@ -198,6 +174,125 @@ func (a *App) checkResourcesOnStrategy(strategy string) []blockcheck.BulkResult 
 	checker := blockcheck.NewChecker(8, proxyAddr)
 	report := checker.BulkCheck(targets, nil)
 	return report.Default
+}
+
+// SetupControlCheck останавливает запрет и проверяет ресурсы без обхода.
+// Результат сохраняется как эталон (controlBaseline) для сравнения со стратегиями.
+func (a *App) SetupControlCheck() map[string]interface{} {
+	a.log.Info("setup", "Control check: stopping zapret for baseline...")
+
+	a.zapret.Stop()
+	executil.HiddenCmd("taskkill", "/IM", "winws.exe", "/F").Run()
+	executil.HiddenCmd("sc", "stop", "WinDivert").Run()
+	executil.HiddenCmd("sc", "stop", "WinDivert14").Run()
+	time.Sleep(3 * time.Second)
+
+	targets, _ := blockcheck.ReadTargets(blockcheck.DefaultTargetsPath(a.cfg.GetZapretPath()))
+	if len(targets) == 0 {
+		return errResp("не найдены ресурсы для проверки (lists/list-general.txt)")
+	}
+
+	checker := blockcheck.NewChecker(8, "")
+	report := checker.BulkCheck(targets, nil)
+
+	baseline := make(map[string]bool)
+	blockedCount := 0
+	for _, r := range report.Default {
+		baseline[r.Name] = !r.OK
+		if !r.OK {
+			blockedCount++
+		}
+	}
+	a.controlBaseline = baseline
+
+	a.log.Info("setup", fmt.Sprintf("Control check done: %d/%d blocked without zapret", blockedCount, len(report.Default)))
+
+	return map[string]interface{}{
+		"total":   len(report.Default),
+		"blocked": blockedCount,
+	}
+}
+
+// SetupTestStrategy применяет стратегию, ждёт подтверждения запуска,
+// проверяет ресурсы и сравнивает с эталоном (controlBaseline).
+// Возвращает процент разблокированных ресурсов.
+func (a *App) SetupTestStrategy(strategy string) map[string]interface{} {
+	if strategy == "" {
+		return errResp("strategy required")
+	}
+
+	a.log.Info("setup", fmt.Sprintf("Testing strategy: %s", strategy))
+
+	executil.HiddenCmd("taskkill", "/IM", "winws.exe", "/F").Run()
+	time.Sleep(1 * time.Second)
+
+	a.cfg.SetCurrentStrategy(strategy)
+	if err := a.zapret.SetStrategy(strategy); err != nil {
+		return errResp(fmt.Sprintf("strategy apply failed: %v", err))
+	}
+
+	running := false
+	for i := 0; i < 15; i++ {
+		svc := a.zapret.GetServiceStatus()
+		if svc.Running {
+			running = true
+			break
+		}
+		time.Sleep(1 * time.Second)
+	}
+	if !running {
+		a.log.Warn("setup", fmt.Sprintf("Strategy %s: service not running after 15s, checking anyway", strategy))
+	}
+	time.Sleep(2 * time.Second)
+
+	targets, _ := blockcheck.ReadTargets(blockcheck.DefaultTargetsPath(a.cfg.GetZapretPath()))
+	proxyAddr := ""
+	if a.proxy.IsRunning() {
+		pcfg := a.cfg.GetProxyConfig()
+		proxyAddr = fmt.Sprintf("127.0.0.1:%d", pcfg.Port)
+	}
+	checker := blockcheck.NewChecker(8, proxyAddr)
+	report := checker.BulkCheck(targets, nil)
+
+	baseline := a.controlBaseline
+	if baseline == nil {
+		baseline = make(map[string]bool)
+	}
+
+	blockedInBaseline := 0
+	unblocked := 0
+	var stillBlocked []map[string]interface{}
+	for _, r := range report.Default {
+		if !baseline[r.Name] {
+			continue
+		}
+		blockedInBaseline++
+		if r.OK {
+			unblocked++
+		} else {
+			stillBlocked = append(stillBlocked, map[string]interface{}{
+				"name":    r.Name,
+				"url":     r.URL,
+				"verdict": r.Verdict,
+			})
+		}
+	}
+
+	percentage := 100
+	if blockedInBaseline > 0 {
+		percentage = unblocked * 100 / blockedInBaseline
+	}
+
+	a.log.Info("setup", fmt.Sprintf("Strategy %s: %d%% (%d/%d unblocked)",
+		strategy, percentage, unblocked, blockedInBaseline))
+
+	return map[string]interface{}{
+		"strategy":            strategy,
+		"percentage":          percentage,
+		"blocked_in_baseline": blockedInBaseline,
+		"unblocked":           unblocked,
+		"still_blocked":       stillBlocked,
+	}
 }
 
 // SetupApplyStrategy применяет выбранную стратегию

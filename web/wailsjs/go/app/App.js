@@ -382,12 +382,20 @@ export function SetupConfigureProxy(arg1, arg2, arg3) {
   return window['go']['app']['App']['SetupConfigureProxy'](arg1, arg2, arg3);
 }
 
+export function SetupControlCheck() {
+  return window['go']['app']['App']['SetupControlCheck']();
+}
+
 export function SetupListStrategies(arg1) {
   return window['go']['app']['App']['SetupListStrategies'](arg1);
 }
 
 export function SetupSkip() {
   return window['go']['app']['App']['SetupSkip']();
+}
+
+export function SetupTestStrategy(arg1) {
+  return window['go']['app']['App']['SetupTestStrategy'](arg1);
 }
 
 export function ShowWindow() {
