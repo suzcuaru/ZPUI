@@ -244,7 +244,7 @@ export default function App() {
         <Footer status={status} />
       </div>
       <LogDrawer open={logsOpen} onClose={() => setLogsOpen(false)} />
-      {checkerOpen && <ResourceChecker onClose={() => setCheckerOpen(false)} showToast={showToast} proxyRunning={status?.proxy?.running} />}
+      {checkerOpen && <ResourceChecker onClose={() => setCheckerOpen(false)} showToast={showToast} />}
       {healthOpen && <HealthCheckModal onClose={() => setHealthOpen(false)} />}
       <AutoSelectModal open={autoSelectOpen} onClose={() => setAutoSelectOpen(false)} showToast={showToast} />
       <DiagnosticsModal open={diagOpen} onClose={() => setDiagOpen(false)} showToast={showToast} />

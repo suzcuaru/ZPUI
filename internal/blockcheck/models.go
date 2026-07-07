@@ -30,16 +30,14 @@ type ProviderInfo struct {
 }
 
 type FullReport struct {
-	URL         string
-	Host        string
-	Direct      CheckResult
-	WithBypass  *CheckResult
-	Provider    ProviderInfo
-	Blocked     bool
-	BlockType   string
-	BypassWorks bool
-	InUserList  bool
-	CheckedAt   string
+	URL       string       `json:"URL"`
+	Host      string       `json:"Host"`
+	Direct    CheckResult  `json:"Direct"`
+	Provider  ProviderInfo `json:"Provider"`
+	Blocked   bool         `json:"Blocked"`
+	BlockType string       `json:"BlockType"`
+	InUserList bool        `json:"InUserList"`
+	CheckedAt string       `json:"CheckedAt"`
 }
 
 const (
