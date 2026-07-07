@@ -1,7 +1,6 @@
 package blockcheck
 
 import (
-	"context"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
@@ -18,11 +17,10 @@ type Checker struct {
 	checkTLS   bool
 	checkHTTP  bool
 	timeout    time.Duration
-	proxyAddr  string
 	httpClient *http.Client
 }
 
-func NewChecker(checkTCP, checkTLS, checkHTTP bool, timeoutSec int, proxyAddr string) *Checker {
+func NewChecker(checkTCP, checkTLS, checkHTTP bool, timeoutSec int) *Checker {
 	if timeoutSec <= 0 {
 		timeoutSec = 8
 	}
@@ -39,7 +37,6 @@ func NewChecker(checkTCP, checkTLS, checkHTTP bool, timeoutSec int, proxyAddr st
 		checkTLS:  checkTLS,
 		checkHTTP: checkHTTP,
 		timeout:   t,
-		proxyAddr: proxyAddr,
 		httpClient: &http.Client{
 			Timeout:   t,
 			Transport: tr,
@@ -226,70 +223,6 @@ func (c *Checker) classify(result *CheckResult) {
 	}
 }
 
-func (c *Checker) CheckViaProxy(rawURL string) *CheckResult {
-	if c.proxyAddr == "" {
-		return nil
-	}
-
-	_, host, fullURL := parseURL(rawURL)
-	if fullURL == "" {
-		return nil
-	}
-
-	result := &CheckResult{
-		URL:  rawURL,
-		Host: host,
-	}
-
-	socksDialer, err := socks5Dialer(c.proxyAddr, c.timeout)
-	if err != nil {
-		result.Verdict = VerdictUnknown
-		result.Notes = []string{"прокси недоступен: " + err.Error()}
-		return result
-	}
-
-	proxyTransport := &http.Transport{
-		DialContext:     socksDialer,
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
-	proxyClient := &http.Client{
-		Timeout:   c.timeout,
-		Transport: proxyTransport,
-	}
-
-	start := time.Now()
-	resp, err := proxyClient.Get(fullURL)
-	elapsed := time.Since(start).Seconds() * 1000
-	if err != nil {
-		result.HTTP = LayerResult{Ok: false, Error: classifyErr(err), TimeMs: elapsed}
-		result.Verdict = VerdictTimeout
-		result.Confidence = ConfLow
-		result.Notes = []string{"через обход: " + err.Error()}
-		return result
-	}
-	defer resp.Body.Close()
-	body, _ := io.ReadAll(io.LimitReader(resp.Body, 64*1024))
-
-	result.HTTP = LayerResult{
-		Ok:       resp.StatusCode < 400,
-		Status:   resp.StatusCode,
-		TimeMs:   elapsed,
-		StubPage: detectStubPage(body),
-	}
-
-	if result.HTTP.Ok && !result.HTTP.StubPage {
-		result.Verdict = VerdictOK
-		result.Confidence = ConfHigh
-	} else if result.HTTP.StubPage {
-		result.Verdict = VerdictHTTPStub
-		result.Confidence = ConfHigh
-	} else {
-		result.Verdict = VerdictDown
-	}
-
-	return result
-}
-
 func (c *Checker) GetProviderInfo() ProviderInfo {
 	info := ProviderInfo{}
 	client := &http.Client{
@@ -447,16 +380,4 @@ func detectStubPage(body []byte) bool {
 		}
 	}
 	return false
-}
-
-func socks5Dialer(proxyAddr string, timeout time.Duration) (func(ctx context.Context, network, addr string) (net.Conn, error), error) {
-	proxyURL, err := url.Parse("socks5://" + proxyAddr)
-	if err != nil {
-		return nil, err
-	}
-	dialer, err := makeSocks5Dialer(proxyURL, timeout)
-	if err != nil {
-		return nil, err
-	}
-	return dialer.DialContext, nil
 }

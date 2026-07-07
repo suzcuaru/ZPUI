@@ -165,14 +165,8 @@ func (a *App) checkResourcesOnStrategy(strategy string) []blockcheck.BulkResult 
 		time.Sleep(2 * time.Second)
 	}
 
-	proxyAddr := ""
-	if a.proxy.IsRunning() {
-		pcfg := a.cfg.GetProxyConfig()
-		proxyAddr = fmt.Sprintf("127.0.0.1:%d", pcfg.Port)
-	}
-
 	bc := a.cfg.GetBlockCheckConfig()
-	checker := blockcheck.NewChecker(bc.CheckTCP, bc.CheckTLS, bc.CheckHTTP, bc.TimeoutSec, proxyAddr)
+	checker := blockcheck.NewChecker(bc.CheckTCP, bc.CheckTLS, bc.CheckHTTP, bc.TimeoutSec)
 	report := checker.BulkCheck(targets, nil)
 	return report.Default
 }
@@ -194,7 +188,7 @@ func (a *App) SetupControlCheck() map[string]interface{} {
 	}
 
 	bc2 := a.cfg.GetBlockCheckConfig()
-	checker := blockcheck.NewChecker(bc2.CheckTCP, bc2.CheckTLS, bc2.CheckHTTP, bc2.TimeoutSec, "")
+	checker := blockcheck.NewChecker(bc2.CheckTCP, bc2.CheckTLS, bc2.CheckHTTP, bc2.TimeoutSec)
 	report := checker.BulkCheck(targets, nil)
 
 	baseline := make(map[string]bool)
@@ -248,13 +242,8 @@ func (a *App) SetupTestStrategy(strategy string) map[string]interface{} {
 	time.Sleep(2 * time.Second)
 
 	targets, _ := blockcheck.ReadTargets(blockcheck.DefaultTargetsPath(a.cfg.GetZapretPath()))
-	proxyAddr := ""
-	if a.proxy.IsRunning() {
-		pcfg := a.cfg.GetProxyConfig()
-		proxyAddr = fmt.Sprintf("127.0.0.1:%d", pcfg.Port)
-	}
 	bc3 := a.cfg.GetBlockCheckConfig()
-	checker := blockcheck.NewChecker(bc3.CheckTCP, bc3.CheckTLS, bc3.CheckHTTP, bc3.TimeoutSec, proxyAddr)
+	checker := blockcheck.NewChecker(bc3.CheckTCP, bc3.CheckTLS, bc3.CheckHTTP, bc3.TimeoutSec)
 	report := checker.BulkCheck(targets, nil)
 
 	baseline := a.controlBaseline

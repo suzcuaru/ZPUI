@@ -19,8 +19,7 @@ func main() {
 		{Name: "sberbank.ru", URL: "https://www.sberbank.ru"},
 	}
 
-	proxyAddr := "127.0.0.1:1080"
-	checker := blockcheck.NewChecker(false, true, true, 8, proxyAddr)
+	checker := blockcheck.NewChecker(false, true, true, 8)
 	report := checker.BulkCheck(targets, nil)
 
 	fmt.Println("=== Resource Blocking Report ===")

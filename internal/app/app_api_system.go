@@ -1,7 +1,6 @@
 package app
 
 import (
-	"fmt"
 	"net"
 	"net/url"
 	"os"
@@ -40,14 +39,8 @@ func (a *App) GetResourceStatus() map[string]interface{} {
 		userTargets = blockcheck.ParseTargets(string(body))
 	}
 
-	var proxyAddr string
-	if a.proxy.IsRunning() {
-		pcfg := a.cfg.GetProxyConfig()
-		proxyAddr = fmt.Sprintf("127.0.0.1:%d", pcfg.Port)
-	}
-
 	bc := a.cfg.GetBlockCheckConfig()
-	checker := blockcheck.NewChecker(bc.CheckTCP, bc.CheckTLS, bc.CheckHTTP, bc.TimeoutSec, proxyAddr)
+	checker := blockcheck.NewChecker(bc.CheckTCP, bc.CheckTLS, bc.CheckHTTP, bc.TimeoutSec)
 	report := checker.BulkCheck(defaultTargets, userTargets)
 
 	a.resourceCacheMu.Lock()
@@ -166,7 +159,7 @@ func (a *App) GetNetworkInfo() map[string]interface{} {
 	}
 
 	bc := a.cfg.GetBlockCheckConfig()
-	checker := blockcheck.NewChecker(bc.CheckTCP, bc.CheckTLS, bc.CheckHTTP, bc.TimeoutSec, "")
+	checker := blockcheck.NewChecker(bc.CheckTCP, bc.CheckTLS, bc.CheckHTTP, bc.TimeoutSec)
 	info := checker.GetProviderInfo()
 	result["public_ip"] = info.IP
 	result["isp"] = info.ISP
@@ -198,41 +191,24 @@ func (a *App) CheckResource(rawURL string) map[string]interface{} {
 		return map[string]interface{}{"error": "URL required"}
 	}
 
-	var proxyAddr string
-	if a.proxy.IsRunning() {
-		pcfg := a.cfg.GetProxyConfig()
-		proxyAddr = fmt.Sprintf("127.0.0.1:%d", pcfg.Port)
-	}
-
 	bc2 := a.cfg.GetBlockCheckConfig()
-	checker := blockcheck.NewChecker(bc2.CheckTCP, bc2.CheckTLS, bc2.CheckHTTP, bc2.TimeoutSec, proxyAddr)
+	checker := blockcheck.NewChecker(bc2.CheckTCP, bc2.CheckTLS, bc2.CheckHTTP, bc2.TimeoutSec)
 
 	provider := checker.GetProviderInfo()
 	direct := checker.Check(rawURL)
 
-	var bypassResult *blockcheck.CheckResult
-	if proxyAddr != "" {
-		bypassResult = checker.CheckViaProxy(rawURL)
-	}
-
 	blocked := direct.Verdict != blockcheck.VerdictOK
-	bypassWorks := false
-	if bypassResult != nil {
-		bypassWorks = bypassResult.Verdict == blockcheck.VerdictOK
-	}
 
 	inList := a.isHostInUserList(direct.Host)
 
 	report := blockcheck.FullReport{
-		URL:         rawURL,
-		Host:        direct.Host,
-		Direct:      direct,
-		WithBypass:  bypassResult,
-		Provider:    provider,
-		Blocked:     blocked,
-		BlockType:   direct.Verdict,
-		BypassWorks: bypassWorks,
-		InUserList:  inList,
+		URL:       rawURL,
+		Host:      direct.Host,
+		Direct:    direct,
+		Provider:  provider,
+		Blocked:   blocked,
+		BlockType: direct.Verdict,
+		InUserList: inList,
 		CheckedAt:   time.Now().Format("2006-01-02 15:04:05"),
 	}
 

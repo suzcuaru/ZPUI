@@ -59,7 +59,7 @@ youtube.com
 }
 
 func TestCheckLive(t *testing.T) {
-	checker := NewChecker(false, true, true, 10, "")
+	checker := NewChecker(false, true, true, 10)
 	result := checker.Check("https://www.google.com")
 
 	t.Logf("Google: verdict=%s confidence=%s", result.Verdict, result.Confidence)
@@ -80,7 +80,7 @@ func TestBulkCheck(t *testing.T) {
 		{Name: "GITHUB", URL: "https://github.com"},
 	}
 
-	checker := NewChecker(false, true, true, 10, "")
+	checker := NewChecker(false, true, true, 10)
 	report := checker.BulkCheck(targets, nil)
 
 	if len(report.Default) != 3 {
@@ -102,7 +102,7 @@ func TestBulkCheck(t *testing.T) {
 }
 
 func TestCheckBlockedResource(t *testing.T) {
-	checker := NewChecker(false, true, true, 5, "")
+	checker := NewChecker(false, true, true, 5)
 
 	result := checker.Check("https://192.0.2.1")
 	t.Logf("Fake IP: verdict=%s http_err=%s", result.Verdict, result.HTTP.Error)
