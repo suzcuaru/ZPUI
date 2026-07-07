@@ -51,15 +51,16 @@ export default function DashboardPage({ status, showToast, onNavigate }) {
 
   const defRes = resources?.default || [];
   const userRes = resources?.user || [];
+  const allRes = [...defRes, ...userRes];
+
   const defOk = defRes.filter(r => r.ok).length;
   const defPct = defRes.length > 0 ? Math.round(defOk / defRes.length * 100) : -1;
   const userOk = userRes.filter(r => r.ok).length;
   const userPct = userRes.length > 0 ? Math.round(userOk / userRes.length * 100) : -1;
 
-  const defFails = defRes.filter(r => !r.ok);
-  const userFails = userRes.filter(r => !r.ok);
-  const fails = [...defFails, ...userFails];
-  const allOk = fails.length === 0;
+  const bypassedRes = allRes.filter(r => r.bypassed);
+  const blockedRes = allRes.filter(r => r.blocked && !r.bypassed);
+  const allOk = blockedRes.length === 0;
 
   return (
     <>
@@ -129,6 +130,17 @@ export default function DashboardPage({ status, showToast, onNavigate }) {
             <span className="db-avail-label"><span className="db-avail-dot" style={{ background: 'var(--success)' }} />{t('dashboard.custom')}</span>
             <span className="db-avail-count">{userOk}/{userRes.length}</span>
           </div>
+          {(bypassedRes.length > 0 || blockedRes.length > 0) && (
+            <div className="db-avail-stat">
+              <span className="db-avail-pct" style={{ fontSize: 16, color: bypassedRes.length > 0 ? 'var(--success)' : 'var(--danger)' }}>
+                {bypassedRes.length}/{bypassedRes.length + blockedRes.length}
+              </span>
+              <span className="db-avail-label">обход</span>
+              <span className="db-avail-count" style={{ color: blockedRes.length > 0 ? 'var(--danger)' : 'var(--success)' }}>
+                {blockedRes.length > 0 ? `${blockedRes.length} не работают` : 'все работают'}
+              </span>
+            </div>
+          )}
         </div>
         <div className="db-avail-chart">
           <DualSpark series={[
@@ -138,13 +150,26 @@ export default function DashboardPage({ status, showToast, onNavigate }) {
         </div>
       </div>
 
-      {!allOk && !loading && (
+      {bypassedRes.length > 0 && !loading && (
         <div className="card-section" style={{ gap: 6 }}>
-          <span className="card-section-title" style={{ fontSize: 11, color: 'var(--danger)' }}>
-            {t('dashboard.unavailableResources')} ({fails.length})
+          <span className="card-section-title" style={{ fontSize: 11, color: 'var(--success)' }}>
+            Обход работает ({bypassedRes.length})
           </span>
           <div className="db-fail-grid">
-            {fails.map((r, i) => (
+            {bypassedRes.map((r, i) => (
+              <span key={i} className="db-fail-tag" style={{ color: 'var(--success)' }}>{r.name}</span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {blockedRes.length > 0 && !loading && (
+        <div className="card-section" style={{ gap: 6 }}>
+          <span className="card-section-title" style={{ fontSize: 11, color: 'var(--danger)' }}>
+            {t('dashboard.unavailableResources')} ({blockedRes.length})
+          </span>
+          <div className="db-fail-grid">
+            {blockedRes.map((r, i) => (
               <span key={i} className="db-fail-tag">{r.name}</span>
             ))}
           </div>

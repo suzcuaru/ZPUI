@@ -11,16 +11,18 @@ type BulkTarget struct {
 }
 
 type BulkResult struct {
-	Name      string `json:"name"`
-	URL       string `json:"url"`
-	OK        bool   `json:"ok"`
-	Blocked   bool   `json:"blocked"`
-	Verdict   string `json:"verdict"`
-	LatencyMs int64  `json:"latency_ms"`
-	Reason    string `json:"reason,omitempty"`
-	TCP       LayerResult `json:"tcp,omitempty"`
-	TLS       LayerResult `json:"tls,omitempty"`
-	HTTP      LayerResult `json:"http,omitempty"`
+	Name          string      `json:"name"`
+	URL           string      `json:"url"`
+	OK            bool        `json:"ok"`
+	Blocked       bool        `json:"blocked"`
+	Bypassed      bool        `json:"bypassed"`
+	Verdict       string      `json:"verdict"`
+	BypassVerdict string      `json:"bypass_verdict,omitempty"`
+	LatencyMs     int64       `json:"latency_ms"`
+	Reason        string      `json:"reason,omitempty"`
+	TCP           LayerResult `json:"tcp,omitempty"`
+	TLS           LayerResult `json:"tls,omitempty"`
+	HTTP          LayerResult `json:"http,omitempty"`
 }
 
 type BulkReport struct {
@@ -55,19 +57,25 @@ func (c *Checker) checkOne(t BulkTarget) BulkResult {
 	direct := c.Check(t.URL)
 	latency := time.Since(start).Milliseconds()
 
-	ok := direct.Verdict == VerdictOK
+	directOK := direct.Verdict == VerdictOK
+	blocked := !directOK
+	bypassed := false
+	bypassVerdict := ""
 
-	if !ok && c.proxyAddr != "" {
+	if blocked && c.proxyAddr != "" {
 		proxyResult := c.CheckViaProxy(t.URL)
-		if proxyResult != nil && proxyResult.Verdict == VerdictOK {
-			ok = true
-			direct.Verdict = VerdictOK
-			direct.Notes = append(direct.Notes, "доступен через прокси")
+		if proxyResult != nil {
+			bypassVerdict = proxyResult.Verdict
+			if proxyResult.Verdict == VerdictOK {
+				bypassed = true
+			}
 		}
 	}
 
+	ok := directOK || bypassed
+
 	reason := ""
-	if !ok {
+	if blocked && !bypassed {
 		reason = direct.Verdict
 		if len(direct.Notes) > 0 {
 			reason = direct.Notes[0]
@@ -75,15 +83,17 @@ func (c *Checker) checkOne(t BulkTarget) BulkResult {
 	}
 
 	return BulkResult{
-		Name:      t.Name,
-		URL:       t.URL,
-		OK:        ok,
-		Blocked:   !ok,
-		Verdict:   direct.Verdict,
-		LatencyMs: latency,
-		Reason:    reason,
-		TCP:       direct.TCP,
-		TLS:       direct.TLS,
-		HTTP:      direct.HTTP,
+		Name:          t.Name,
+		URL:           t.URL,
+		OK:            ok,
+		Blocked:       blocked,
+		Bypassed:      bypassed,
+		Verdict:       direct.Verdict,
+		BypassVerdict: bypassVerdict,
+		LatencyMs:     latency,
+		Reason:        reason,
+		TCP:           direct.TCP,
+		TLS:           direct.TLS,
+		HTTP:          direct.HTTP,
 	}
 }
