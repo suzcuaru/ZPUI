@@ -742,8 +742,9 @@ input, textarea { user-select:text; -webkit-user-select:text; }
 
 .lg-body { flex:1; overflow-y:auto; padding:4px 8px; }
 .lg-row {
-  display:flex; gap:6px; padding:3px 6px; border-radius:4px; align-items:flex-start;
-  font-family:var(--font-mono); font-size:10px; line-height:1.45;
+  display:flex; gap:8px; padding:4px 8px; border-radius:4px; align-items:flex-start;
+  font-family:var(--font-mono); font-size:10px; line-height:1.5;
+  border-bottom:1px solid rgba(128,128,128,0.05);
 }
 .lg-row:hover { background:var(--bg-hover); }
 .lg-row.error { background:var(--danger-bg); }
@@ -758,13 +759,14 @@ input, textarea { user-select:text; -webkit-user-select:text; }
 .lg-dot.debug { background:var(--text-tertiary); }
 .lg-time {
   color:var(--text-tertiary); white-space:nowrap; font-size:9.5px;
-  flex-shrink:0; width:64px; text-align:right; padding-top:1px;
+  flex-shrink:0; width:72px; min-width:72px; text-align:right; padding-top:1px;
+  margin-right:4px;
 }
 .lg-fe {
   font-size:7px; font-weight:700; color:var(--warning); background:var(--warning-bg);
   padding:1px 4px; border-radius:3px; flex-shrink:0; margin-top:2px;
 }
-.lg-msg { color:var(--text-secondary); word-break:break-all; flex:1; min-width:0; }
+.lg-msg { color:var(--text-secondary); word-break:break-word; overflow-wrap:anywhere; flex:1; min-width:0; padding-left:2px; }
 .lg-empty {
   display:flex; flex-direction:column; align-items:center; justify-content:center;
   gap:4px; color:var(--text-tertiary); padding:24px; font-size:11px; height:100%;
@@ -2470,5 +2472,5 @@ input, textarea { user-select:text; -webkit-user-select:text; }
   font-size:9.5px; color:var(--text-tertiary); display:block; margin-top:2px;
 }
 /* Categories moved to lg-head (right of title) */
-.lg-head-cats { display:flex; gap:3px; flex-wrap:wrap; align-items:center; margin-left:8px; }
+.lg-head-cats { display:flex; gap:3px; flex-wrap:wrap; align-items:center; margin-left:8px; max-width:60%; overflow:hidden; }
 .lg-head-cats .lg-chip { font-size:9.5px; padding:2px 6px; }

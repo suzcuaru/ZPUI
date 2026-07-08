@@ -47,20 +47,13 @@ func (m *Manager) CheckForUpdates() (*UpdateInfo, error) {
 
 	client := &http.Client{Timeout: 10 * time.Second}
 
-	// Get latest version from raw file
+	// Get latest version from raw file (GitHub)
 	if resp, err := client.Get(githubVersionURL); err == nil {
 		if resp.StatusCode == 200 {
 			body, _ := io.ReadAll(resp.Body)
 			info.LatestVersion = strings.TrimSpace(string(body))
 		}
 		resp.Body.Close()
-	}
-
-	// Решение об обновлении: только семвер-сравнение.
-	// "unknown"/пустая текущая версия — не считаем обновлением, чтобы избежать
-	// ложных уведомлений сразу после неполной/первой установки.
-	if info.LatestVersion != "" && info.CurrentVersion != "" && info.CurrentVersion != "unknown" {
-		info.UpdateNeeded = updater.IsNewer(info.CurrentVersion, info.LatestVersion)
 	}
 
 	// Get actual download URL + fallbacks from GitHub API
@@ -93,13 +86,40 @@ func (m *Manager) CheckForUpdates() (*UpdateInfo, error) {
 					proxyURL2 := "https://ghproxy.com/" + directURL
 					info.FallbackURLs = []string{proxyURL, proxyURL2}
 				}
+				// If GitHub API returned tag_name but version.txt failed, use tag as version
+				if info.LatestVersion == "" && release.TagName != "" {
+					info.LatestVersion = strings.TrimPrefix(release.TagName, "v")
+				}
 			}
 		}
 		resp.Body.Close()
 	}
 
+	// Yandex Disk fallback: if GitHub failed completely (no version OR no download URL),
+	// try to find zapret folder on Yandex Disk.
+	if info.LatestVersion == "" || info.DownloadURL == "" {
+		yaURL, yaName, yErr := updater.YandexFindZapretZip(updater.YandexPublicURL)
+		if yErr == nil && yaURL != "" {
+			m.log.Info("updater", "Found zapret on Yandex Disk: "+yaName)
+			if info.DownloadURL == "" {
+				info.DownloadURL = yaURL
+			}
+			// Extract version from folder/file name
+			if v := extractVersionFromZapretName(yaName); v != "" && info.LatestVersion == "" {
+				info.LatestVersion = v
+			}
+		}
+	}
+
+	// Decision: only semver comparison.
+	// "unknown"/empty current version is not considered an update, to avoid
+	// false notifications right after incomplete/first install.
+	if info.LatestVersion != "" && info.CurrentVersion != "" && info.CurrentVersion != "unknown" {
+		info.UpdateNeeded = updater.IsNewer(info.CurrentVersion, info.LatestVersion)
+	}
+
 	if info.LatestVersion == "" {
-		return nil, fmt.Errorf("не удалось получить версию Запрета")
+		return nil, fmt.Errorf("\xd0\xbd\xd0\xb5 \xd1\x83\xd0\xb4\xd0\xb0\xd0\xbb\xd0\xbe\xd1\x81\xd1\x8c \xd0\xbf\xd0\xbe\xd0\xbb\xd1\x83\xd1\x87\xd0\xb8\xd1\x82\xd1\x8c \xd0\xb2\xd0\xb5\xd1\x80\xd1\x81\xd0\xb8\xd1\x8e \xd0\x97\xd0\xb0\xd0\xbf\xd1\x80\xd0\xb5\xd1\x82\xd0\xb0")
 	}
 
 	return info, nil
@@ -621,4 +641,15 @@ func extractVersionFromZipName(name string) string {
 		return ""
 	}
 	return name[idx+1:]
+}
+// extractVersionFromZapretName extracts version from Yandex Disk folder/file name.
+// Handles: "Zapret 1.9.9d" -> "1.9.9d", "zapret-discord-youtube-1.9.9d.zip" -> "1.9.9d"
+func extractVersionFromZapretName(name string) string {
+	name = strings.TrimSuffix(name, ".zip")
+	name = strings.TrimPrefix(strings.ToLower(name), "zapret")
+	name = strings.TrimPrefix(name, "-discord-youtube")
+	name = strings.TrimSpace(name)
+	// Remove leading dash/space
+	name = strings.TrimLeft(name, "- ")
+	return name
 }
