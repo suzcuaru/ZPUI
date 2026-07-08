@@ -177,7 +177,9 @@
     "ipsetDescFull": "IPSet — список IP-адресов для фильтрации. none = обход применяется ко всем IP, loaded = только к IP из списка, any = ко всем IP indiscriminately. По умолчанию loaded — оптимально для большинства пользователей.",
     "ipsetStatusHint": "loaded = только IP из списка, none = никакие, any = все IP",
     "updateIpsetTip": "Скачать актуальный список IP-адресов заблокированных ресурсов",
-    "updateHostsTip": "Обновить файл hosts — починка веб-версии Telegram и голосового чата Discord"
+    "updateHostsTip": "Обновить файл hosts — починка веб-версии Telegram и голосового чата Discord",
+    "filtersTitle": "Фильтры",
+    "filtersTip": "Расширенные настройки обхода: игровые фильтры и IPSet. Большинству пользователей можно не менять."
   },
   "proxy": {
     "title": "Прокси",
@@ -246,15 +248,12 @@
     "updateCheck": "Проверка обновлений",
     "notifications": "Уведомления Windows",
     "notifyStrategyTest": "Уведомление о завершении теста",
-    "test": "Тест",
-    "testNotificationSent": "Тестовое уведомление отправлено",
     "notifZpuiUpdates": "Обновления ZPUI",
     "notifZpuiUpdatesDesc": "Уведомлять о новых версиях ZPUI",
     "notifZapretUpdates": "Обновления Zapret",
     "notifZapretUpdatesDesc": "Уведомлять о новых версиях Zapret",
     "notifMissingFiles": "Отсутствующие файлы",
     "notifMissingFilesDesc": "Уведомлять о недостающих файлах Zapret",
-    "notifServiceStatus": "Изменение статуса службы",
     "notifServiceStatusDesc": "Уведомлять при остановке/запуске службы",
     "notifResourceDrop": "Падение доступности ресурсов",
     "notifResourceDropDesc": "Уведомлять при падении доступности ниже порога",
@@ -276,7 +275,11 @@
     "installZapretDesc": "Сбросить режим без Запрета и запустить установку",
     "installZapretBtn": "Установить",
     "installZapretConfirm": "Приложение будет перезапущено для установки Запрета. Продолжить?",
-    "notifErrors": "Об ошибках в работе"
+    "notifErrors": "Об ошибках в работе",
+    "notifServiceCrash": "Об аварийной остановке службы",
+    "reinstallServiceBtn": "Переустановить",
+    "reinstallServiceConfirm": "Переустановить службу Запрета? Это остановит сервис, удалит и запустит заново.",
+    "serviceReinstalled": "Служба переустановлена"
   },
   "startup": {
     "loadingSystem": "Загрузка системы…",

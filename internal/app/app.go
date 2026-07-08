@@ -105,6 +105,13 @@ func (a *App) Startup(ctx context.Context) {
 		}
 	})
 
+	// Hook zapret crash to desktop notifications.
+	a.zapret.OnCrash = func() {
+		if a.cfg.ShouldNotify("service_crash") {
+			notify.Show("Служба Запрета остановлена", "Процесс winws.exe завершился неожиданно. Проверьте стратегию и логи.")
+		}
+	}
+
 	close(a.ctxReady)
 
 	// Recovery: если прошлое обновление zapret прервалось (крах) — восстановить.

@@ -193,13 +193,26 @@ export default function SettingsPage({ status, showToast, onOpenLogs }) {
               <span className="set-row-title">{t('settings.removeService')}</span>
               <span className="set-row-desc">{t('settings.removeServiceDesc')}</span>
             </div>
-            <button className="btn btn-danger btn-xs" onClick={() => {
-              if (window.confirm(t('settings.removeServiceConfirm'))) {
-                apiCall(async () => api('POST', '/api/zapret/service/remove'), t('settings.serviceRemoved'), showToast);
-              }
-            }}>
-              {t('settings.removeServiceBtn')}
-            </button>
+            <div className="set-row-actions">
+              <button className="btn btn-danger btn-xs" onClick={() => {
+                if (window.confirm(t('settings.removeServiceConfirm'))) {
+                  apiCall(async () => api('POST', '/api/zapret/service/remove'), t('settings.serviceRemoved'), showToast);
+                }
+              }}>
+                {t('settings.removeServiceBtn')}
+              </button>
+              <button className="btn btn-xs" onClick={() => {
+                if (window.confirm(t('settings.reinstallServiceConfirm'))) {
+                  apiCall(async () => api('POST', '/api/zapret/stop'), null, showToast);
+                  apiCall(async () => api('POST', '/api/zapret/service/remove'), null, showToast);
+                  setTimeout(() => {
+                    apiCall(async () => api('POST', '/api/zapret/start'), t('settings.serviceReinstalled'), showToast);
+                  }, 1000);
+                }
+              }}>
+                {t('settings.reinstallServiceBtn')}
+              </button>
+            </div>
           </div>
           {config.zapret_skipped && (
             <div className="set-row" style={{ padding: '3px 0' }}>
@@ -221,48 +234,34 @@ export default function SettingsPage({ status, showToast, onOpenLogs }) {
         <div className="section set-notif-section">
           <div className="set-notif-head">
             <span className="section-title">{t('settings.notifications')}</span>
-            <div className="set-notif-actions">
-              <Switch checked={config.notifications_enabled !== false} onChange={() => update({ notifications_enabled: !config.notifications_enabled })} />
-              {config.notifications_enabled !== false && (
-                <button className="btn btn-ghost btn-xs" onClick={async () => {
-                  const d = await api('POST', '/api/test-notification');
-                  if (d?.error) showToast(d.error, 'error');
-                  else showToast(t('settings.testNotificationSent'), 'success');
-                }}>
-                  {t('settings.test')}
-                </button>
-              )}
-            </div>
           </div>
-          {config.notifications_enabled !== false && (
-            <div className="set-notif-grid">
-              <CompactNotif label={t('settings.notifZpuiUpdates')}
-                checked={config.notify_zpui_updates !== false}
-                onChange={() => update({ notify_zpui_updates: !config.notify_zpui_updates })} />
-              <CompactNotif label={t('settings.notifZapretUpdates')}
-                checked={config.notify_zapret_updates !== false}
-                onChange={() => update({ notify_zapret_updates: !config.notify_zapret_updates })} />
-              <CompactNotif label={t('settings.notifServiceStatus')}
-                checked={config.notify_service_status === true}
-                onChange={() => update({ notify_service_status: !config.notify_service_status })} />
-              <CompactNotif label={t('settings.notifErrors')}
-                checked={config.notify_errors === true}
-                onChange={() => update({ notify_errors: !config.notify_errors })} />
-              <div className={'set-cnotiff-wide' + (config.notify_resource_drop ? '' : ' dimmed')}>
-                <div className="cnotiff-left">
-                  <Switch checked={config.notify_resource_drop === true}
-                    onChange={() => update({ notify_resource_drop: !config.notify_resource_drop })} />
-                  <span className="set-cnotiff-label">{t('settings.notifResourceDrop')}</span>
-                </div>
-                <div className="cnotiff-right">
-                  <input type="range" min="10" max="100" step="5" value={config.resource_drop_pct || 70}
-                    onChange={e => update({ resource_drop_pct: parseInt(e.target.value) })}
-                    className="set-threshold-slider" />
-                  <span className="set-threshold-val">{config.resource_drop_pct || 70}%</span>
-                </div>
+          <div className="set-notif-grid">
+            <CompactNotif label={t('settings.notifZpuiUpdates')}
+              checked={config.notify_zpui_updates !== false}
+              onChange={() => update({ notify_zpui_updates: !config.notify_zpui_updates })} />
+            <CompactNotif label={t('settings.notifZapretUpdates')}
+              checked={config.notify_zapret_updates !== false}
+              onChange={() => update({ notify_zapret_updates: !config.notify_zapret_updates })} />
+            <CompactNotif label={t('settings.notifServiceCrash')}
+              checked={config.notify_service_crash !== false}
+              onChange={() => update({ notify_service_crash: !config.notify_service_crash })} />
+            <CompactNotif label={t('settings.notifErrors')}
+              checked={config.notify_errors === true}
+              onChange={() => update({ notify_errors: !config.notify_errors })} />
+            <div className={'set-cnotiff-wide' + (config.notify_resource_drop ? '' : ' dimmed')}>
+              <div className="cnotiff-left">
+                <Switch checked={config.notify_resource_drop === true}
+                  onChange={() => update({ notify_resource_drop: !config.notify_resource_drop })} />
+                <span className="set-cnotiff-label">{t('settings.notifResourceDrop')}</span>
+              </div>
+              <div className="cnotiff-right">
+                <input type="range" min="10" max="100" step="5" value={config.resource_drop_pct || 70}
+                  onChange={e => update({ resource_drop_pct: parseInt(e.target.value) })}
+                  className="set-threshold-slider" />
+                <span className="set-threshold-val">{config.resource_drop_pct || 70}%</span>
               </div>
             </div>
-          )}
+          </div>
         </div>
 
       </div>

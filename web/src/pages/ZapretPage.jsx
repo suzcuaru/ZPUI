@@ -1,7 +1,51 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { api, apiCall } from '../api';
 import { useT } from '../i18n';
-import { Check, Play, Square, RefreshCw, Stethoscope, AlertCircle, Info } from 'lucide-react';
+import { Check, Play, Square, RefreshCw, Stethoscope, Info } from 'lucide-react';
+
+// sortStrategiesNatural — natural sort by name + number.
+// "general (ALT).bat" < "general (ALT2).bat" < ... < "general (ALT10).bat"
+// "general (FAKE TLS AUTO).bat" < "general (FAKE TLS AUTO ALT).bat"
+// "general.bat" goes first.
+function sortStrategiesNatural(strategies) {
+  return [...strategies].sort((a, b) => {
+    const an = a.filename || a.name;
+    const bn = b.filename || b.name;
+    // "general.bat" first
+    if (an === 'general.bat') return -1;
+    if (bn === 'general.bat') return 1;
+    // Extract base name (before first "(") and the part inside "(...)"
+    const parseStrat = (s) => {
+      // "general (ALT12).bat" -> base="general", variant="ALT12"
+      const m = s.match(/^(.+?)\s*\(([^)]+)\)\.bat$/i);
+      if (m) return { base: m[1].toLowerCase(), variant: m[2] };
+      // fallback - whole name without .bat
+      return { base: s.replace(/\.bat$/i, '').toLowerCase(), variant: '' };
+    };
+    const pa = parseStrat(an);
+    const pb = parseStrat(bn);
+    // Compare base names first
+    if (pa.base !== pb.base) {
+      return pa.base.localeCompare(pb.base);
+    }
+    // Same base — compare variants by natural sort (ALT, ALT2, ALT10)
+    // Extract leading letters and trailing digits
+    const parseVariant = (v) => {
+      const m = v.match(/^([A-Za-z ]+?)(\d+)?$/);
+      if (m) return { letters: m[1].trim().toUpperCase(), num: m[2] ? parseInt(m[2], 10) : 0 };
+      return { letters: v.toUpperCase(), num: 0 };
+    };
+    const va = parseVariant(pa.variant);
+    const vb = parseVariant(pb.variant);
+    if (va.letters !== vb.letters) {
+      // Empty variant (just "ALT") sorts before "ALT X"
+      if (va.letters === '') return -1;
+      if (vb.letters === '') return 1;
+      return va.letters.localeCompare(vb.letters);
+    }
+    return va.num - vb.num;
+  });
+}
 
 export default function ZapretPage({ status, showToast, onOpenDiagnostics }) {
   const { t } = useT();
@@ -11,9 +55,7 @@ export default function ZapretPage({ status, showToast, onOpenDiagnostics }) {
 
   useEffect(() => {
     api('GET', '/api/config').then(c => {
-      if (c) {
-        setSkipped(c.zapret_skipped === true);
-      }
+      if (c) setSkipped(c.zapret_skipped === true);
     });
   }, []);
 
@@ -37,7 +79,6 @@ export default function ZapretPage({ status, showToast, onOpenDiagnostics }) {
   const handleReinstall = async () => {
     if (!window.confirm(t('zapret.reinstallConfirm'))) return;
     setServiceBusy(true);
-    // Stop, remove service, then start fresh
     await apiCall(() => api('POST', '/api/zapret/stop'), null, showToast);
     await apiCall(() => api('POST', '/api/zapret/service/remove'), null, showToast);
     await new Promise(r => setTimeout(r, 1000));
@@ -70,7 +111,7 @@ export default function ZapretPage({ status, showToast, onOpenDiagnostics }) {
     <>
       <div className="page-title">{t('zapret.title')}</div>
 
-      {/* Сервисные кнопки: статус + запуск/остановка + переустановка + диагностика */}
+      {/* Compact service bar — fits one line */}
       <div className="zp-service-bar">
         <div className="zp-service-status">
           <span className={'zp-status-dot ' + (zRun ? 'on' : 'off')} />
@@ -87,7 +128,7 @@ export default function ZapretPage({ status, showToast, onOpenDiagnostics }) {
             {zRun ? t('common.stop') : t('common.start')}
           </button>
           <button
-            className="btn btn-sm"
+            className="btn btn-sm zp-btn-wide"
             onClick={handleReinstall}
             disabled={serviceBusy}
             data-tooltip={t('zapret.reinstallTip')}
@@ -97,7 +138,7 @@ export default function ZapretPage({ status, showToast, onOpenDiagnostics }) {
             {t('zapret.reinstall')}
           </button>
           <button
-            className="btn btn-sm"
+            className="btn btn-sm zp-btn-wide"
             onClick={onOpenDiagnostics}
             data-tooltip={t('zapret.diagnosticsTip')}
             data-tooltip-pos="bottom"
@@ -143,6 +184,9 @@ function StrategiesTab({ status, showToast }) {
     if (ip) setIpsetStatus(ip.status || 'loaded');
   };
 
+  // Natural sort: ALT, ALT2, ALT3, ... ALT10, ALT11, ALT12
+  const sortedStrategies = useMemo(() => sortStrategiesNatural(strategies), [strategies]);
+
   const handleSet = async (fn) => {
     setChanging(fn);
     await apiCall(() => api('POST', '/api/zapret/set-strategy', { filename: fn }), t('zapret.strategyApplied'), showToast);
@@ -171,8 +215,9 @@ function StrategiesTab({ status, showToast }) {
 
   return (
     <>
+      {/* Strategies grid */}
       <div className="strat-grid">
-        {strategies.map(s => (
+        {sortedStrategies.map(s => (
           <button
             key={s.filename}
             className={'strat-card' + (s.current ? ' active' : '')}
@@ -188,48 +233,51 @@ function StrategiesTab({ status, showToast }) {
         {strategies.length === 0 && <div className="strat-empty">{t('zapret.noStrategies')}</div>}
       </div>
 
-      <div className="strat-filters">
-        {/* Игровой фильтр с описанием */}
-        <div className="flt-section flt-section-info">
-          <div className="flt-section-head">
-            <div className="flt-label">{t('zapret.gameFilter')}</div>
-            <Info size={13} className="flt-info-icon" data-tooltip={t('zapret.gameFilterDescFull')} data-tooltip-pos="bottom" />
-          </div>
-          <div className="flt-section-desc">{t('zapret.gameFilterDescShort')}</div>
-          <div className="flt-radios">
-            {[
-              { v: 'disabled', l: t('zapret.off') },
-              { v: 'all', l: 'TCP+UDP' },
-              { v: 'tcp', l: 'TCP' },
-              { v: 'udp', l: 'UDP' },
-            ].map(o => (
-              <label key={o.v} className="flt-radio">
-                <input type="radio" name="gf" checked={gameFilter === o.v} onChange={() => handleGameFilter(o.v)} />
-                <span>{o.l}</span>
-              </label>
-            ))}
-          </div>
+      {/* Combined filters panel — compact, one card */}
+      <div className="zp-filters-card">
+        <div className="zp-filters-head">
+          <span className="zp-filters-title">{t('zapret.filtersTitle')}</span>
+          <Info size={13} className="flt-info-icon" data-tooltip={t('zapret.filtersTip')} data-tooltip-pos="bottom" />
         </div>
 
-        {/* IPSet фильтр с описанием */}
-        <div className="flt-section flt-section-info">
-          <div className="flt-section-head">
-            <div className="flt-label">{t('zapret.ipsetFilter')}</div>
-            <Info size={13} className="flt-info-icon" data-tooltip={t('zapret.ipsetDescFull')} data-tooltip-pos="bottom" />
-          </div>
-          <div className="flt-section-desc">{t('zapret.ipsetDescShort')}</div>
-          <div className="flt-row">
-            <div className="flt-row-info">
-              <span className="flt-row-title">{t('zapret.status') + ' '}<strong>{ipsetStatus}</strong></span>
-              <span className="flt-status-hint">{t('zapret.ipsetStatusHint')}</span>
+        <div className="zp-filters-grid">
+          {/* Game filter column */}
+          <div className="zp-filter-col">
+            <div className="zp-filter-label">
+              {t('zapret.gameFilter')}
+              <Info size={11} className="flt-info-icon-sm" data-tooltip={t('zapret.gameFilterDescFull')} data-tooltip-pos="bottom" />
             </div>
-            <button className="btn btn-sm" onClick={handleIpsetToggle}>
-              {ipsetStatus === 'loaded' ? t('common.stop') : ipsetStatus === 'none' ? t('common.start') : t('common.load')}
-            </button>
+            <div className="flt-radios compact">
+              {[
+                { v: 'disabled', l: t('zapret.off') },
+                { v: 'all', l: 'TCP+UDP' },
+                { v: 'tcp', l: 'TCP' },
+                { v: 'udp', l: 'UDP' },
+              ].map(o => (
+                <label key={o.v} className="flt-radio compact">
+                  <input type="radio" name="gf" checked={gameFilter === o.v} onChange={() => handleGameFilter(o.v)} />
+                  <span>{o.l}</span>
+                </label>
+              ))}
+            </div>
+            <div className="zp-filter-desc">{t('zapret.gameFilterDescShort')}</div>
           </div>
-          <div className="btn-row">
-            <button className="btn btn-sm" onClick={handleUpdateIpset} data-tooltip={t('zapret.updateIpsetTip')} data-tooltip-pos="bottom">{t('zapret.updateIpset')}</button>
-            <button className="btn btn-sm" onClick={handleUpdateHosts} data-tooltip={t('zapret.updateHostsTip')} data-tooltip-pos="bottom">{t('zapret.updateHosts')}</button>
+
+          {/* IPSet column */}
+          <div className="zp-filter-col">
+            <div className="zp-filter-label">
+              {t('zapret.ipsetFilter')}
+              <Info size={11} className="flt-info-icon-sm" data-tooltip={t('zapret.ipsetDescFull')} data-tooltip-pos="bottom" />
+            </div>
+            <div className="zp-ipset-row">
+              <span className="zp-ipset-status">{ipsetStatus}</span>
+              <button className="btn btn-xs" onClick={handleIpsetToggle}>
+                {ipsetStatus === 'loaded' ? t('common.stop') : ipsetStatus === 'none' ? t('common.start') : t('common.load')}
+              </button>
+              <button className="btn btn-xs" onClick={handleUpdateIpset} data-tooltip={t('zapret.updateIpsetTip')} data-tooltip-pos="bottom">{t('zapret.updateIpset')}</button>
+              <button className="btn btn-xs" onClick={handleUpdateHosts} data-tooltip={t('zapret.updateHostsTip')} data-tooltip-pos="bottom">{t('zapret.updateHosts')}</button>
+            </div>
+            <div className="zp-filter-desc">{t('zapret.ipsetDescShort')}</div>
           </div>
         </div>
       </div>

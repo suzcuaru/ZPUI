@@ -36,6 +36,12 @@ type Manager struct {
 	version       string
 	gameFilterTCP string
 	gameFilterUDP string
+
+	// OnCrash is called when the winws.exe process exits unexpectedly
+	// (i.e. not via Stop()). Used to show desktop notifications.
+	// stopRequested=true means Stop() was called, so no notification.
+	stopRequested bool
+	OnCrash       func()
 }
 
 func NewManager(cfg *config.Config, log *logger.Logger) *Manager {
@@ -113,6 +119,8 @@ func (m *Manager) StartWithStrategy(strategyFile string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
+	m.stopRequested = false
+
 	if m.isProcessRunning() {
 		m.stopLocked()
 	}
@@ -167,22 +175,44 @@ func (m *Manager) StartWithStrategy(strategyFile string) error {
 
 	m.log.Info("zapret", fmt.Sprintf("Zapret started (PID: %d)", m.cmd.Process.Pid))
 
+	// Wait for the process to exit (in background) and update status.
 	go func() {
 		err := m.cmd.Wait()
 		m.mu.Lock()
-		defer m.mu.Unlock()
+		wasStopRequested := m.stopRequested
 		m.status = StatusStopped
+		m.mu.Unlock()
 		if err != nil {
 			m.log.Error("zapret", fmt.Sprintf("Process exited with error: %v", err))
 		} else {
 			m.log.Info("zapret", "Process exited normally")
 		}
+		// If process died on its own (not via Stop()), trigger crash callback
+		if !wasStopRequested && err != nil && m.OnCrash != nil {
+			go m.OnCrash()
+		}
 	}()
+
+	// Give the process up to 2 seconds to crash. winws.exe can exit
+	// immediately if strategy args are invalid or DPI kills it.
+	// Without this check we would return success and show "started"
+	// notification even though the process already died.
+	time.Sleep(2 * time.Second)
+	m.mu.Lock()
+	stillRunning := m.status == StatusRunning
+	m.mu.Unlock()
+	if !stillRunning {
+		return fmt.Errorf("процесс winws.exe завершился сразу после запуска — проверьте стратегию или логи")
+	}
 
 	return nil
 }
 
 func (m *Manager) Stop() error {
+	m.mu.Lock()
+	m.stopRequested = true
+	m.mu.Unlock()
+
 	if m.isServiceRunning() {
 		m.log.Info("zapret", "Stopping service...")
 		stopService("zapret")

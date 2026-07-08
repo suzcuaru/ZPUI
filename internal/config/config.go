@@ -76,7 +76,7 @@ type Config struct {
 	NotifyZPUIUpdates   bool `json:"notify_zpui_updates"`
 	NotifyZapretUpdates bool `json:"notify_zapret_updates"`
 	NotifyMissingFiles  bool `json:"notify_missing_files"`
-	NotifyServiceStatus bool `json:"notify_service_status"`
+	NotifyServiceCrash bool `json:"notify_service_crash"`
 	NotifyResourceDrop  bool `json:"notify_resource_drop"`
 	NotifyErrors        bool `json:"notify_errors"`
 	ResourceDropPct     int  `json:"resource_drop_pct"`
@@ -138,7 +138,7 @@ func defaultConfig(zapretDir string) *Config {
 		NotifyZPUIUpdates:   true,
 		NotifyZapretUpdates: true,
 		NotifyMissingFiles:  true,
-		NotifyServiceStatus: false,
+		NotifyServiceCrash: false,
 		NotifyResourceDrop:  false,
 		ResourceDropPct:     70,
 	}
@@ -284,8 +284,8 @@ func (c *Config) ShouldNotify(event string) bool {
 		return c.NotifyZPUIUpdates
 	case "zapret_update":
 		return c.NotifyZapretUpdates
-	case "service_status":
-		return c.NotifyServiceStatus
+	case "service_crash":
+		return c.NotifyServiceCrash
 	case "resource_drop":
 		return c.NotifyResourceDrop
 	case "errors":
@@ -329,8 +329,8 @@ func (c *Config) SetNotifyFlags(flags map[string]bool) error {
 	if v, ok := flags["notify_missing_files"]; ok {
 		c.NotifyMissingFiles = v
 	}
-	if v, ok := flags["notify_service_status"]; ok {
-		c.NotifyServiceStatus = v
+	if v, ok := flags["notify_service_crash"]; ok {
+		c.NotifyServiceCrash = v
 	}
 	if v, ok := flags["notify_resource_drop"]; ok {
 		c.NotifyResourceDrop = v

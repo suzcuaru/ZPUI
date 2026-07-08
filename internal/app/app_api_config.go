@@ -94,7 +94,7 @@ func (a *App) GetConfig() map[string]interface{} {
 		"notify_zpui_updates":   a.cfg.NotifyZPUIUpdates,
 		"notify_zapret_updates": a.cfg.NotifyZapretUpdates,
 		"notify_missing_files":  a.cfg.NotifyMissingFiles,
-		"notify_service_status": a.cfg.NotifyServiceStatus,
+		"notify_service_crash": a.cfg.NotifyServiceCrash,
 		"notify_resource_drop":  a.cfg.NotifyResourceDrop,
 		"resource_drop_pct":     a.cfg.GetResourceDropPct(),
 		"show_strategy_modal":   a.cfg.ShowStrategyModal,
@@ -139,7 +139,7 @@ func (a *App) SetConfig(opts map[string]interface{}) map[string]interface{} {
 		a.cfg.SetNotificationsEnabled(v)
 	}
 	notifyFlags := map[string]bool{}
-	for _, key := range []string{"notify_zpui_updates", "notify_zapret_updates", "notify_missing_files", "notify_service_status", "notify_resource_drop"} {
+	for _, key := range []string{"notify_zpui_updates", "notify_zapret_updates", "notify_missing_files", "notify_service_crash", "notify_resource_drop"} {
 		if v, ok := opts[key].(bool); ok {
 			notifyFlags[key] = v
 		}

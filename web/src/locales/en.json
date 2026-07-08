@@ -177,7 +177,9 @@
     "ipsetDescFull": "IPSet - list of IP addresses to filter. none = bypass applies to no IPs, loaded = only IPs from list, any = all IPs. Default loaded is optimal for most users.",
     "ipsetStatusHint": "loaded = only listed IPs, none = no IPs, any = all IPs",
     "updateIpsetTip": "Download current list of blocked resource IPs",
-    "updateHostsTip": "Update hosts file - fixes Telegram web and Discord voice chat"
+    "updateHostsTip": "Update hosts file - fixes Telegram web and Discord voice chat",
+    "filtersTitle": "Filters",
+    "filtersTip": "Advanced bypass settings: game filters and IPSet. Most users can leave defaults."
   },
   "proxy": {
     "title": "Proxy",
@@ -246,15 +248,12 @@
     "updateCheck": "Update check",
     "notifications": "Windows notifications",
     "notifyStrategyTest": "Test completion notification",
-    "test": "Test",
-    "testNotificationSent": "Test notification sent",
     "notifZpuiUpdates": "ZPUI updates",
     "notifZpuiUpdatesDesc": "Notify about new ZPUI versions",
     "notifZapretUpdates": "Zapret updates",
     "notifZapretUpdatesDesc": "Notify about new Zapret versions",
     "notifMissingFiles": "Missing files",
     "notifMissingFilesDesc": "Notify about missing Zapret files",
-    "notifServiceStatus": "Service status changes",
     "notifServiceStatusDesc": "Notify when service starts/stops",
     "notifResourceDrop": "Resource availability drop",
     "notifResourceDropDesc": "Notify when availability falls below threshold",
@@ -276,7 +275,11 @@
     "installZapretDesc": "Reset no-zapret mode and start installation",
     "installZapretBtn": "Install",
     "installZapretConfirm": "The app will restart to install Zapret. Continue?",
-    "notifErrors": "About errors"
+    "notifErrors": "About errors",
+    "notifServiceCrash": "About service crash",
+    "reinstallServiceBtn": "Reinstall",
+    "reinstallServiceConfirm": "Reinstall Zapret service? This will stop, remove and restart.",
+    "serviceReinstalled": "Service reinstalled"
   },
   "startup": {
     "loadingSystem": "Loading system…",
