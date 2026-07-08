@@ -1,0 +1,44 @@
+# skip-resources.txt — список ресурсов, исключённых из проверки доступности.
+#
+# Эти домены всегда недоступны (мертвые CDN, удалённые поддомены, служебные
+# домены которые не нужно проверять), поэтому их пропуск улучшает статистику
+# доступности и не засоряет логи.
+#
+# Формат: один домен на строку. Строки, начинающиеся с #, — комментарии.
+# Пустые строки игнорируются. Поддомены учитываются автоматически:
+#   "cloudflare.com" исключит и "cloudflare.com", и "api.cloudflare.com".
+#
+# Этот файл устанавливается вместе с приложением. Чтобы добавить/убрать
+# домен — отредактируй этот файл вручную и перезапусти приложение.
+
+# === Cloudflare служебные/тестовые домены (всегда недоступны) ===
+cloudflareapps.com
+cloudflarebolt.com
+cloudflareclient.com
+cloudflarepartners.com
+cloudflareresolve.com
+cloudflaressl.com
+cloudflarestatus.com
+cloudflarestorage.com
+cloudflaretest.com
+
+# === Cloudfront CDN ===
+cloudfront.net
+
+# === Discord служебные поддомены (часть всегда недоступна без Discord-аккаунта) ===
+discord.dev
+discord.media
+discord.status
+discord-activities.com
+discordactivities.com
+discordapp.net
+discordpartygames.com
+
+# === Прочие служебные/недоступные ===
+localizeapi.com
+live-video.net
+
+# === PornHub CDN — всегда недоступны напрямую в РФ ===
+phncdn.com
+pix-cdn77.phncdn.com
+winhanced.com

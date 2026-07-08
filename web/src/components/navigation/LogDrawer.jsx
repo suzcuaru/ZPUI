@@ -1,11 +1,11 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { api } from '../../api';
 import { useT } from '../../i18n';
-import { X, SlidersHorizontal, Trash2, Copy } from 'lucide-react';
+import { X, Trash2, Copy, Download, Search, AlertTriangle } from 'lucide-react';
 
-const CATS = ['all', 'app', 'zapret', 'network', 'availability', 'config', 'tray', 'xboxdns'];
-const ALL_FETCH = ['app', 'zapret', 'network', 'availability', 'tray', 'config', 'xboxdns'];
-const DEBUG_CATS = ['app', 'zapret', 'network', 'availability'];
+// Категории логов. 'config' убран — пользователь не должен видеть служебные логи конфигурации.
+const CATS = ['all', 'app', 'zapret', 'network', 'availability', 'tray', 'xboxdns'];
+const ALL_FETCH = ['app', 'zapret', 'network', 'availability', 'tray', 'xboxdns'];
 
 const FE_KEY = '__zpui_fe_logs';
 const MAX_FE = 500;
@@ -32,71 +32,64 @@ if (typeof window !== 'undefined' && !window.__zpui_log_init) {
   window.addEventListener('unhandledrejection', e => addFe('ERROR', `Promise: ${e.reason}`));
 }
 
+const LEVELS = ['ALL', 'ERROR', 'WARN', 'INFO'];
+
 export default function LogDrawer({ open, onClose }) {
   const { t } = useT();
-  const [tab, setTab] = useState('live');
   const [cat, setCat] = useState('all');
+  const [level, setLevel] = useState('ALL');
+  const [search, setSearch] = useState('');
   const [raw, setRaw] = useState([]);
-  const [debugState, setDebugState] = useState({});
-  const [showDebug, setShowDebug] = useState(false);
-  const [errorFiles, setErrorFiles] = useState([]);
+  const [errorSnapshots, setErrorSnapshots] = useState([]);
+  const [showErrors, setShowErrors] = useState(false);
   const [selectedError, setSelectedError] = useState(null);
   const [errorContent, setErrorContent] = useState('');
-  const [archiveFiles, setArchiveFiles] = useState([]);
-  const [selectedArchive, setSelectedArchive] = useState(null);
-  const [archiveContent, setArchiveContent] = useState('');
+  const [exporting, setExporting] = useState(false);
+  const [clearing, setClearing] = useState(false);
+  const [autoScroll, setAutoScroll] = useState(true);
   const bodyRef = useRef(null);
   const prevLen = useRef(0);
 
   useEffect(() => {
     if (!open) return;
-    api('GET', '/api/logs/debug').then(d => {
-      if (d?.categories) setDebugState(d.categories);
-    });
-  }, [open]);
 
+    const load = async () => {
+      let be = [];
+      if (cat === 'all') {
+        const results = await Promise.all(
+          ALL_FETCH.map(c => api('GET', `/api/logs?category=${c}&lines=100`))
+        );
+        // ВАЖНО: используем индекс, не переменную `c` (она вне scope после map).
+        // Раньше тут был баг "ReferenceError: c is not defined".
+        be = results.flatMap((d, i) => {
+          const categoryName = ALL_FETCH[i];
+          return (d?.lines || []).map(l => ({
+            ...l,
+            source: 'be',
+            category: l.category || categoryName,
+          }));
+        });
+      } else {
+        const d = await api('GET', `/api/logs?category=${cat}&lines=250`);
+        be = (d?.lines || []).map(l => ({ ...l, source: 'be', category: l.category || cat }));
+      }
+      const fe = getFe().map(l => ({ ...l, source: 'fe', category: 'fe' }));
+      setRaw([...be, ...fe].slice(-500));
+    };
+    load();
+    const iv = setInterval(load, 3000);
+    return () => clearInterval(iv);
+  }, [open, cat]);
+
+  // Загрузка списка срезов ошибок (для кнопки-индикатора)
   useEffect(() => {
     if (!open) return;
-    if (tab === 'live') {
-      const load = async () => {
-        let be = [];
-        if (cat === 'all') {
-          const results = await Promise.all(
-            ALL_FETCH.map(c => api('GET', `/api/logs?category=${c}&lines=100`))
-          );
-          be = results.flatMap(d => (d?.lines || []).map(l => ({ ...l, source: 'be' })));
-        } else {
-          const d = await api('GET', `/api/logs?category=${cat}&lines=250`);
-          be = (d?.lines || []).map(l => ({ ...l, source: 'be' }));
-        }
-        const fe = getFe().map(l => ({ ...l, source: 'fe' }));
-        setRaw([...be, ...fe].slice(-400));
-      };
-      load();
-      const iv = setInterval(load, 3000);
-      return () => clearInterval(iv);
-    }
-    if (tab === 'errors') {
-      const load = async () => {
-        const d = await api('GET', '/api/logs/errors');
-        if (d?.files) setErrorFiles(d.files);
-      };
-      load();
-    }
-    if (tab === 'archive') {
-      const load = async () => {
-        const d = await api('GET', '/api/logs/archive');
-        if (d?.files) setArchiveFiles(d.files);
-      };
-      load();
-    }
-  }, [open, tab, cat]);
-
-  const toggleDebug = async (category) => {
-    const next = !debugState[category];
-    setDebugState(prev => ({ ...prev, [category]: next }));
-    await api('POST', '/api/logs/debug', { category, enabled: next });
-  };
+    const loadErr = async () => {
+      const d = await api('GET', '/api/logs/errors');
+      if (d?.files) setErrorSnapshots(d.files);
+    };
+    loadErr();
+  }, [open]);
 
   const readError = async (name) => {
     setSelectedError(name);
@@ -105,46 +98,96 @@ export default function LogDrawer({ open, onClose }) {
     if (d?.content) setErrorContent(d.content);
   };
 
-  const readArchive = async (name) => {
-    setSelectedArchive(name);
-    setArchiveContent('');
-    const d = await api('GET', `/api/logs/archive/read?name=${encodeURIComponent(name)}`);
-    if (d?.content) setArchiveContent(d.content);
-  };
+  // Фильтрация: по уровню + по подстроке
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return raw.filter(l => {
+      if (level !== 'ALL' && (l.level || '').toUpperCase() !== level) return false;
+      if (q) {
+        const msg = (l.message || '').toLowerCase();
+        const c = (l.category || '').toLowerCase();
+        if (!msg.includes(q) && !c.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [raw, level, search]);
 
-  const filtered = raw;
+  // Счётчики по уровням
+  const counts = useMemo(() => {
+    const c = { ALL: raw.length, ERROR: 0, WARN: 0, INFO: 0 };
+    raw.forEach(l => {
+      const lv = (l.level || 'INFO').toUpperCase();
+      if (c[lv] !== undefined) c[lv]++;
+      else c.INFO++;
+    });
+    return c;
+  }, [raw]);
 
   useEffect(() => {
     const el = bodyRef.current;
-    if (!el || !open || tab !== 'live') return;
+    if (!el || !open || !autoScroll) return;
     if (filtered.length !== prevLen.current) {
       el.scrollTop = el.scrollHeight;
       prevLen.current = filtered.length;
     }
-  }, [filtered, open, tab]);
+  }, [filtered, open, autoScroll]);
 
   const copyAll = () => {
-    let text;
-    if (tab === 'live') {
-      text = filtered.map(l => `[${l.time}] [${l.level}] ${l.source === 'fe' ? '[FE] ' : ''}${l.message}`).join('\n');
-    } else if (tab === 'errors' && errorContent) {
-      text = errorContent;
-    } else if (tab === 'archive' && archiveContent) {
-      text = archiveContent;
-    }
+    const text = filtered.map(l => `[${l.time}] [${l.level}] ${l.source === 'fe' ? '[FE] ' : ''}${l.message}`).join('\n');
     if (text) navigator.clipboard.writeText(text);
   };
 
-  const clearAll = async () => {
+  // Очистка: полностью удаляет записи выбранной категории (или все если "all")
+  const handleClear = async () => {
+    if (clearing) return;
+    const confirmMsg = cat === 'all'
+      ? 'Удалить ВСЕ логи? Это очистит все файлы логов безвозвратно.'
+      : `Удалить все записи категории "${cat}"?`;
+    if (!window.confirm(confirmMsg)) return;
+
+    setClearing(true);
+    // 1. Очищаем FE логи (sessionStorage) всегда
     sessionStorage.removeItem(FE_KEY);
-    await api('POST', '/api/logs/clear');
+
+    // 2. Очищаем BE логи выбранной категории
+    const d = await api('POST', '/api/logs/clear-bucket', { category: cat });
+    setClearing(false);
+
+    if (d?.error) {
+      console.error('Clear failed:', d.error);
+      return;
+    }
+
+    // 3. Перезагружаем логи
     setRaw([]);
-    setErrorFiles([]);
-    setSelectedError(null);
-    setErrorContent('');
+    // Принудительный reload через интервал сработает через 3 сек,
+    // но лучше сразу перечитать.
+    setTimeout(async () => {
+      let be = [];
+      if (cat === 'all') {
+        const results = await Promise.all(
+          ALL_FETCH.map(c => api('GET', `/api/logs?category=${c}&lines=100`))
+        );
+        be = results.flatMap((d, i) => (d?.lines || []).map(l => ({
+          ...l, source: 'be', category: l.category || ALL_FETCH[i],
+        })));
+      } else {
+        const d = await api('GET', `/api/logs?category=${cat}&lines=250`);
+        be = (d?.lines || []).map(l => ({ ...l, source: 'be', category: l.category || cat }));
+      }
+      setRaw(be);
+    }, 200);
   };
 
-  const errCount = raw.filter(l => (l.level || '').toLowerCase() === 'error').length;
+  const exportLogs = async () => {
+    setExporting(true);
+    const d = await api('POST', '/api/logs/export');
+    setExporting(false);
+    if (d?.path) {
+      console.log('Logs exported to', d.path);
+    }
+  };
+
   const fmtSize = (b) => b < 1024 ? b + ' B' : (b / 1024).toFixed(1) + ' KB';
   const catLabel = (c) => c === 'all' ? t('logs.all') : c.charAt(0).toUpperCase() + c.slice(1);
 
@@ -154,118 +197,126 @@ export default function LogDrawer({ open, onClose }) {
       <div className={'lg-drawer' + (open ? ' open' : '')}>
         <div className="lg-head">
           <span className="lg-head-title">{t('logs.title')}</span>
-          {errCount > 0 && <span className="lg-head-badge">{errCount}</span>}
-          <div className="lg-head-tabs">
-            <button className={'lg-tab' + (tab === 'live' ? ' on' : '')} onClick={() => setTab('live')}>
-              {t('logs.title')}
-            </button>
-            <button className={'lg-tab' + (tab === 'errors' ? ' on' : '')} onClick={() => setTab('errors')}>
-              {t('logs.errors', { defaultValue: 'Errors' })}
-              {errorFiles.length > 0 && <span className="lg-tab-badge">{errorFiles.length}</span>}
-            </button>
-            <button className={'lg-tab' + (tab === 'archive' ? ' on' : '')} onClick={() => setTab('archive')}>
-              {t('logs.archive', { defaultValue: 'Archive' })}
-            </button>
+          {counts.ERROR > 0 && <span className="lg-head-badge" data-tooltip="Ошибки в логах">{counts.ERROR}</span>}
+          {/* Категории логов — справа от заголовка, в шапке */}
+          <div className="lg-head-cats">
+            {CATS.map(c => (
+              <button key={c} className={'lg-chip' + (cat === c ? ' on' : '')} onClick={() => setCat(c)}>
+                {catLabel(c)}
+              </button>
+            ))}
           </div>
           <div className="lg-spacer" />
+          <button
+            className={'lg-head-errors-btn' + (errorSnapshots.length > 0 ? ' has-errors' : '')}
+            onClick={() => setShowErrors(!showErrors)}
+            data-tooltip={`Срезы ошибок (${errorSnapshots.length})`}
+            aria-label="Срезы ошибок"
+          >
+            <AlertTriangle size={14} strokeWidth={2} />
+            {errorSnapshots.length > 0 && <span className="lg-err-count">{errorSnapshots.length}</span>}
+          </button>
           <button className="lg-head-close" data-tooltip={t('common.close')} onClick={onClose}><X size={16} strokeWidth={2.5} /></button>
         </div>
 
-        {tab === 'live' && (
-          <>
-            <div className="lg-toolbar">
-              <div className="lg-cats">
-                {CATS.map(c => (
-                  <button key={c} className={'lg-chip' + (cat === c ? ' on' : '')} onClick={() => setCat(c)}>
-                    {catLabel(c)}
-                  </button>
-                ))}
-              </div>
-              <div className="lg-actions">
+        {/* Тулбар с поиском и уровнями */}
+        <div className="lg-toolbar">
+          <div className="lg-toolbar-row">
+            <div className="lg-levels">
+              {LEVELS.map(lv => (
                 <button
-                  className={'lg-btn' + (showDebug || Object.values(debugState).some(Boolean) ? ' on' : '')}
-                  onClick={() => setShowDebug(!showDebug)}
-                  data-tooltip={t('logs.debugMode', { defaultValue: 'Debug mode' })}
-                ><SlidersHorizontal size={15} strokeWidth={2} /></button>
-                <button className="lg-btn" onClick={clearAll} data-tooltip={t('common.clear')}><Trash2 size={15} strokeWidth={2} /></button>
-                <button className="lg-btn" onClick={copyAll} data-tooltip={t('common.copy')}><Copy size={15} strokeWidth={2} /></button>
+                  key={lv}
+                  className={'lg-level' + (level === lv ? ' on' : '') + ' lg-level-' + lv.toLowerCase()}
+                  onClick={() => setLevel(lv)}
+                >
+                  {lv}{lv !== 'ALL' && counts[lv] > 0 && <span className="lg-level-count">{counts[lv]}</span>}
+                </button>
+              ))}
+            </div>
+            <div className="lg-actions">
+              <button
+                className={'lg-btn' + (autoScroll ? ' on' : '')}
+                onClick={() => setAutoScroll(!autoScroll)}
+                data-tooltip={autoScroll ? 'Автопрокрутка вкл' : 'Автопрокрутка выкл'}
+                aria-label="Автопрокрутка"
+              >
+                ↓
+              </button>
+              <button
+                className={'lg-btn' + (clearing ? ' on' : '')}
+                onClick={handleClear}
+                disabled={clearing}
+                data-tooltip={clearing ? 'Очистка...' : (cat === 'all' ? 'Очистить все логи' : `Очистить «${catLabel(cat)}»`)}
+                aria-label="Очистить"
+              >
+                {clearing ? <span className="mini-spin" /> : <Trash2 size={15} strokeWidth={2} />}
+              </button>
+              <button className={'lg-btn' + (exporting ? ' on' : '')} onClick={exportLogs} disabled={exporting} data-tooltip="Экспорт в ZIP">
+                {exporting ? <span className="mini-spin" /> : <Download size={15} strokeWidth={2} />}
+              </button>
+              <button className="lg-btn" onClick={copyAll} data-tooltip={t('common.copy')}><Copy size={15} strokeWidth={2} /></button>
+            </div>
+            <div className="lg-search-wrap">
+              <Search size={13} strokeWidth={2} className="lg-search-icon" />
+              <input
+                type="text"
+                className="lg-search"
+                placeholder={t('logs.searchPlaceholder') || 'Поиск...'}
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="lg-filter-info">
+            {filtered.length !== raw.length ? (
+              <span>Показано {filtered.length} из {raw.length}</span>
+            ) : (
+              <span>Всего {raw.length}</span>
+            )}
+          </div>
+        </div>
+
+        {/* Тело: либо логи, либо модалка срезов ошибок поверх */}
+        <div className="lg-body" ref={bodyRef}>
+          {showErrors ? (
+            <div className="lg-errors-view">
+              <div className="lg-errors-head">
+                <span>Срезы ошибок ({errorSnapshots.length})</span>
+                <button className="lg-btn" onClick={() => setShowErrors(false)}>← К логам</button>
+              </div>
+              <div className="lg-split">
+                <div className="lg-file-list">
+                  {errorSnapshots.length > 0 ? errorSnapshots.map(f => (
+                    <button key={f.name} className={'lg-file-item' + (selectedError === f.name ? ' active' : '')} onClick={() => readError(f.name)}>
+                      <span className="lg-file-name">{f.name}</span>
+                      <span className="lg-file-meta">{fmtSize(f.size)}</span>
+                    </button>
+                  )) : <div className="lg-empty">Нет срезов ошибок</div>}
+                </div>
+                <div className="lg-file-content">
+                  {selectedError && errorContent ? (
+                    <pre className="lg-pre">{errorContent}</pre>
+                  ) : <div className="lg-empty">Выберите файл слева</div>}
+                  {selectedError && (
+                    <div className="lg-file-actions">
+                      <button className="lg-btn" data-tooltip={t('common.copy')} onClick={() => navigator.clipboard.writeText(errorContent)}>⎘</button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-            {showDebug && (
-              <div className="lg-debug-bar">
-                <span className="lg-debug-label">{t('logs.debugMode', { defaultValue: 'Debug' })}:</span>
-                {DEBUG_CATS.map(c => (
-                  <button
-                    key={c}
-                    className={'lg-dbg' + (debugState[c] ? ' on' : '')}
-                    onClick={() => toggleDebug(c)}
-                    data-tooltip={debugState[c] ? t('common.disable') : t('common.enable')}
-                  >{c}</button>
-                ))}
-              </div>
-            )}
-          </>
-        )}
-
-        <div className="lg-body" ref={bodyRef}>
-          {tab === 'live' && (
+          ) : (
             filtered.length > 0 ? filtered.map((l, i) => {
               const lv = (l.level || 'INFO').toLowerCase();
               return (
                 <div key={i} className={'lg-row ' + lv}>
+                  <span className={'lg-dot ' + lv} />
                   <span className="lg-time">{l.time || ''}</span>
-                  <span className={'lg-lv ' + lv}>{lv === 'error' ? 'E' : lv === 'warn' ? 'W' : lv === 'debug' ? 'D' : 'I'}</span>
                   {l.source === 'fe' && <span className="lg-fe">FE</span>}
                   <span className="lg-msg">{l.message || ''}</span>
                 </div>
               );
-            }) : <div className="lg-empty">{t('logs.noLogs')}</div>
-          )}
-
-          {tab === 'errors' && (
-            <div className="lg-split">
-              <div className="lg-file-list">
-                {errorFiles.length > 0 ? errorFiles.map(f => (
-                  <button key={f.name} className={'lg-file-item' + (selectedError === f.name ? ' active' : '')} onClick={() => readError(f.name)}>
-                    <span className="lg-file-name">{f.name}</span>
-                    <span className="lg-file-meta">{fmtSize(f.size)}</span>
-                  </button>
-                )) : <div className="lg-empty">{t('logs.noErrors', { defaultValue: 'No errors' })}</div>}
-              </div>
-              <div className="lg-file-content">
-                {selectedError && errorContent ? (
-                  <pre className="lg-pre">{errorContent}</pre>
-                ) : <div className="lg-empty">{t('logs.selectFile', { defaultValue: 'Select a file' })}</div>}
-                {selectedError && (
-                  <div className="lg-file-actions">
-                    <button className="lg-btn" data-tooltip={t('common.copy')} onClick={() => navigator.clipboard.writeText(errorContent)}>⎘</button>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {tab === 'archive' && (
-            <div className="lg-split">
-              <div className="lg-file-list">
-                {archiveFiles.length > 0 ? archiveFiles.map(f => (
-                  <button key={f.name} className={'lg-file-item' + (selectedArchive === f.name ? ' active' : '')} onClick={() => readArchive(f.name)}>
-                    <span className="lg-file-name">{f.name}</span>
-                    <span className="lg-file-meta">{fmtSize(f.size)}</span>
-                  </button>
-                )) : <div className="lg-empty">{t('logs.noArchive', { defaultValue: 'No archives' })}</div>}
-              </div>
-              <div className="lg-file-content">
-                {selectedArchive && archiveContent ? (
-                  <pre className="lg-pre">{archiveContent}</pre>
-                ) : <div className="lg-empty">{t('logs.selectFile', { defaultValue: 'Select a file' })}</div>}
-                {selectedArchive && (
-                  <div className="lg-file-actions">
-                    <button className="lg-btn" data-tooltip={t('common.copy')} onClick={() => navigator.clipboard.writeText(archiveContent)}>⎘</button>
-                  </div>
-                )}
-              </div>
-            </div>
+            }) : <div className="lg-empty">{search || level !== 'ALL' ? (t('logs.nothingFound') || 'Ничего не найдено') : (t('logs.noLogs') || 'Нет логов')}</div>
           )}
         </div>
       </div>

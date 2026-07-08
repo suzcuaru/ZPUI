@@ -204,7 +204,7 @@ export default function App() {
   const pageContent = backendOnline ? (
     <div className="main-area page-fade" key={activePage}>
         {PageComponent ? (
-         <PageComponent status={status} showToast={showToast} onNavigate={setActivePage} onOpenLogs={() => setLogsOpen(true)} />
+         <PageComponent status={status} showToast={showToast} onNavigate={setActivePage} onOpenLogs={() => setLogsOpen(true)} onOpenDiagnostics={() => setDiagOpen(true)} />
        ) : null}
     </div>
   ) : (
@@ -230,14 +230,11 @@ export default function App() {
           onOpenChecker={() => setCheckerOpen(true)}
           onAutoSelect={() => setAutoSelectOpen(true)}
           onOpenHealth={() => setHealthOpen(true)}
-          onOpenDiagnostics={() => setDiagOpen(true)}
           onOpenHelp={() => setActivePage('docs')}
           healthWarn={healthWarn}
           status={status}
           showToast={showToast}
           onOpenLogs={() => setLogsOpen(true)}
-          isDark={theme === 'dark'}
-          onToggleTheme={toggleTheme}
         />
       <div className="app-body">
         {pageContent}

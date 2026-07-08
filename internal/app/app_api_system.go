@@ -21,16 +21,29 @@ import (
 // RESOURCE STATUS
 // ============================================================
 
+// GetResourceStatus returns resource status with 30s cache.
+// Use RefreshResourceStatus for manual checks (refresh button).
 func (a *App) GetResourceStatus() map[string]interface{} {
-	a.resourceCacheMu.Lock()
-	if time.Since(a.resourceCacheTime) < 30*time.Second && a.resourceCache != nil {
-		a.resourceCacheMu.Unlock()
-		return map[string]interface{}{
-			"default": a.resourceCache.Default,
-			"user":    a.resourceCache.User,
+	return a.getResourceStatusInternal(false)
+}
+
+// RefreshResourceStatus forces resource check ignoring cache.
+// Used by the UI refresh button so user sees fresh results.
+func (a *App) RefreshResourceStatus() map[string]interface{} {
+	return a.getResourceStatusInternal(true)
+}
+
+func (a *App) getResourceStatusInternal(force bool) map[string]interface{} {
+	if !force {
+		a.resourceCacheMu.Lock()
+		if time.Since(a.resourceCacheTime) < 30*time.Second && a.resourceCache != nil {
+			cached := a.resourceCache
+			cachedAt := a.resourceCacheTime
+			a.resourceCacheMu.Unlock()
+			return a.buildResourceStatusResponse(cached, cachedAt, true)
 		}
+		a.resourceCacheMu.Unlock()
 	}
-	a.resourceCacheMu.Unlock()
 
 	defaultTargets, _ := blockcheck.ReadTargets(blockcheck.DefaultTargetsPath(a.cfg.GetZapretPath()))
 
@@ -39,18 +52,35 @@ func (a *App) GetResourceStatus() map[string]interface{} {
 		userTargets = blockcheck.ParseTargets(string(body))
 	}
 
+	// Filter out resources in the skip list (always-down / no-point-checking).
+	defaultTargets = a.filterSkipped(defaultTargets)
+	userTargets = a.filterSkipped(userTargets)
+
 	bc := a.cfg.GetBlockCheckConfig()
 	checker := blockcheck.NewChecker(bc.CheckTCP, bc.CheckTLS, bc.CheckHTTP, bc.TimeoutSec)
 	report := checker.BulkCheck(defaultTargets, userTargets)
 
+	now := time.Now()
 	a.resourceCacheMu.Lock()
 	a.resourceCache = report
-	a.resourceCacheTime = time.Now()
+	a.resourceCacheTime = now
 	a.resourceCacheMu.Unlock()
 
+	return a.buildResourceStatusResponse(report, now, false)
+}
+
+// buildResourceStatusResponse assembles response with check metadata:
+//   checked_at      - ISO time of last check
+//   checked_at_unix - unix timestamp (for "N sec ago")
+//   cached          - true if response from cache
+//   default / user  - result arrays
+func (a *App) buildResourceStatusResponse(report *blockcheck.BulkReport, checkedAt time.Time, cached bool) map[string]interface{} {
 	return map[string]interface{}{
-		"default": report.Default,
-		"user":    report.User,
+		"default":         report.Default,
+		"user":            report.User,
+		"checked_at":      checkedAt.Format("2006-01-02 15:04:05"),
+		"checked_at_unix": checkedAt.Unix(),
+		"cached":          cached,
 	}
 }
 
@@ -201,19 +231,54 @@ func (a *App) CheckResource(rawURL string) map[string]interface{} {
 
 	inList := a.isHostInUserList(direct.Host)
 
-	report := blockcheck.FullReport{
-		URL:       rawURL,
-		Host:      direct.Host,
-		Direct:    direct,
-		Provider:  provider,
-		Blocked:   blocked,
-		BlockType: direct.Verdict,
-		InUserList: inList,
-		CheckedAt:   time.Now().Format("2006-01-02 15:04:05"),
-	}
-
+	// Frontend ResourceChecker.jsx chitaet PascalCase-kljuchi
+	// (report.Direct.Verdict, report.Direct.TCP.Ok, ...), poetomu sobiraem
+	// map vruchnuju s PascalCase-kljuchami, a ne otdajom FullReport kak est'
+	// (ego json-tegi lowercase slomali by frontend).
 	return map[string]interface{}{
-		"report": report,
+		"report": map[string]interface{}{
+			"URL":        rawURL,
+			"Host":       direct.Host,
+			"Direct":     directToMap(direct),
+			"Provider": map[string]interface{}{
+				"IP":      provider.IP,
+				"ISP":     provider.ISP,
+				"City":    provider.City,
+				"Country": provider.Country,
+				"Org":     provider.Org,
+				"ASN":     provider.ASN,
+			},
+			"Blocked":    blocked,
+			"BlockType":  direct.Verdict,
+			"InUserList": inList,
+			"CheckedAt":  time.Now().Format("2006-01-02 15:04:05"),
+		},
+	}
+}
+
+// directToMap preobrazuet CheckResult v map s PascalCase-kljuchami,
+// chtoby frontend ResourceChecker.jsx mog chitat' report.Direct.TCP.Ok i t.d.
+func directToMap(r blockcheck.CheckResult) map[string]interface{} {
+	return map[string]interface{}{
+		"URL":        r.URL,
+		"Host":       r.Host,
+		"TCP":        layerToMap(r.TCP),
+		"TLS":        layerToMap(r.TLS),
+		"HTTP":       layerToMap(r.HTTP),
+		"Verdict":    r.Verdict,
+		"Confidence": r.Confidence,
+		"Notes":      r.Notes,
+	}
+}
+
+func layerToMap(l blockcheck.LayerResult) map[string]interface{} {
+	return map[string]interface{}{
+		"Ok":       l.Ok,
+		"TimeMs":   l.TimeMs,
+		"Error":    l.Error,
+		"Status":   l.Status,
+		"StubPage": l.StubPage,
+		"Header":   l.Header,
 	}
 }
 
@@ -453,4 +518,16 @@ func percentOrZero(done, total int64) int {
 		return 100
 	}
 	return p
+}
+// filterSkipped removes targets whose Name matches any entry in skip-resources.txt.
+// Match is case-insensitive (host == entry OR host ends with "."+entry).
+func (a *App) filterSkipped(targets []blockcheck.BulkTarget) []blockcheck.BulkTarget {
+	out := make([]blockcheck.BulkTarget, 0, len(targets))
+	for _, t := range targets {
+		if a.cfg.IsSkippedResource(t.Name) {
+			continue
+		}
+		out = append(out, t)
+	}
+	return out
 }

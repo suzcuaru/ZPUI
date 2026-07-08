@@ -39,7 +39,6 @@ func ParseTargets(content string) []BulkTarget {
 	return targets
 }
 
-// DefaultTargetsPath возвращает путь к lists/list-general.txt внутри директории zapret.
 func DefaultTargetsPath(zapretDir string) string {
 	return filepath.Join(zapretDir, "lists", "list-general.txt")
 }

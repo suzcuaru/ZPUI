@@ -2,8 +2,10 @@ package xboxdns
 
 import (
 	"fmt"
+	"net"
 	"strings"
 	"sync"
+	"time"
 
 	"zpui/internal/executil"
 	"zpui/internal/logger"
@@ -35,6 +37,19 @@ func (m *Manager) IsEnabled() bool {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	return m.enabled
+}
+
+func (m *Manager) CheckAvailable() bool {
+	ips, err := net.LookupHost("xbox-dns.ru")
+	if err != nil || len(ips) == 0 {
+		return false
+	}
+	conn, err := net.DialTimeout("tcp", net.JoinHostPort(ips[0], "443"), 4*time.Second)
+	if err != nil {
+		return false
+	}
+	conn.Close()
+	return true
 }
 
 func (m *Manager) Enable() error {

@@ -116,7 +116,6 @@ export default function SettingsPage({ status, showToast, onOpenLogs }) {
           <MiniRow label={t('settings.startMinimized')}><Switch checked={config.start_minimized || false} onChange={() => update({ start_minimized: !config.start_minimized })} /></MiniRow>
           <MiniRow label={t('settings.closeToTray')}><Switch checked={config.close_to_tray !== false} onChange={() => update({ close_to_tray: !config.close_to_tray })} /></MiniRow>
           <MiniRow label={t('settings.updateCheck')}><Switch checked={config.auto_update_check !== false} onChange={() => update({ auto_update_check: !config.auto_update_check })} /></MiniRow>
-          <MiniRow label={t('settings.notifyStrategyTest')}><Switch checked={config.notify_strategy_test === true} onChange={() => update({ notify_strategy_test: !config.notify_strategy_test })} /></MiniRow>
         </div>
 
         <div className="section">
@@ -243,12 +242,12 @@ export default function SettingsPage({ status, showToast, onOpenLogs }) {
               <CompactNotif label={t('settings.notifZapretUpdates')}
                 checked={config.notify_zapret_updates !== false}
                 onChange={() => update({ notify_zapret_updates: !config.notify_zapret_updates })} />
-              <CompactNotif label={t('settings.notifMissingFiles')}
-                checked={config.notify_missing_files !== false}
-                onChange={() => update({ notify_missing_files: !config.notify_missing_files })} />
               <CompactNotif label={t('settings.notifServiceStatus')}
                 checked={config.notify_service_status === true}
                 onChange={() => update({ notify_service_status: !config.notify_service_status })} />
+              <CompactNotif label={t('settings.notifErrors')}
+                checked={config.notify_errors === true}
+                onChange={() => update({ notify_errors: !config.notify_errors })} />
               <div className={'set-cnotiff-wide' + (config.notify_resource_drop ? '' : ' dimmed')}>
                 <div className="cnotiff-left">
                   <Switch checked={config.notify_resource_drop === true}

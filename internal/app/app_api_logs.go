@@ -1,9 +1,12 @@
 package app
 
 import (
+	"archive/zip"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 	"zpui/internal/executil"
 )
 
@@ -28,6 +31,34 @@ func (a *App) GetLogFiles() map[string]interface{} {
 
 func (a *App) ClearLogs() map[string]interface{} {
 	a.log.Clear()
+	return okResp()
+}
+
+// ClearLogBucket clears a specific log category (in-memory + file).
+// category = "zapret" / "network" / "app" / "availability" / "tray" / "xboxdns" / ...
+// If category = "all" - clears all log files.
+func (a *App) ClearLogBucket(category string) map[string]interface{} {
+	if category == "" {
+		return errResp("category required")
+	}
+	if category == "all" {
+		if err := a.log.ClearAll(); err != nil {
+			return errResp(err.Error())
+		}
+		a.log.Info("app", "All logs cleared")
+		return okResp()
+	}
+	bucket := category
+	switch category {
+	case "network", "proxy":
+		bucket = "network"
+	case "zapret", "service", "strategy", "updater", "install":
+		bucket = "zapret"
+	}
+	if err := a.log.ClearBucket(bucket); err != nil {
+		return errResp(err.Error())
+	}
+	a.log.Info("app", "Log bucket cleared: "+bucket)
 	return okResp()
 }
 
@@ -165,4 +196,79 @@ func (a *App) SaveList(name string, content string) map[string]interface{} {
 		return errResp(err.Error())
 	}
 	return okResp()
+}
+
+func (a *App) ExportLogs() map[string]interface{} {
+	logsDir := a.cfg.LogsDir()
+
+	downloads := getDownloadsDir()
+	if downloads == "" {
+		return errResp("cannot find Downloads folder")
+	}
+
+	stamp := time.Now().Format("2006-01-02_150405")
+	zipPath := filepath.Join(downloads, fmt.Sprintf("zpui-logs-%s.zip", stamp))
+
+	zipFile, err := os.Create(zipPath)
+	if err != nil {
+		return errResp(err.Error())
+	}
+	defer zipFile.Close()
+
+	zw := zip.NewWriter(zipFile)
+	addToZip := func(fullPath, zipName string) {
+		data, err := os.ReadFile(fullPath)
+		if err != nil {
+			return
+		}
+		w, err := zw.Create(zipName)
+		if err != nil {
+			return
+		}
+		w.Write(data)
+	}
+
+	addDir := func(dir, prefix string) {
+		entries, err := os.ReadDir(dir)
+		if err != nil {
+			return
+		}
+		for _, e := range entries {
+			if e.IsDir() || !strings.HasSuffix(e.Name(), ".log") {
+				continue
+			}
+			addToZip(filepath.Join(dir, e.Name()), prefix+e.Name())
+		}
+	}
+
+	addDir(logsDir, "")
+	addDir(filepath.Join(logsDir, "errors"), "errors/")
+	addDir(filepath.Join(logsDir, "archive"), "archive/")
+
+	zw.Close()
+
+	executil.HiddenCmd("explorer.exe", "/select,\""+zipPath+"\"").Start()
+
+	return map[string]interface{}{
+		"status": "ok",
+		"path":   zipPath,
+	}
+}
+
+func getDownloadsDir() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ""
+	}
+	candidates := []string{
+		filepath.Join(home, "Downloads"),
+		filepath.Join(os.Getenv("USERPROFILE"), "Downloads"),
+		filepath.Join(home, "Загрузки"),
+	}
+	for _, c := range candidates {
+		if info, err := os.Stat(c); err == nil && info.IsDir() {
+			return c
+		}
+	}
+	return ""
 }

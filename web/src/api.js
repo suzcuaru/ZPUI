@@ -73,6 +73,7 @@ const GET_ROUTES = {
   // '/api/logs/clear' — POST route (см. POST_ROUTES)
   '/api/config': (app) => app.GetConfig(),
   '/api/resource-status': (app) => app.GetResourceStatus(),
+  '/api/resource-status/refresh': (app) => app.RefreshResourceStatus(),
   '/api/up/info': (app) => app.GetUpInfo(),
   '/api/devices': (app) => app.GetDevices(),
   '/api/updates/check/zpui': (app) => app.CheckZPUIUpdate(),
@@ -147,6 +148,8 @@ const POST_ROUTES = {
   '/api/zapret/install-service-logged': (app, b) => app.InstallServiceLogged(b.strategy || ''),
   '/api/zapret/autoselect': (app) => app.RunAutoSelectStream(),
   '/api/logs/clear': (app) => app.ClearLogs(),
+  '/api/logs/clear-bucket': (app, b) => app.ClearLogBucket(b.category || 'all'),
+  '/api/logs/export': (app) => app.ExportLogs(),
   '/api/logs/debug': (app, b) => app.SetLogDebug(b.category || '', b.enabled === true),
   '/api/test-notification': (app) => app.SendTestNotification(),
   '/api/setup/remove-thirdparty': (app) => app.RemoveThirdPartyZapret(),

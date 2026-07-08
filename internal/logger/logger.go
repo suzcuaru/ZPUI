@@ -33,6 +33,10 @@ type Logger struct {
 	lastSnap        time.Time
 	debugCategories map[string]bool
 	stopCh          chan struct{}
+
+	// OnError callback - called when an ERROR-level message is logged.
+	// Used by App to show desktop notifications (if NotifyErrors is enabled).
+	onError         func(category, msg string)
 }
 
 type ringEntry struct {
@@ -89,6 +93,14 @@ func (l *Logger) Close() {
 
 func (l *Logger) Info(category, msg string) {
 	l.write("INFO", category, msg)
+}
+
+// SetOnError registers a callback invoked whenever an ERROR is logged.
+// Useful for showing desktop notifications on critical errors.
+func (l *Logger) SetOnError(fn func(category, msg string)) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.onError = fn
 }
 
 func (l *Logger) Error(category, msg string) {
@@ -189,6 +201,10 @@ func (l *Logger) write(level, category, msg string) {
 	// Срез ошибки
 	if level == "ERROR" {
 		l.flushErrorSnapshot(now, category, msg)
+		// Trigger OnError callback (for desktop notifications)
+		if l.onError != nil {
+			go l.onError(category, msg)
+		}
 	}
 }
 
@@ -382,25 +398,69 @@ func (l *Logger) Clear() {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
-	for bucket, f := range l.files {
-		f.Close()
-		path := filepath.Join(l.baseDir, bucket+".log")
-		if newF, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644); err == nil {
-			l.files[bucket] = newF
-		} else {
-			delete(l.files, bucket)
+	l.ring = nil
+}
+
+// ClearBucket clears a specific log bucket (file + in-memory entries).
+// bucket = "zapret" / "network" / "app" / "availability" / "tray" / "xboxdns" / ...
+// Ring entries for this category are removed, file is truncated to 0 bytes.
+func (l *Logger) ClearBucket(bucket string) error {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	// 1. Remove entries from ring buffer
+	filtered := l.ring[:0]
+	for _, e := range l.ring {
+		if mapBucket(e.category) != bucket {
+			filtered = append(filtered, e)
 		}
 	}
+	l.ring = filtered
+
+	// 2. Close file if open, then truncate
+	if f, ok := l.files[bucket]; ok {
+		f.Close()
+		delete(l.files, bucket)
+		delete(l.fileDates, bucket)
+	}
+	path := filepath.Join(l.baseDir, bucket+".log")
+	if err := os.Truncate(path, 0); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	return nil
+}
+
+// ClearAll clears all log buckets (in-memory + all .log files in baseDir).
+// Archives and error snapshots are NOT touched.
+func (l *Logger) ClearAll() error {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	// 1. Clear ring buffer entirely
 	l.ring = nil
 
-	errorsDir := filepath.Join(l.baseDir, "errors")
-	if entries, err := os.ReadDir(errorsDir); err == nil {
-		for _, e := range entries {
-			if !e.IsDir() && strings.HasSuffix(e.Name(), ".log") {
-				os.Remove(filepath.Join(errorsDir, e.Name()))
-			}
+	// 2. Close all open files
+	for _, f := range l.files {
+		f.Close()
+	}
+	l.files = make(map[string]*os.File)
+	l.fileDates = make(map[string]string)
+
+	// 3. Truncate all .log files in baseDir
+	entries, err := os.ReadDir(l.baseDir)
+	if err != nil {
+		return err
+	}
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".log") {
+			continue
+		}
+		path := filepath.Join(l.baseDir, e.Name())
+		if err := os.Truncate(path, 0); err != nil && !os.IsNotExist(err) {
+			continue
 		}
 	}
+	return nil
 }
 
 // ListLogFiles возвращает все доступные лог-файлы: текущие, архивы и срезы ошибок.

@@ -4,278 +4,211 @@
 
 # ZPUI
 
-### Контроллер обхода DPI (Zapret) для Windows
+### Простое приложение для обхода блокировок Discord и YouTube на Windows
 
-Управление обходом блокировок, прокси, мониторингом и DNS для Xbox —
-в одном приложении с автообновлением и красивым UI.
+Если у вас не работает Discord, YouTube или другие сайты — ZPUI поможет
+их разблокировать. Не нужно ничего настраивать вручную: скачали,
+запустили, выбрали стратегию — и всё работает.
 
 [![Release](https://img.shields.io/github/v/release/suzcuaru/ZPUI?style=for-the-badge&label=RELEASE&color=0078D4)](https://github.com/suzcuaru/ZPUI/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/suzcuaru/ZPUI/total?style=for-the-badge&label=DOWNLOADS&color=2EA44F)](https://github.com/suzcuaru/ZPUI/releases/latest)
-[![Stars](https://img.shields.io/github/stars/suzcuaru/ZPUI?style=for-the-badge&label=STARS&color=FFD700)](https://github.com/suzcuaru/ZPUI/stargazers)
 [![License](https://img.shields.io/github/license/suzcuaru/ZPUI?style=for-the-badge&color=8B89CC)](LICENSE)
 
-[![Go](https://img.shields.io/badge/Go-1.25-00ADD8?style=flat-square&logo=go)](https://go.dev/)
-[![Wails](https://img.shields.io/badge/Wails-v2.12-FF0000?style=flat-square)](https://wails.io/)
-[![React](https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react&logoColor=white)](https://react.dev/)
-[![Vite](https://img.shields.io/badge/Vite-5-646CFF?style=flat-square&logo=vite&logoColor=white)](https://vitejs.dev/)
-[![Platform](https://img.shields.io/badge/Platform-Windows%2010%2B-0078D4?style=flat-square&logo=windows&logoColor=white)]()
-
-**[Скачать](https://github.com/suzcuaru/ZPUI/releases/latest)** ·
-**[Возможности](#-возможности)** ·
+**[Скачать](#-установка)** ·
+**[Что это](#-что-это-и-зачем)** ·
 **[Установка](#-установка)** ·
-**[Архитектура](#-архитектура)** ·
-**[Сборка](#-сборка-из-исходников)** ·
-**[Вклад](#-вклад)**
+**[Использование](#-как-пользоваться)** ·
+**[Частые вопросы](#-частые-вопросы)**
 
 </div>
 
 ---
 
-## О проекте
+## 🤔 Что это и зачем
 
-**ZPUI** — это десктопное приложение на базе [Wails](https://wails.io/) (Go + React), которое объединяет все инструменты для обхода блокировок под одним интерфейсом:
+**Проблема:** В России многие сайты и приложения заблокированы
+(Discord, YouTube, иногда Telegram). Обычный пользователь не может их
+открыть без специальных инструментов.
 
-- Устанавливает и настраивает [zapret-discord-youtube](https://github.com/flowseal/zapret-discord-youtube) (обход DPI)
-- Автоматически подбирает рабочую стратегию для вашего провайдера
-- Управляет встроенным SOCKS5-прокси, мониторингом трафика и DNS для Xbox
-- Обновляет само себя и спутники через GitHub Releases
-- Сворачивается в системный трей, запускается вместе с Windows
+**Решение:** ZPUI использует [zapret](https://github.com/bol-van/zapret) —
+программу, которая «обманывает» системы блокировки (DPI) и позволяет
+открывать заблокированные сайты. ZPUI делает это **просто**: не нужно
+писать команды в консоли, не нужно разбираться в настройках —
+всё через понятный интерфейс.
 
-> **Требуется** запуск от имени администратора (управление драйвером WinDivert и маршрутизацией).
+### Что умеет ZPUI
 
----
-
-## Возможности
-
-| Модуль | Что делает |
-|:------:|-----------|
-| **Zapret** | Запуск/остановка обхода DPI, выбор стратегии, автоподбор рабочих параметров за один клик |
-| **Прокси** | Встроенный SOCKS5-прокси для перенаправления трафика через Zapret |
-| **Монитор** | Отслеживание статуса процессов и доступности ресурсов в реальном времени |
-| **Xbox DNS** | Подбор и применение оптимального DNS-сервера для Xbox |
-| **Blockcheck** | Проверка доступности заблокированных ресурсов (Discord, YouTube и др.) |
-| **Диагностика** | Сбор системной информации и логов в один архив для отчёта о баге |
-| **Автообновление** | Обновление приложения, спутников и модов через GitHub Releases (ETag-кеш, без лимитов) |
-| **Трей** | Сворачивание в системный трей, автозапуск с Windows, toast-уведомления |
-| **Моды** | Расширяемая система JS-плагинов (свой прокси, sysinfo, Xbox DNS) |
-
-### Ключевые преимущества
-
-- **Без прав администратора для установки** — ставится в профиль пользователя, не требует UAC
-- **Умный установщик** — определяет существующую установку и предлагает обновление по версии
-- **Сохранение данных** — обновление не затрагивает настройки, логи и конфигурацию Zapret
-- **Семантическое сравнение версий** (semver) — корректно определяет, нужно ли обновление
-- **Дедупликация уведомлений** — тост о конкретной версии показывается один раз
+- 🔓 **Обход блокировок** — Discord, YouTube и другие сайты начинают работать
+- 🌐 **Прокси-сервер** — можно раздать обход блокировок на телефон, планшет, телевизор
+- 🎮 **DNS для Xbox/PlayStation** — игровая консоль тоже может пользоваться обходом
+- 📊 **Мониторинг** — видите какой трафик идёт и какие устройства подключены
+- 🔄 **Автообновление** — программа сама обновляется и обновляет zapret
+- 🔍 **Проверка сайтов** — можно проверить, работает ли конкретный сайт
+- 📋 **Логи** — понимаете что происходит, если что-то сломалось
 
 ---
 
-## Установка
+## 📥 Установка
 
-### Установщик (рекомендуется)
+### Способ 1: Установщик (проще всего)
 
-Скачайте `ZPUI-Setup-x.y.z.exe` из [последнего релиза](https://github.com/suzcuaru/ZPUI/releases/latest) и запустите.
+1. Скачайте `ZPUI-Setup-1.4.33-win32.exe` со [страницы релизов](https://github.com/suzcuaru/ZPUI/releases/latest)
+   (или с [Яндекс.Диска](https://disk.yandex.ru/d/1WD-A1MHklliaw), если GitHub недоступен)
+2. Запустите скачанный файл
+3. Следуйте инструкциям установщика
+4. После установки запустите ZPUI из меню Пуск
 
-| Шаг | Описание |
-|:---:|---------|
-| 1 | **Лицензия MIT** — примите условия использования |
-| 2 | **Папка установки** — по умолчанию `%LOCALAPPDATA%\Programs\ZPUI` (без прав админа) |
-| 3 | **Ярлыки** — меню «Пуск» и/или рабочий стол (на выбор) |
-| 4 | **Готово** — ZPUI запускается автоматически |
+### Способ 2: Портативная версия (без установки)
 
-> При повторном запуске установщик **автоматически определит** установленную версию:
-> - **Версия старее** → тихое обновление с сохранением данных
-> - **Версия та же** → предложение переустановки
-> - **Версия новее** → предупреждение о понижении версии
+1. Скачайте `zpui-win32.zip` со [страницы релизов](https://github.com/suzcuaru/ZPUI/releases/latest)
+2. Распакуйте архив в любую папку (например, `C:\ZPUI`)
+3. Запустите `zpui.exe`
 
-### Портативная версия
+### Системные требования
 
-Скачайте `zpui.zip` из [релиза](https://github.com/suzcuaru/ZPUI/releases/latest), распакуйте в любую папку и запустите `zpui.exe`.
-
----
-
-## Архитектура
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                      Фронтенд (React)                        │
-│         web/src/api.js  →  window.go.app.App.*              │
-└──────────────────────────┬──────────────────────────────────┘
-                           │ Wails IPC (биндинги + события)
-┌──────────────────────────┴──────────────────────────────────┐
-│              Ядро приложения (Go, package app)               │
-│                  internal/app/app.go                         │
-│      app_api*.go · versions.go · app_devices.go              │
-└──────────────────────────┬──────────────────────────────────┘
-                           │
-┌──────────────────────────┴──────────────────────────────────┐
-│                  internal/ (доменные пакеты)                 │
-│                                                              │
-│  zapret   — обход DPI (стратегии, автотест, служба)         │
-│  wizard   — мастер первичной настройки (внутрипроцессно)    │
-│  autoselect — движок автоподбора стратегии                  │
-│  proxy    — SOCKS5-прокси                                   │
-│  monitor  — мониторинг трафика                              │
-│  xboxdns  — DNS для Xbox                                    │
-│  updater  — обновления (ETag-кеш, semver, спутники)        │
-│  config · database · logger · notify · tray · mods          │
-└─────────────────────────────────────────────────────────────┘
-                           │
-┌──────────────────────────┴──────────────────────────────────┐
-│          cmd/ (сателлиты — отдельные .exe)                  │
-│                                                              │
-│  selfupdate    — самообновление ZPUI                         │
-│  zapretupdate  — обновление Zapret                           │
-│  wizard        — CLI-обёртка над internal/wizard             │
-│  autoselect    — CLI-обёртка над internal/autoselect         │
-└─────────────────────────────────────────────────────────────┘
-```
-
-**Поток данных:** фронтенд вызывает `api('GET', '/api/...')` → `web/src/api.js` маршрутизирует вызов в Wails-биндинг `func (a *App)` → метод работает с пакетами из `internal/` и возвращает `map[string]interface{}`.
-
-### Стек
-
-| Слой | Технологии |
-|------|-----------|
-| Бэкенд | Go 1.25, [Wails v2.12](https://wails.io/) |
-| Фронтенд | React 18, Vite 5 |
-| База данных | SQLite (modernc.org/sqlite — чистый Go, без CGO) |
-| Обход DPI | [zapret-discord-youtube](https://github.com/flowseal/zapret-discord-youtube) |
-| Установщик | NSIS (per-user, автообновление по версии) |
-
-> Полная структура репозитория описана в [**STRUCTURE.md**](STRUCTURE.md).
+- Windows 10 или Windows 11 (64-бит или 32-бит)
+- Права администратора (нужны для работы с сетью)
+- Антивирус может ругаться на драйвер WinDivert — это нормально, добавьте в исключения
 
 ---
 
-## Сборка из исходников
+## 🚀 Как пользоваться
 
-### Требования
+### Первый запуск
 
-| Инструмент | Версия | Установка |
-|-----------|--------|-----------|
-| [Go](https://go.dev/dl/) | 1.25+ | `winget install GoLang.Go` |
-| [Node.js](https://nodejs.org/) | 20+ | `winget install OpenJS.NodeJS.LTS` |
-| [Wails CLI](https://wails.io/) | v2.12+ | `go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0` |
-| [NSIS](https://nsis.sourceforge.io/) | 3.x | `winget install NSIS.NSIS` (для установщика) |
+При первом запуске ZPUI покажет мастер настройки:
 
-### Быстрая сборка
+1. **Проверка системы** — программа проверит, нет ли конфликтов
+2. **Скачивание Запрета** — если zapret ещё не установлен, скачает автоматически
+3. **Выбор стратегии** — программа протестирует несколько стратегий обхода и предложит лучшую
+4. **Настройки** — можно включить дополнительно: прокси, DNS, уведомления
 
-```bat
-build.bat
-```
+После завершения вы увидите главное окно с обзором.
 
-Скрипт выполнит:
-1. Автоинкремент версии (`version.txt`)
-2. Сборку фронтенда (`npm run build`)
-3. Сборку ядра Wails (`zpui.exe`)
-4. Сборку 4 сателлитов (`wizard`, `autoselect`, `selfupdate`, `zapretupdate`)
-5. Сборку `versions.json` и копирование модов в `build/dist/`
+### Главное окно (Обзор)
 
-### Сборка установщика
+Здесь видно:
+- **Статус сервисов** — Запрет / Прокси / DNS (зелёная точка = работает)
+- **Доступность ресурсов** — процент сайтов, которые сейчас открываются
+- **График за час** — как менялась доступность за последний час
+- **Список недоступных** — какие сайты до сих пор не работают
+
+Кнопка **«Проверить сейчас»** (иконка обновления) — принудительно перепроверяет
+все сайты. Полезно после смены стратегии.
+
+### Вкладка «Запрет»
+
+Здесь настраивается обход блокировок:
+
+- **Статус службы** — показывает, работает ли Запрет прямо сейчас
+- **Кнопки Запуск/Остановка** — ручное управление службой
+- **Переустановить** — если служба зависла, переустанавливает её
+- **Диагностика** — проверяет что всё в порядке с системой
+- **Стратегии** — разные способы обхода. Если одна не работает, попробуйте другую
+- **Игровой фильтр** — включите если у вас не работают онлайн-игры
+- **IPSet фильтр** — продвинутая настройка, можно не трогать
+
+### Вкладка «Прокси»
+
+Позволяет раздать обход блокировок на другие устройства в вашей сети:
+
+1. Включите прокси
+2. На телефоне/планшете в настройках Wi-Fi укажите IP компьютера и порт 1080
+3. Теперь на телефоне тоже работают заблокированные сайты
+
+### Вкладка «DNS»
+
+Для игровых консолей (Xbox, PlayStation):
+
+1. Включите DNS
+2. На консоли в настройках сети укажите IP компьютера как DNS-сервер
+3. Консоль тоже получит обход блокировок
+
+### Вкладка «Монитор»
+
+Показывает:
+- Текущую скорость интернета (вниз/вверх)
+- Сколько всего скачано/отправлено
+- Какие устройства подключены через прокси
+
+### Вкладка «Настройки»
+
+- **Тема** — светлая/тёмная/системная
+- **Язык** — русский/английский
+- **Автозапуск** — запускать ли ZPUI при включении компьютера
+- **Сворачивать в трей** — закрывать окно, но оставлять работать в фоне
+- **Уведомления** — что показывать во всплывающих окнах
+
+---
+
+## ❓ Частые вопросы
+
+### Discord/YouTube не работает, что делать?
+
+1. Проверьте, что Запрет запущен (зелёная точка на вкладке «Обзор»)
+2. Нажмите «Проверить сейчас» — обновится статус
+3. Если сайты красные — попробуйте другую стратегию на вкладке «Запрет»
+4. Если ничего не помогает — нажмите «Диагностика» на вкладке «Запрет»
+5. В крайнем случае — «Переустановить» службу
+
+### Антивирус ругается на ZPUI
+
+Это ложное срабатывание на драйвер WinDivert (нужен для обхода DPI).
+Добавьте папку с ZPUI в исключения антивируса.
+
+### Программа не запускается
+
+1. Запустите от имени администратора (правый клик → Запуск от имени администратора)
+2. Проверьте, что у вас Windows 10 или 11
+3. Если не помогает — скачайте заново, возможно файл повредился
+
+### Прокси не работает на других устройствах
+
+1. Убедитесь, что компьютер и устройство в одной Wi-Fi сети
+2. Проверьте, что брандмауэр Windows не блокирует порт 1080
+3. На устройстве укажите правильный IP компьютера (можно посмотреть в «Монитор»)
+
+### Где посмотреть логи?
+
+Нажмите иконку 📄 в левой панели. Откроется панель логов с поиском
+и фильтрами по уровню (Ошибки/Предупреждения/Инфо).
+
+---
+
+## 🛠️ Сборка из исходников
+
+Если хотите собрать сами (нужен [Go](https://go.dev/dl/) и [Node.js](https://nodejs.org/)):
 
 ```bash
-makensis /DVERSION=1.0.49 /DDIST=build\dist /DICON=build\windows\icon.ico \
-         /DLICENSE=LICENSE /DOUTDIR=build installer\ZPUI.nsi
-```
+# Клонировать репозиторий
+git clone https://github.com/suzcuaru/ZPUI.git
+cd ZPUI
 
-### Сборка вручную
+# Установить Wails
+go install github.com/wailsapp/wails/v2/cmd/wails@latest
 
-```bash
-# 1. Фронтенд (обязательно: бэкенд встраивает web/dist через go:embed)
-cd web && npm install && npm run build && cd ..
+# Собрать
+wails build
 
-# 2. Ядро (Wails)
-wails build -platform windows/amd64 -s -skipbindings -o zpui.exe \
-    -ldflags "-s -w -H windowsgui -X main.version=1.0.49" -trimpath
-
-# 3. Сателлиты
-go build -ldflags "-s -w -H windowsgui -X main.version=1.0.49" -trimpath ./cmd/wizard/
-go build -ldflags "-s -w -H windowsgui -X main.version=1.0.49" -trimpath ./cmd/autoselect/
-go build -ldflags "-s -w -H windowsgui -X main.version=1.0.49" -trimpath ./cmd/selfupdate/
-go build -ldflags "-s -w -H windowsgui -X main.version=1.0.49" -trimpath ./cmd/zapretupdate/
+# Готовый .exe будет в build/bin/
 ```
 
 ---
 
-## Разработка
+## 📄 Лицензия
 
-### Проверка и тесты
+MIT License — см. [LICENSE](LICENSE)
 
-```bash
-# Backend
-go vet ./...        # статический анализ — должен проходить
-go test ./...       # unit-тесты (config, monitor, zapret)
-go build ./...      # компиляция всех пакетов
+## 🙏 Благодарности
 
-# Frontend (из web/)
-npm run build       # production-сборка (vite) — должна проходить
-npm test            # vitest (однократно)
-npm run dev         # dev-сервер на :3000
-```
-
-> `go build ./...` требует собранный фронтенд (`web/dist/`), т.к. бэкенд встраивает его через `//go:embed all:web/dist`.
-
-### Добавление новой настройки / эндпоинта
-
-1. Добавить поле в `internal/config/config.go` (`Config`) + значение по умолчанию в `defaultConfig()`
-2. Добавить метод `func (a *App) ...` в один из `internal/app/app_api*.go` (биндинг Wails)
-3. Зарегистрировать маршрут в `web/src/api.js`
-4. Добавить строки в `web/src/locales/{ru,en}.json` + использовать через хук `useT`
-
-Подробности — в [**AGENTS.md**](AGENTS.md) и [**STRUCTURE.md**](STRUCTURE.md).
+- [bol-van/zapret](https://github.com/bol-van/zapret) — оригинальный zapret
+- [Flowseal/zapret-discord-youtube](https://github.com/Flowseal/zapret-discord-youtube) — готовая сборка с стратегиями
+- [Wails](https://wails.io/) — фреймворк для десктопных приложений на Go + Web
 
 ---
-
-## Релизы
-
-Сборка релиза запускается автоматически при пуше тега `v*` (например `v1.0.49`) через [GitHub Actions](.github/workflows/release.yml).
-Также доступен ручной запуск: вкладка **Actions → Release → Run workflow**.
-
-Релиз включает:
-
-| Артефакт | Описание |
-|----------|---------|
-| `ZPUI-Setup-x.y.z.exe` | NSIS-установщик (per-user, автообновление по версии) |
-| `zpui.zip` | Портативная версия |
-| `versions.json` | Манифест версий для механизма автообновления |
-| `*.exe` (спутники) | `wizard`, `autoselect`, `selfupdate`, `zapretupdate` |
-
----
-
-## Вклад
-
-Пулл-реквесты приветствуются! Для масштабных изменений сначала откройте issue для обсуждения.
-
-1. Fork → branch (`git checkout -b feature/amazing`)
-2. Коммитьте, следуя conventional commits (`feat:`, `fix:`, `refactor:`, `docs:`)
-3. Убедитесь, что `go vet ./...`, `go test ./...`, `npm run build`, `npm test` проходят
-4. Pull request → describe what & why
-
----
-
-## Статистика
 
 <div align="center">
 
-| | |
-|:---:|:---:|
-| ![GitHub Repo stars](https://img.shields.io/github/stars/suzcuaru/ZPUI?style=social) | ![GitHub forks](https://img.shields.io/github/forks/suzcuaru/ZPUI?style=social) |
-| ![GitHub watchers](https://img.shields.io/github/watchers/suzcuaru/ZPUI?style=social) | ![GitHub contributors](https://img.shields.io/github/contributors/suzcuaru/ZPUI) |
-| ![GitHub issues](https://img.shields.io/github/issues/suzcuaru/ZPUI) | ![GitHub closed issues](https://img.shields.io/github/issues-closed/suzcuaru/ZPUI) |
-| ![Repo Size](https://img.shields.io/github/repo-size/suzcuaru/ZPUI) | ![Last Commit](https://img.shields.io/github/last-commit/suzcuaru/ZPUI) |
-| ![GitHub Release Date](https://img.shields.io/github/release-date/suzcuaru/ZPUI) | ![GitHub commits since](https://img.shields.io/github/commits-since/suzcuaru/ZPUI/latest) |
-
-</div>
-
----
-
-## Лицензия
-
-[MIT License](LICENSE) — Copyright (c) 2026 SuzucaRU
-
-<div align="center">
-
-**ZPUI** использует [zapret-discord-youtube](https://github.com/flowseal/zapret-discord-youtube) от [flowseal](https://github.com/flowseal) и [WinDivert](https://github.com/basil00/Reqable) для обхода DPI.
-
-ZPUI не связан с разработчиками zapret, WinDivert или Discord/YouTube.
+**Если ZPUI вам помог — поставьте ⭐ звёздочку проекту на GitHub!**
 
 </div>

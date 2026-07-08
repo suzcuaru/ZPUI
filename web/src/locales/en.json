@@ -44,8 +44,18 @@
     "sysinfo": "Network"
   },
   "sidebar": {
-    "autoSelect": "Auto-select strategy",
-    "zapretStopped": "Zapret is stopped"
+    "dashboardTip": "Overview - services status and availability",
+    "zapretTip": "Zapret - DPI bypass for Discord, YouTube",
+    "proxyTip": "Proxy - SOCKS5 for other devices in network",
+    "dnsTip": "DNS - configure DNS for Xbox/PlayStation",
+    "monitorTip": "Monitor - traffic and devices",
+    "settingsTip": "Application settings",
+    "healthTip": "System check - warnings detected",
+    "autoSelectTip": "Auto-select strategy - automatically find the best one",
+    "autoSelectDisabledTip": "Start Zapret to use auto-select",
+    "checkerTip": "Resource check - test if a site is accessible",
+    "logsTip": "Application logs",
+    "helpTip": "Help and documentation"
   },
   "status": {
     "running": "Running",
@@ -73,7 +83,9 @@
   },
   "footer": {
     "total": "Total:",
-    "strategy": "Strategy:"
+    "strategy": "Strategy:",
+    "up": "UP",
+    "down": "DOWN"
   },
   "dashboard": {
     "title": "Overview",
@@ -88,6 +100,8 @@
     "totalColon": "Total:",
     "zapretSettings": "Zapret settings",
     "unavailableResources": "Unavailable resources",
+    "checking": "Checking…",
+    "upToDate": "Up to date",
     "moreSuffix": "more",
     "noProblems": "No problems",
     "actions": "Actions",
@@ -151,7 +165,19 @@
     "cacheClearingDiscord": "Clearing Discord cache...",
     "runDiagnostics": "Run diagnostics",
     "diagnosticsRunning": "Running checks...",
-    "diagnosticsDesc": "System check for conflicts and DPI bypass issues"
+    "diagnosticsDesc": "System check for conflicts and DPI bypass issues",
+    "reinstall": "Reinstall",
+    "reinstallConfirm": "Reinstall Zapret service? This will stop, remove and restart with current strategy.",
+    "reinstalled": "Zapret service reinstalled",
+    "reinstallTip": "Stop, remove service and start fresh. Helps if service is stuck or corrupted.",
+    "diagnosticsTip": "Check system, files and drivers state",
+    "gameFilterDescShort": "Filter for games and other UDP/TCP apps on ports above 1023. Without it, games may not work with Zapret.",
+    "gameFilterDescFull": "Enables DPI bypass for game traffic. By default Zapret only handles HTTPS/HTTP. Enable if your game or app uses non-standard ports. May slightly increase network load.",
+    "ipsetDescShort": "IP filter - allows Zapret to process traffic only for known blocked IPs (or all of them).",
+    "ipsetDescFull": "IPSet - list of IP addresses to filter. none = bypass applies to no IPs, loaded = only IPs from list, any = all IPs. Default loaded is optimal for most users.",
+    "ipsetStatusHint": "loaded = only listed IPs, none = no IPs, any = all IPs",
+    "updateIpsetTip": "Download current list of blocked resource IPs",
+    "updateHostsTip": "Update hosts file - fixes Telegram web and Discord voice chat"
   },
   "proxy": {
     "title": "Proxy",
@@ -249,7 +275,8 @@
     "installZapret": "Install Zapret",
     "installZapretDesc": "Reset no-zapret mode and start installation",
     "installZapretBtn": "Install",
-    "installZapretConfirm": "The app will restart to install Zapret. Continue?"
+    "installZapretConfirm": "The app will restart to install Zapret. Continue?",
+    "notifErrors": "About errors"
   },
   "startup": {
     "loadingSystem": "Loading system…",
@@ -369,17 +396,23 @@
     "title": "Logs",
     "all": "All",
     "network": "Network",
-    "config": "Config",
     "searchPlaceholder": "Search...",
     "nothingFound": "Nothing found",
     "noLogs": "No logs",
     "errors": "Errors",
-    "archive": "Archive",
     "availability": "Availability",
     "debugMode": "Debug",
     "noErrors": "No errors",
-    "noArchive": "No archives",
-    "selectFile": "Select a file"
+    "selectFile": "Select a file",
+    "clear": "Clear",
+    "clearAll": "Clear all",
+    "clearConfirm": "Delete all entries? This cannot be undone.",
+    "export": "Export to ZIP",
+    "autoScroll": "Auto-scroll",
+    "errorSnapshots": "Error snapshots",
+    "backToLogs": "← Back to logs",
+    "total": "Total",
+    "shown": "Shown"
   },
   "health": {
     "title": "System check",

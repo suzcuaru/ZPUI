@@ -138,6 +138,10 @@ func (m *Manager) PerformUpdate(progress chan<- UpdateProgress) error {
 	tempZip := filepath.Join(os.TempDir(), "zapret-update.zip")
 	urls := []string{info.DownloadURL}
 	urls = append(urls, info.FallbackURLs...)
+	// Yandex Disk fallback (added at the end so GitHub is tried first)
+	if yaURL, _, yErr := updater.YandexFindZapretZip(updater.YandexPublicURL); yErr == nil && yaURL != "" {
+		urls = append(urls, yaURL)
+	}
 
 	var dlErr error
 	downloaded := false
@@ -483,6 +487,10 @@ func (m *Manager) DownloadAndInstall(progressFn ProgressFn) error {
 	} else {
 		urls := []string{info.DownloadURL}
 		urls = append(urls, info.FallbackURLs...)
+		// Yandex Disk fallback
+		if yaURL, _, yErr := updater.YandexFindZapretZip(updater.YandexPublicURL); yErr == nil && yaURL != "" {
+			urls = append(urls, yaURL)
+		}
 
 		for _, u := range urls {
 			if u == "" {
@@ -603,4 +611,14 @@ func (m *Manager) InstallZapret(sourceDir string, progress chan<- UpdateProgress
 
 	sendProgress(progress, "Installation complete", 100)
 	return nil
+}
+// extractVersionFromZipName extracts version from filename like
+// "zapret-discord-youtube-1.2.3.zip" -> "1.2.3".
+func extractVersionFromZipName(name string) string {
+	name = strings.TrimSuffix(name, ".zip")
+	idx := strings.LastIndex(name, "-")
+	if idx < 0 {
+		return ""
+	}
+	return name[idx+1:]
 }

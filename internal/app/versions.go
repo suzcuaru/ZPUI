@@ -149,6 +149,7 @@ func (a *App) CheckZPUIUpdate() map[string]interface{} {
 		"latest":         remote.ZPUI,
 		"update_needed":  needed,
 		"repo_available": true,
+		"source":         "github+yandex-fallback",
 	}
 }
 

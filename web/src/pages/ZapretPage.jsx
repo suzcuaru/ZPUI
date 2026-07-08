@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { api, apiCall } from '../api';
 import { useT } from '../i18n';
-import { Check } from 'lucide-react';
+import { Check, Play, Square, RefreshCw, Stethoscope, AlertCircle, Info } from 'lucide-react';
 
-export default function ZapretPage({ status, showToast }) {
+export default function ZapretPage({ status, showToast, onOpenDiagnostics }) {
   const { t } = useT();
   const [subtab, setSubtab] = useState('strategies');
   const [skipped, setSkipped] = useState(false);
+  const [serviceBusy, setServiceBusy] = useState(false);
 
   useEffect(() => {
     api('GET', '/api/config').then(c => {
@@ -20,6 +21,28 @@ export default function ZapretPage({ status, showToast }) {
     await api('POST', '/api/config', { zapret_skipped: false });
     setSkipped(false);
     showToast(t('zapret.reenabled'), 'success');
+  };
+
+  const handleServiceToggle = async () => {
+    setServiceBusy(true);
+    const running = status?.zapret?.status === 'running';
+    if (running) {
+      await apiCall(() => api('POST', '/api/zapret/stop'), t('header.zapretStopped'), showToast);
+    } else {
+      await apiCall(() => api('POST', '/api/zapret/start'), t('header.zapretStarted'), showToast);
+    }
+    setServiceBusy(false);
+  };
+
+  const handleReinstall = async () => {
+    if (!window.confirm(t('zapret.reinstallConfirm'))) return;
+    setServiceBusy(true);
+    // Stop, remove service, then start fresh
+    await apiCall(() => api('POST', '/api/zapret/stop'), null, showToast);
+    await apiCall(() => api('POST', '/api/zapret/service/remove'), null, showToast);
+    await new Promise(r => setTimeout(r, 1000));
+    await apiCall(() => api('POST', '/api/zapret/start'), t('zapret.reinstalled'), showToast);
+    setServiceBusy(false);
   };
 
   if (skipped) {
@@ -40,9 +63,51 @@ export default function ZapretPage({ status, showToast }) {
     );
   }
 
+  const zRun = status?.zapret?.status === 'running';
+  const zVersion = status?.zapret?.version || '—';
+
   return (
     <>
       <div className="page-title">{t('zapret.title')}</div>
+
+      {/* Сервисные кнопки: статус + запуск/остановка + переустановка + диагностика */}
+      <div className="zp-service-bar">
+        <div className="zp-service-status">
+          <span className={'zp-status-dot ' + (zRun ? 'on' : 'off')} />
+          <span className="zp-status-text">{zRun ? t('status.running') : t('status.stopped')}</span>
+          <span className="zp-version">v{zVersion}</span>
+        </div>
+        <div className="zp-service-actions">
+          <button
+            className={'btn btn-sm ' + (zRun ? 'btn-danger' : 'btn-accent')}
+            onClick={handleServiceToggle}
+            disabled={serviceBusy}
+          >
+            {serviceBusy ? <RefreshCw size={13} className="spinning" /> : zRun ? <Square size={13} /> : <Play size={13} />}
+            {zRun ? t('common.stop') : t('common.start')}
+          </button>
+          <button
+            className="btn btn-sm"
+            onClick={handleReinstall}
+            disabled={serviceBusy}
+            data-tooltip={t('zapret.reinstallTip')}
+            data-tooltip-pos="bottom"
+          >
+            <RefreshCw size={13} />
+            {t('zapret.reinstall')}
+          </button>
+          <button
+            className="btn btn-sm"
+            onClick={onOpenDiagnostics}
+            data-tooltip={t('zapret.diagnosticsTip')}
+            data-tooltip-pos="bottom"
+          >
+            <Stethoscope size={13} />
+            {t('zapret.diagnostics')}
+          </button>
+        </div>
+      </div>
+
       <div className="subtabs">
         <button className={'subtab' + (subtab === 'strategies' ? ' active' : '')} onClick={() => setSubtab('strategies')}>{t('zapret.strategies')}</button>
         <button className={'subtab' + (subtab === 'lists' ? ' active' : '')} onClick={() => setSubtab('lists')}>{t('zapret.lists')}</button>
@@ -124,8 +189,13 @@ function StrategiesTab({ status, showToast }) {
       </div>
 
       <div className="strat-filters">
-        <div className="flt-section">
-          <div className="flt-label">{t('zapret.gameFilter')}</div>
+        {/* Игровой фильтр с описанием */}
+        <div className="flt-section flt-section-info">
+          <div className="flt-section-head">
+            <div className="flt-label">{t('zapret.gameFilter')}</div>
+            <Info size={13} className="flt-info-icon" data-tooltip={t('zapret.gameFilterDescFull')} data-tooltip-pos="bottom" />
+          </div>
+          <div className="flt-section-desc">{t('zapret.gameFilterDescShort')}</div>
           <div className="flt-radios">
             {[
               { v: 'disabled', l: t('zapret.off') },
@@ -133,30 +203,35 @@ function StrategiesTab({ status, showToast }) {
               { v: 'tcp', l: 'TCP' },
               { v: 'udp', l: 'UDP' },
             ].map(o => (
-            <label key={o.v} className="flt-radio">
-              <input type="radio" name="gf" checked={gameFilter === o.v} onChange={() => handleGameFilter(o.v)} />
-              <span>{o.l}</span>
-            </label>
-          ))}
-        </div>
-      </div>
-
-      <div className="flt-section">
-        <div className="flt-label">{t('zapret.ipsetFilter')}</div>
-        <div className="flt-row">
-          <div className="flt-row-info">
-            <span className="flt-row-title">{t('zapret.status') + ' '}<strong>{ipsetStatus}</strong></span>
+              <label key={o.v} className="flt-radio">
+                <input type="radio" name="gf" checked={gameFilter === o.v} onChange={() => handleGameFilter(o.v)} />
+                <span>{o.l}</span>
+              </label>
+            ))}
           </div>
-          <button className="btn btn-sm" onClick={handleIpsetToggle}>
-            {ipsetStatus === 'loaded' ? t('common.stop') : ipsetStatus === 'none' ? t('common.start') : t('common.load')}
-          </button>
         </div>
-        <div className="btn-row">
-          <button className="btn btn-sm" onClick={handleUpdateIpset}>{t('zapret.updateIpset')}</button>
-          <button className="btn btn-sm" onClick={handleUpdateHosts}>{t('zapret.updateHosts')}</button>
-        </div>
-      </div>
 
+        {/* IPSet фильтр с описанием */}
+        <div className="flt-section flt-section-info">
+          <div className="flt-section-head">
+            <div className="flt-label">{t('zapret.ipsetFilter')}</div>
+            <Info size={13} className="flt-info-icon" data-tooltip={t('zapret.ipsetDescFull')} data-tooltip-pos="bottom" />
+          </div>
+          <div className="flt-section-desc">{t('zapret.ipsetDescShort')}</div>
+          <div className="flt-row">
+            <div className="flt-row-info">
+              <span className="flt-row-title">{t('zapret.status') + ' '}<strong>{ipsetStatus}</strong></span>
+              <span className="flt-status-hint">{t('zapret.ipsetStatusHint')}</span>
+            </div>
+            <button className="btn btn-sm" onClick={handleIpsetToggle}>
+              {ipsetStatus === 'loaded' ? t('common.stop') : ipsetStatus === 'none' ? t('common.start') : t('common.load')}
+            </button>
+          </div>
+          <div className="btn-row">
+            <button className="btn btn-sm" onClick={handleUpdateIpset} data-tooltip={t('zapret.updateIpsetTip')} data-tooltip-pos="bottom">{t('zapret.updateIpset')}</button>
+            <button className="btn btn-sm" onClick={handleUpdateHosts} data-tooltip={t('zapret.updateHostsTip')} data-tooltip-pos="bottom">{t('zapret.updateHosts')}</button>
+          </div>
+        </div>
       </div>
     </>
   );

@@ -2,21 +2,21 @@ import { useT } from '../../i18n';
 import { useServiceToggle } from '../../hooks/useServiceToggle';
 import {
   LayoutDashboard, ShieldCheck, Globe, Gamepad2, Activity, Settings,
-  Sun, Moon, FileText, ShieldAlert, Zap, Search, Stethoscope, CircleHelp,
+  FileText, ShieldAlert, Zap, Search, CircleHelp,
 } from 'lucide-react';
 
 const ic = (Comp) => <Comp size={18} strokeWidth={2} />;
 
 const NAV = [
-  { page: 'dashboard', label: 'nav.dashboard', icon: ic(LayoutDashboard) },
-  { page: 'zapret',    label: 'nav.zapret',    service: 'zapret', icon: ic(ShieldCheck) },
-  { page: 'proxy',     label: 'nav.proxy',     service: 'proxy',  icon: ic(Globe) },
-  { page: 'xboxdns',   label: 'nav.xboxdns',   service: 'xboxdns', icon: ic(Gamepad2) },
-  { page: 'monitor',   label: 'nav.monitor',   icon: ic(Activity) },
-  { page: 'settings',  label: 'nav.settings',  icon: ic(Settings) },
+  { page: 'dashboard', label: 'nav.dashboard', tooltip: 'sidebar.dashboardTip', icon: ic(LayoutDashboard) },
+  { page: 'zapret',    label: 'nav.zapret',    tooltip: 'sidebar.zapretTip', service: 'zapret', icon: ic(ShieldCheck) },
+  { page: 'proxy',     label: 'nav.proxy',     tooltip: 'sidebar.proxyTip', service: 'proxy',  icon: ic(Globe) },
+  { page: 'xboxdns',   label: 'nav.xboxdns',   tooltip: 'sidebar.dnsTip', service: 'xboxdns', icon: ic(Gamepad2) },
+  { page: 'monitor',   label: 'nav.monitor',   tooltip: 'sidebar.monitorTip', icon: ic(Activity) },
+  { page: 'settings',  label: 'nav.settings',  tooltip: 'sidebar.settingsTip', icon: ic(Settings) },
 ];
 
-export default function Sidebar({ activePage, onNavigate, onOpenChecker, onAutoSelect, onOpenHealth, onOpenDiagnostics, onOpenHelp, healthWarn, status, showToast, onOpenLogs, isDark, onToggleTheme }) {
+export default function Sidebar({ activePage, onNavigate, onOpenChecker, onAutoSelect, onOpenHealth, onOpenHelp, healthWarn, status, showToast, onOpenLogs }) {
   const { t } = useT();
 
   const zRun = status?.zapret?.status === 'running';
@@ -51,6 +51,8 @@ export default function Sidebar({ activePage, onNavigate, onOpenChecker, onAutoS
               onClick={() => onNavigate(item.page)}
               aria-label={t(item.label)}
               aria-current={activePage === item.page ? 'page' : undefined}
+              data-tooltip={t(item.tooltip)}
+              data-tooltip-pos="right"
             >
               {item.icon}
               {svc && (
@@ -74,6 +76,8 @@ export default function Sidebar({ activePage, onNavigate, onOpenChecker, onAutoS
           onClick={onOpenHealth}
           style={healthColor ? { color: healthColor } : {}}
           aria-label="health"
+          data-tooltip={t('sidebar.healthTip')}
+          data-tooltip-pos="right"
         >
           <ShieldAlert size={18} strokeWidth={2} />
           {healthWarn.warnings?.length > 0 && (
@@ -84,28 +88,42 @@ export default function Sidebar({ activePage, onNavigate, onOpenChecker, onAutoS
 
       <button
         className={'sidebar-footer-btn' + (zRun ? '' : ' disabled')}
-        onClick={zRun ? () => showToast(t('common.inDevelopment'), 'info') : undefined}
+        onClick={zRun ? onAutoSelect : undefined}
         aria-label="auto-select"
+        data-tooltip={zRun ? t('sidebar.autoSelectTip') : t('sidebar.autoSelectDisabledTip')}
+        data-tooltip-pos="right"
       >
         <Zap size={18} strokeWidth={2} />
       </button>
-      <button className="sidebar-footer-btn" onClick={onOpenChecker} aria-label="checker">
+      <button
+        className="sidebar-footer-btn"
+        onClick={onOpenChecker}
+        aria-label="checker"
+        data-tooltip={t('sidebar.checkerTip')}
+        data-tooltip-pos="right"
+      >
         <Search size={18} strokeWidth={2} />
-      </button>
-      <button className="sidebar-footer-btn" onClick={onOpenDiagnostics} aria-label="diagnostics">
-        <Stethoscope size={18} strokeWidth={2} />
       </button>
 
       <div className="sidebar-divider" />
 
-      <button className="sidebar-footer-btn" onClick={onOpenLogs} aria-label="logs">
+      <button
+        className="sidebar-footer-btn"
+        onClick={onOpenLogs}
+        aria-label="logs"
+        data-tooltip={t('sidebar.logsTip')}
+        data-tooltip-pos="right"
+      >
         <FileText size={18} strokeWidth={2} />
       </button>
-      <button className="sidebar-footer-btn" onClick={onOpenHelp} aria-label="help">
+      <button
+        className="sidebar-footer-btn"
+        onClick={onOpenHelp}
+        aria-label="help"
+        data-tooltip={t('sidebar.helpTip')}
+        data-tooltip-pos="right"
+      >
         <CircleHelp size={18} strokeWidth={2} />
-      </button>
-      <button className="sidebar-footer-btn" onClick={onToggleTheme} aria-label="theme">
-        {isDark ? <Sun size={18} strokeWidth={2} /> : <Moon size={18} strokeWidth={2} />}
       </button>
     </aside>
   );

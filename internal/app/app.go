@@ -95,6 +95,16 @@ func (a *App) Startup(ctx context.Context) {
 	a.ctx = ctx
 	a.log.Info("app", "Wails application started")
 
+	// Ensure skip-resources.txt exists (shipped with app, but auto-create if missing).
+	a.ensureSkipResourcesFile()
+
+	// Hook logger errors to desktop notifications (if enabled by user).
+	a.log.SetOnError(func(category, msg string) {
+		if a.cfg.ShouldNotify("errors") {
+			notify.Show("ZPUI \xd0\xbe\xd1\x88\xd0\xb8\xd0\xb1\xd0\xba\xd0\xb0", "["+category+"] "+msg)
+		}
+	})
+
 	close(a.ctxReady)
 
 	// Recovery: если прошлое обновление zapret прервалось (крах) — восстановить.
@@ -127,7 +137,7 @@ func (a *App) Startup(ctx context.Context) {
 		})
 	}
 
-	if a.cfg.LastXboxDnsState {
+	if a.cfg.AutoStartXboxDns {
 		a.safeGo(func() {
 			xd := a.cfg.GetXboxDnsConfig()
 			a.xboxDns.Configure(xd.PrimaryDNS, xd.SecondaryDNS)
@@ -241,12 +251,18 @@ func (a *App) startResourceMonitor() {
 					return
 				}
 				oks := 0
+				var failed []blockcheck.BulkResult
 				for _, r := range res {
 					if r.OK {
 						oks++
+					} else {
+						failed = append(failed, r)
 					}
 				}
-				pct := oks * 100 / len(res)
+				pct := 0
+				if len(res) > 0 {
+					pct = oks * 100 / len(res)
+				}
 				database.InsertAvailabilitySnapshot(&database.AvailabilityRecord{
 					Timestamp:      time.Now(),
 					Type:           typ,
@@ -254,6 +270,18 @@ func (a *App) startResourceMonitor() {
 					OKResources:    oks,
 					Pct:            float64(pct),
 				})
+				a.log.Info("availability", fmt.Sprintf("[%s] %d%% (%d/%d)", typ, pct, oks, len(res)))
+				for _, r := range failed {
+					verdict := r.Verdict
+					if verdict == "" {
+						verdict = "DOWN"
+					}
+					reason := r.Reason
+					if reason == "" {
+						reason = verdict
+					}
+					a.log.Warn("availability", fmt.Sprintf("[%s] ✗ %s — %s: %s", typ, r.Name, verdict, reason))
+				}
 			}
 			saveSet("standard", report.Default)
 			saveSet("user", report.User)
@@ -264,7 +292,14 @@ func (a *App) startResourceMonitor() {
 					oks++
 				}
 			}
-			pct := oks * 100 / len(all)
+			pct := 0
+			if len(all) > 0 {
+				pct = oks * 100 / len(all)
+			}
+			a.log.Info("availability", fmt.Sprintf("[total] %d%% (%d/%d) — standard %d/%d, user %d/%d",
+				pct, oks, len(all),
+				countOK(report.Default), len(report.Default),
+				countOK(report.User), len(report.User)))
 
 			if a.cfg.ShouldNotify("resource_drop") {
 				threshold := a.cfg.GetResourceDropPct()
@@ -498,4 +533,70 @@ func (a *App) startDataRotation() {
 			return
 		}
 	}
+}
+// countOK returns number of OK results in a bulk result slice.
+func countOK(res []blockcheck.BulkResult) int {
+	n := 0
+	for _, r := range res {
+		if r.OK {
+			n++
+		}
+	}
+	return n
+}
+// defaultSkipContent is the default content for skip-resources.txt.
+// Used when the file is missing and needs to be created.
+const defaultSkipContent = `# skip-resources.txt - resources excluded from availability checks.
+#
+# These domains are always down (dead CDN, retired subdomains, etc) so
+# there is no point in checking them. Edit this file manually to add/remove.
+# One host per line. Lines starting with # are comments. Blank lines ignored.
+# Subdomains are matched automatically: "google.com" excludes "drive.google.com".
+
+# Cloudflare service/test domains (always unavailable)
+cloudflareapps.com
+cloudflarebolt.com
+cloudflareclient.com
+cloudflarepartners.com
+cloudflareresolve.com
+cloudflaressl.com
+cloudflarestatus.com
+cloudflarestorage.com
+cloudflaretest.com
+
+# Cloudfront CDN
+cloudfront.net
+
+# Discord service subdomains
+discord.dev
+discord.media
+discord.status
+discord-activities.com
+discordactivities.com
+discordapp.net
+discordpartygames.com
+
+# Other service/unavailable
+localizeapi.com
+live-video.net
+
+# PornHub CDN - always unavailable in RU
+phncdn.com
+pix-cdn77.phncdn.com
+winhanced.com
+`
+
+// ensureSkipResourcesFile creates skip-resources.txt next to config.json
+// if it does not exist yet. The file is pre-populated with a list of
+// known always-down resources. User can edit it manually afterwards.
+func (a *App) ensureSkipResourcesFile() {
+	path := a.cfg.GetSkipResourcesFilePath()
+	if _, err := os.Stat(path); err == nil {
+		return // file exists, do not overwrite
+	}
+	if err := os.WriteFile(path, []byte(defaultSkipContent), 0644); err != nil {
+		a.log.Warn("app", "Failed to create skip-resources.txt: "+err.Error())
+		return
+	}
+	a.log.Info("app", "Created skip-resources.txt with default exclusions")
 }

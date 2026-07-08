@@ -78,6 +78,7 @@ type Config struct {
 	NotifyMissingFiles  bool `json:"notify_missing_files"`
 	NotifyServiceStatus bool `json:"notify_service_status"`
 	NotifyResourceDrop  bool `json:"notify_resource_drop"`
+	NotifyErrors        bool `json:"notify_errors"`
 	ResourceDropPct     int  `json:"resource_drop_pct"`
 
 	// Последняя версия, о которой уже отправлено уведомление (дедупликация
@@ -283,12 +284,12 @@ func (c *Config) ShouldNotify(event string) bool {
 		return c.NotifyZPUIUpdates
 	case "zapret_update":
 		return c.NotifyZapretUpdates
-	case "missing_files":
-		return c.NotifyMissingFiles
 	case "service_status":
 		return c.NotifyServiceStatus
 	case "resource_drop":
 		return c.NotifyResourceDrop
+	case "errors":
+		return c.NotifyErrors
 	default:
 		return false
 	}
@@ -421,4 +422,59 @@ func (c *Config) SetBlockCheckConfig(b BlockCheckConfig) error {
 	}
 	c.BlockCheck = b
 	return c.save()
+}
+// skipResourcesFile returns the path to skip-resources.txt next to the config file.
+// This file is shipped with the application and contains pre-defined hosts
+// that should never be checked (always-down CDN endpoints, dead subdomains, etc).
+// User can edit this file manually to add/remove entries.
+// One host per line, lines starting with # are comments, blank lines ignored.
+func (c *Config) skipResourcesFile() string {
+	return filepath.Join(filepath.Dir(c.configPath), "skip-resources.txt")
+}
+
+// GetSkipResources reads the skip-resources.txt file and returns the list of hosts.
+// If the file does not exist, returns an empty slice (no exclusions).
+func (c *Config) GetSkipResources() []string {
+	c.mu.RLock()
+	path := c.skipResourcesFile()
+	c.mu.RUnlock()
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return []string{}
+	}
+	var result []string
+	for _, line := range strings.Split(string(data), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		result = append(result, strings.ToLower(line))
+	}
+	return result
+}
+
+// IsSkippedResource returns true if host matches any entry in skip-resources.txt.
+// Match is case-insensitive: "google.com" matches "drive.google.com" (subdomain).
+func (c *Config) IsSkippedResource(host string) bool {
+	host = strings.ToLower(strings.TrimSpace(host))
+	if host == "" {
+		return false
+	}
+	for _, s := range c.GetSkipResources() {
+		if s == "" {
+			continue
+		}
+		if host == s || strings.HasSuffix(host, "."+s) || strings.Contains(host, s) {
+			return true
+		}
+	}
+	return false
+}
+// GetSkipResourcesFilePath returns the absolute path to skip-resources.txt.
+// Located next to config.json.
+func (c *Config) GetSkipResourcesFilePath() string {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return filepath.Join(filepath.Dir(c.configPath), "skip-resources.txt")
 }

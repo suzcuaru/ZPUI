@@ -124,7 +124,25 @@ func findAsset(assets []releaseAsset, name string) string {
 	return ""
 }
 
+// FetchRemoteVersions tries GitHub first, on failure falls back to Yandex Disk.
+// Yandex public URL is hardcoded as fallback (used when GitHub is blocked).
 func FetchRemoteVersions() (*RemoteVersions, error) {
+	// 1. Try GitHub
+	rv, ghErr := fetchRemoteVersionsGitHub()
+	if rv != nil {
+		return rv, nil
+	}
+
+	// 2. Fallback: Yandex Disk
+	rvY, yErr := fetchYandexVersions(YandexPublicURL)
+	if rvY != nil {
+		return rvY, nil
+	}
+
+	return nil, fmt.Errorf("github: %v; yandex: %v", ghErr, yErr)
+}
+
+func fetchRemoteVersionsGitHub() (*RemoteVersions, error) {
 	client := &http.Client{Timeout: 15 * time.Second}
 	req, err := http.NewRequest("GET", versionsURL, nil)
 	if err != nil {
@@ -138,12 +156,12 @@ func FetchRemoteVersions() (*RemoteVersions, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("versions.json: статус %d", resp.StatusCode)
+		return nil, fmt.Errorf("versions.json: status %d", resp.StatusCode)
 	}
 
 	var rv RemoteVersions
 	if err := json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&rv); err != nil {
-		return nil, fmt.Errorf("разбор versions.json: %w", err)
+		return nil, fmt.Errorf("parse versions.json: %w", err)
 	}
 	return &rv, nil
 }
@@ -214,7 +232,26 @@ func ReplaceModule(exeDir, name string) error {
 
 	tmpZip := filepath.Join(exeDir, "zpui-modules-tmp.zip")
 	if err := downloadFile(zipURL, tmpZip); err != nil {
-		return fmt.Errorf("download failed: %w", err)
+		// Fallback: download individual .exe from Yandex Disk
+		yaURL, yErr := yandexDownloadURL(YandexPublicURL, "", fileName)
+		if yErr != nil || yaURL == "" {
+			return fmt.Errorf("download failed (github: %v, yandex: %v)", err, yErr)
+		}
+		if err := downloadFromYandex(yaURL, targetPath+".tmp"); err != nil {
+			return fmt.Errorf("yandex download failed: %w", err)
+		}
+		// File already in place (targetPath.tmp), skip zip extraction.
+		bm := NewBackupManager(exeDir)
+		if _, err := os.Stat(targetPath); err == nil {
+			bm.BackupComponent("module_"+name, "pre-update", "module", []string{targetPath})
+			os.Rename(targetPath, bakPath)
+		}
+		if err := os.Rename(targetPath+".tmp", targetPath); err != nil {
+			os.Rename(bakPath, targetPath)
+			return fmt.Errorf("replace failed: %w", err)
+		}
+		os.Remove(bakPath)
+		return nil
 	}
 	defer os.Remove(tmpZip)
 
