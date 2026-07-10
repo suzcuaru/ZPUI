@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { api } from '../api';
+import { api, createStream } from '../api';
 import { useT } from '../i18n';
+import { Loader, Check, AlertTriangle } from 'lucide-react';
 
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
@@ -124,39 +125,64 @@ export default function SetupWizard({ onComplete, onCancel }) {
     await api('GET', '/api/setup/control-check').catch(() => null);
     if (!aliveRef.current) return;
 
-    // ── strategy test ──────────────────────
-    const sRes = await api('GET', '/api/setup/strategies').catch(() => null);
-    const list = (sRes && sRes.strategies) || [];
-    setTestTotal(list.length);
+    // ── strategy autoselect (streaming) ──
+    setStatus(t('setup.test.autoSelect'));
+    setTestIdx(0);
 
     const scored = [];
-    const fromP = 70, toP = 92;
-    const span = list.length ? (toP - fromP) / list.length : 0;
+    let appliedStrategy = null;
 
-    for (let i = 0; i < list.length; i++) {
-      const name = list[i];
-      setTestIdx(i + 1);
-      setStatus(t('setup.test.testing', { name: name.replace('.bat', '') }));
-      await tickProgress(fromP + span * i, fromP + span * (i + 1), 400);
+    await new Promise((resolve) => {
+      const es = createStream('/api/autoselect/stream');
+      const finish = () => { es.close(); resolve(); };
 
-      const result = await api('GET', `/api/setup/test-strategy?strategy=${encodeURIComponent(name)}`).catch(() => null);
+      es.onmessage = (e) => {
+        if (!aliveRef.current) { finish(); return; }
+        const d = JSON.parse(e.data);
+        if (d.type === 'done') {
+          if (d.error && !appliedStrategy) {
+            setError(d.error);
+          }
+          finish();
+          return;
+        }
+        if (d.type === 'progress') {
+          setTestTotal(d.total || 0);
+          setTestIdx(d.current || 0);
+          if (d.message) setStatus(d.message);
+          const pctProg = d.total > 0 ? (d.current / d.total) : 0;
+          setProgress(Math.round(70 + pctProg * 22));
+        } else if (d.type === 'result') {
+          if (d.strategy && !d.error) {
+            scored.push({
+              name: d.strategy,
+              percentage: d.resources_n > 0 ? Math.round((d.resources_ok / d.resources_n) * 100) : 0,
+              blocked: [],
+            });
+            appliedStrategy = d.strategy;
+          } else if (d.strategy && d.error) {
+            scored.push({ name: d.strategy, percentage: 0, blocked: [] });
+          }
+        } else if (d.type === 'info') {
+          const msg = d.message || '';
+          const prefix = 'Применена стратегия:';
+          if (msg.startsWith(prefix)) {
+            appliedStrategy = msg.replace(prefix, '').trim().replace('.bat', '');
+          }
+          if (msg) setStatus(msg);
+        }
+      };
+      es.onerror = () => { finish(); };
+    });
 
-      if (result && !result.error) {
-        scored.push({
-          name,
-          percentage: result.percentage ?? 0,
-          blocked: result.still_blocked || [],
-        });
-      }
-      if (!aliveRef.current) return;
-    }
+    if (!aliveRef.current) return;
 
     scored.sort((a, b) => b.percentage - a.percentage);
-    const viable = scored.filter(s => s.percentage >= 70);
+    const viable = scored.filter(s => s.percentage >= 50);
     const display = viable.length > 0 ? viable : scored;
     setResults(display);
-    setBestStrategy(display[0] ? display[0].name : '');
-    setSelected(display[0] ? display[0].name : '');
+    setBestStrategy(appliedStrategy || (display[0] ? display[0].name : ''));
+    setSelected(appliedStrategy || (display[0] ? display[0].name : ''));
 
     setStatus(t('setup.test.done'));
     setProgress(95);
@@ -226,6 +252,7 @@ export default function SetupWizard({ onComplete, onCancel }) {
     if (phase === 'test') {
       return (
         <div className="zw-test-info">
+          <Loader size={16} className="spinning" />
           {testTotal > 0 && (
             <span className="zw-test-counter">{testIdx} / {testTotal}</span>
           )}
@@ -233,12 +260,15 @@ export default function SetupWizard({ onComplete, onCancel }) {
       );
     }
     if (phase === 'results') {
-      const allViable = results.length > 0 && results.every(r => r.percentage >= 70);
+      const allViable = results.length > 0 && results.every(r => r.percentage >= 50);
       return (
         <div className="zw-card zw-card-wide">
           <div className="zw-card-title">{t('setup.results.title')}</div>
           <p className="zw-card-desc">
-            {allViable ? t('setup.results.desc') : t('setup.results.noViable')}
+            {bestStrategy
+              ? t('setup.results.applied', { name: bestStrategy.replace('.bat', '') })
+              : (allViable ? t('setup.results.desc') : t('setup.results.noViable'))
+            }
           </p>
           <div className="zw-strategies">
             {results.map(r => (
@@ -246,14 +276,10 @@ export default function SetupWizard({ onComplete, onCancel }) {
                 key={r.name}
                 className={'zw-strategy' + (selected === r.name ? ' selected' : '')}
                 onClick={() => setSelected(r.name)}
-                title={blockedTitle(r)}
               >
                 <span className="zw-strategy-pct" style={{ color: pctColor(r.percentage) }}>{r.percentage}%</span>
                 <span className="zw-strategy-name">{r.name.replace('.bat', '')}</span>
                 {r.name === bestStrategy && <span className="zw-best">{t('setup.results.best')}</span>}
-                {r.blocked && r.blocked.length > 0 && (
-                  <span className="zw-blocked-badge">{r.blocked.length} {t('setup.results.blocked')}</span>
-                )}
               </button>
             ))}
           </div>
@@ -292,9 +318,6 @@ export default function SetupWizard({ onComplete, onCancel }) {
 
   return (
     <div className="zw-overlay">
-      <div className="zw-brand">
-        <img src="logo.svg" alt="ZPUI" className="zw-logo" />
-      </div>
       <div className="zw-progress-section">
         <div className="zw-bar"><div className="zw-bar-fill" style={{ width: pct + '%' }} /></div>
         <div className="zw-status-row">

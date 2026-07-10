@@ -30,11 +30,11 @@ export default function Footer({ status }) {
       <span className="footer-sep" />
 
       <div className="footer-item footer-metric">
-        <span className="footer-tag down">DOWN</span>
+        <span className="footer-tag down muted">DOWN</span>
         <span className="footer-mono footer-num total" style={{ color: 'var(--text-secondary)' }}>{dlTotal}</span>
       </div>
       <div className="footer-item footer-metric">
-        <span className="footer-tag up">UP</span>
+        <span className="footer-tag up muted">UP</span>
         <span className="footer-mono footer-num total" style={{ color: 'var(--text-secondary)' }}>{ulTotal}</span>
       </div>
 

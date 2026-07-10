@@ -1,6 +1,7 @@
 {
   "common": {
     "cancel": "Cancel",
+    "cancelled": "Cancelled",
     "apply": "Apply",
     "close": "Close",
     "save": "Save",
@@ -11,6 +12,7 @@
     "updating": "Updating...",
     "start": "Enable",
     "stop": "Disable",
+    "wait": "Please wait…",
     "load": "Load",
     "copy": "Copy",
     "clear": "Clear",
@@ -32,7 +34,8 @@
     "yes": "Yes",
     "no": "No",
     "done": "Done",
-    "continue": "Continue"
+    "continue": "Continue",
+    "confirm": "Confirm"
   },
   "nav": {
     "dashboard": "Home",
@@ -101,12 +104,26 @@
     "zapretSettings": "Zapret settings",
     "unavailableResources": "Unavailable resources",
     "checking": "Checking…",
+    "checkingHint": "checking…",
+    "checkNow": "check now",
+    "nextCheck": "next check",
+    "lastCheckedAt": "checked",
+    "cache": "cache",
+    "justNow": "just now",
+    "secAgo": "{n} s ago",
+    "minAgo": "{n} min ago",
+    "hourAgo": "{n} h ago",
+    "secShort": "s",
+    "noChartData": "waiting for data…",
     "upToDate": "Up to date",
     "moreSuffix": "more",
     "noProblems": "No problems",
     "actions": "Actions",
     "strategy": "Strategy",
-    "provider": "Provider"
+    "provider": "Provider",
+    "addToSkip": "Add to skip",
+    "checkResource": "Check",
+    "addedToSkip": "{host} added to skip list"
   },
   "zapret": {
     "title": "Zapret",
@@ -124,8 +141,10 @@
     "autoSelect": "Auto-select strategy",
     "autoSelectComplete": "Auto-select complete",
     "autoSelectFailed": "Auto-select failed",
+    "autoSelectStarting": "Starting auto-select…",
     "noWorkingStrategies": "No working strategies",
     "appliedStrategy": "Applied strategy",
+    "testResults": "Test results",
     "testStrategies": "Test strategies",
     "testingStrategies": "Testing strategies",
     "starting": "Starting...",
@@ -151,6 +170,10 @@
     "editor": "Editor:",
     "selectList": "Select a list on the left",
     "textareaPlaceholder": "Enter domains or IPs, one per line...",
+    "skipResourcesTitle": "Autoselect exclusions (skip-resources)",
+    "skipResourcesDesc": "Sites in this list will be skipped during automatic strategy selection. One domain per line.",
+    "skipResourcesPlaceholder": "example.com\napi.example.com\n...",
+    "skipResSaved": "Exclusions list saved",
     "systemLists": "System lists (read-only)",
     "diagnostics": "Diagnostics",
     "systemChecks": "System checks",
@@ -171,6 +194,9 @@
     "reinstalled": "Zapret service reinstalled",
     "reinstallTip": "Stop, remove service and start fresh. Helps if service is stuck or corrupted.",
     "diagnosticsTip": "Check system, files and drivers state",
+    "diagAllOk": "All checks passed",
+    "diagHasErrors": "Errors detected",
+    "diagHasWarnings": "Warnings found",
     "gameFilterDescShort": "Filter for games and other UDP/TCP apps on ports above 1023. Without it, games may not work with Zapret.",
     "gameFilterDescFull": "Enables DPI bypass for game traffic. By default Zapret only handles HTTPS/HTTP. Enable if your game or app uses non-standard ports. May slightly increase network load.",
     "ipsetDescShort": "IP filter - allows Zapret to process traffic only for known blocked IPs (or all of them).",
@@ -246,6 +272,8 @@
     "startMinimized": "Start minimized",
     "closeToTray": "Close to tray",
     "updateCheck": "Update check",
+    "checkInterval": "Resource check frequency",
+    "checkIntervalDesc": "How often to check resource availability",
     "notifications": "Windows notifications",
     "notifyStrategyTest": "Test completion notification",
     "notifZpuiUpdates": "ZPUI updates",
@@ -279,7 +307,17 @@
     "notifServiceCrash": "About service crash",
     "reinstallServiceBtn": "Reinstall",
     "reinstallServiceConfirm": "Reinstall Zapret service? This will stop, remove and restart.",
-    "serviceReinstalled": "Service reinstalled"
+    "serviceReinstalled": "Service reinstalled",
+    "installServiceBtn": "Install service",
+    "serviceInstalled": "Service installed",
+    "serviceMode": "Service mode",
+    "processMode": "Process mode",
+    "fullReinstall": "Full reinstall",
+    "fullReinstallDesc": "Delete Zapret folder, download fresh. User lists will be backed up and restored.",
+    "fullReinstallBtn": "Full reinstall",
+    "fullReinstallConfirm": "WARNING: Zapret folder will be completely deleted and re-downloaded. This may take several minutes. Continue?",
+    "fullReinstallStarted": "Full reinstall started. This will take a few minutes.",
+    "fullReinstallComplete": "Full reinstall complete"
   },
   "startup": {
     "loadingSystem": "Loading system…",
@@ -355,17 +393,19 @@
       "baseline": "Control check without Zapret…",
       "control": "Control resource check without Zapret…",
       "testing": "Testing strategy: {name}",
+      "autoSelect": "Automatically selecting best strategy…",
       "waiting": "Waiting for strategy to apply…",
       "done": "Strategy check complete"
     },
     "results": {
-      "title": "Choose a strategy",
-      "desc": "Showing strategies with 70%+ availability. Hover a card for blocked resources.",
+      "title": "Selection results",
+      "desc": "Strategies sorted by effectiveness.",
+      "applied": "Auto-select complete. Applied strategy: {name}. You can choose another or keep current.",
       "best": "Recommended",
       "apply": "Apply",
       "blocked": "blocked",
       "allOk": "All resources accessible",
-      "noViable": "No strategy reached 70%. Showing all."
+      "noViable": "No strategy worked. Showing all."
     },
     "config": {
       "title": "Quick setup",
@@ -415,7 +455,10 @@
     "errorSnapshots": "Error snapshots",
     "backToLogs": "← Back to logs",
     "total": "Total",
-    "shown": "Shown"
+    "shown": "Shown",
+    "clearBtn": "Delete",
+    "clearAllConfirm": "Delete ALL logs? This will irreversibly clear all log files.",
+    "clearCatConfirm": "Delete all entries in category \"{cat}\"?"
   },
   "health": {
     "title": "System check",

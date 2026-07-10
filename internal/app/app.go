@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -54,12 +55,25 @@ type App struct {
 	resourceCacheTime time.Time
 	resourceCacheMu   sync.Mutex
 
+	// checkingNow = true when a resource check is in progress (auto or manual).
+	// Frontend uses this to disable button and show "updating...".
+	checkingNow   bool
+	checkingNowMu sync.Mutex
+
+	// prevResourceState tracks previous OK/!OK state per resource name.
+	// Used to log only state CHANGES (not every failed check).
+	prevResourceState   map[string]bool
+	prevResourceStateMu sync.Mutex
+
 	// Эталон: какие ресурсы заблокированы без запрета (для wizard)
 	controlBaseline map[string]bool
 
 	// Видимость окна (для tray toggle)
 	windowVisible bool
 	windowMu      sync.Mutex
+
+	// startHidden — окно запускается скрытым (start_minimized или флаг --hidden)
+	startHidden bool
 }
 
 
@@ -90,10 +104,21 @@ func NewApp(
 	}
 }
 
+// SetStartHidden управляет скрытым запуском окна (вызывается из main.go).
+func (a *App) SetStartHidden(v bool) { a.startHidden = v }
+
 // startup вызывается Wails при запуске приложения.
 func (a *App) Startup(ctx context.Context) {
 	a.ctx = ctx
 	a.log.Info("app", "Wails application started")
+
+	// Синхронизируем флаг видимости окна с реальным стартовым состоянием
+	a.windowMu.Lock()
+	a.windowVisible = !a.startHidden
+	a.windowMu.Unlock()
+
+	// Initialize resource state map for change tracking
+	a.prevResourceState = make(map[string]bool)
 
 	// Ensure skip-resources.txt exists (shipped with app, but auto-create if missing).
 	a.ensureSkipResourcesFile()
@@ -150,6 +175,17 @@ func (a *App) Startup(ctx context.Context) {
 			a.xboxDns.Configure(xd.PrimaryDNS, xd.SecondaryDNS)
 			if err := a.xboxDns.Enable(); err != nil {
 				a.log.Error("xboxdns", "Auto-start xbox DNS failed: "+err.Error())
+			}
+		})
+	} else if a.cfg.XboxDns.Enabled {
+		// Автозапуск выключен, но DNS был включён ранее — восстанавливаем DHCP
+		// и сбрасываем флаг, чтобы статус отражал реальное выключенное состояние.
+		xd := a.cfg.GetXboxDnsConfig()
+		xd.Enabled = false
+		a.cfg.SetXboxDnsConfig(xd)
+		a.safeGo(func() {
+			if err := a.xboxDns.RestoreDHCP(); err != nil {
+				a.log.Warn("xboxdns", "RestoreDHCP on startup: "+err.Error())
 			}
 		})
 	}
@@ -229,102 +265,151 @@ func (a *App) checkUpdatesOnStartup() {
 }
 
 func (a *App) startResourceMonitor() {
-	time.Sleep(30 * time.Second)
-	ticker := time.NewTicker(60 * time.Second)
-	defer ticker.Stop()
+	time.Sleep(10 * time.Second)
 
-	notified := false
+	// Первая проверка сразу при запуске
+	a.doResourceCheckAndSave()
+
 	for {
+		interval := time.Duration(a.cfg.GetResourceCheckInterval()) * time.Minute
+		next := time.Now().Truncate(interval).Add(interval)
+		wait := time.Until(next)
+		if wait <= 0 {
+			wait = interval
+		}
+
 		select {
 		case <-a.stopCh:
 			return
-		case <-ticker.C:
-			_ = a.GetResourceStatus() // refresh cache
-
-			a.resourceCacheMu.Lock()
-			report := a.resourceCache
-			a.resourceCacheMu.Unlock()
-
-			if report == nil {
-				continue
-			}
-			all := append(report.Default, report.User...)
-			if len(all) == 0 {
-				continue
-			}
-
-			saveSet := func(typ string, res []blockcheck.BulkResult) {
-				if len(res) == 0 {
-					return
-				}
-				oks := 0
-				var failed []blockcheck.BulkResult
-				for _, r := range res {
-					if r.OK {
-						oks++
-					} else {
-						failed = append(failed, r)
-					}
-				}
-				pct := 0
-				if len(res) > 0 {
-					pct = oks * 100 / len(res)
-				}
-				database.InsertAvailabilitySnapshot(&database.AvailabilityRecord{
-					Timestamp:      time.Now(),
-					Type:           typ,
-					TotalResources: len(res),
-					OKResources:    oks,
-					Pct:            float64(pct),
-				})
-				a.log.Info("availability", fmt.Sprintf("[%s] %d%% (%d/%d)", typ, pct, oks, len(res)))
-				for _, r := range failed {
-					verdict := r.Verdict
-					if verdict == "" {
-						verdict = "DOWN"
-					}
-					reason := r.Reason
-					if reason == "" {
-						reason = verdict
-					}
-					a.log.Warn("availability", fmt.Sprintf("[%s] ✗ %s — %s: %s", typ, r.Name, verdict, reason))
-				}
-			}
-			saveSet("standard", report.Default)
-			saveSet("user", report.User)
-
-			oks := 0
-			for _, r := range all {
-				if r.OK {
-					oks++
-				}
-			}
-			pct := 0
-			if len(all) > 0 {
-				pct = oks * 100 / len(all)
-			}
-			a.log.Info("availability", fmt.Sprintf("[total] %d%% (%d/%d) — standard %d/%d, user %d/%d",
-				pct, oks, len(all),
-				countOK(report.Default), len(report.Default),
-				countOK(report.User), len(report.User)))
-
-			if a.cfg.ShouldNotify("resource_drop") {
-				threshold := a.cfg.GetResourceDropPct()
-				if pct < threshold {
-					if !notified {
-						notified = true
-						lang := a.cfg.GetLanguage()
-						notify.Show("ZPUI", tr(lang, "resource_drop", pct))
-						a.log.Warn("notify", fmt.Sprintf("Resource availability %d%% < threshold %d%%", pct, threshold))
-					}
-				} else {
-					notified = false
-				}
-			} else {
-				notified = false
-			}
+		case <-time.After(wait):
+			a.doResourceCheckAndSave()
 		}
 	}
+}
+
+// doResourceCheckAndSave performs a full resource check (bypassing cache),
+// saves snapshots to DB, and logs results. Used by both auto-monitor
+// and manual refresh.
+func (a *App) doResourceCheckAndSave() {
+	a.checkingNowMu.Lock()
+	a.checkingNow = true
+	a.checkingNowMu.Unlock()
+	defer func() {
+		a.checkingNowMu.Lock()
+		a.checkingNow = false
+		a.checkingNowMu.Unlock()
+	}()
+
+	report := a.getResourceStatusForced()
+	if report == nil {
+		return
+	}
+
+	all := append(report.Default, report.User...)
+	if len(all) == 0 {
+		return
+	}
+
+	saveSet := func(typ string, res []blockcheck.BulkResult) {
+		if len(res) == 0 {
+			return
+		}
+		oks := 0
+		var newlyFailed, recovered []string
+		failedCount := 0
+		for _, r := range res {
+			key := typ + ":" + r.Name
+			a.prevResourceStateMu.Lock()
+			prevOK, wasKnown := a.prevResourceState[key]
+			a.prevResourceStateMu.Unlock()
+
+			if r.OK {
+				oks++
+				if wasKnown && !prevOK {
+					recovered = append(recovered, r.Name)
+				}
+			} else {
+				failedCount++
+				if !wasKnown || prevOK {
+					newlyFailed = append(newlyFailed, r.Name)
+				}
+			}
+
+			// Update state
+			a.prevResourceStateMu.Lock()
+			a.prevResourceState[key] = r.OK
+			a.prevResourceStateMu.Unlock()
+		}
+		pct := 0
+		if len(res) > 0 {
+			pct = oks * 100 / len(res)
+		}
+		database.InsertAvailabilitySnapshot(&database.AvailabilityRecord{
+			Timestamp:      time.Now(),
+			Type:           typ,
+			TotalResources: len(res),
+			OKResources:    oks,
+			Pct:            float64(pct),
+		})
+		// Summary line (always)
+		a.log.Info("availability", fmt.Sprintf("[%s] %d%% (%d/%d)", typ, pct, oks, len(res)))
+		// Only log state CHANGES (not every failed resource)
+		for _, name := range newlyFailed {
+			a.log.Warn("availability", fmt.Sprintf("[%s] ✗ %s — now unavailable", typ, name))
+		}
+		for _, name := range recovered {
+			a.log.Info("availability", fmt.Sprintf("[%s] ✓ %s — recovered", typ, name))
+		}
+	}
+	saveSet("standard", report.Default)
+	saveSet("user", report.User)
+
+	oks := 0
+	for _, r := range all {
+		if r.OK {
+			oks++
+		}
+	}
+	pct := 0
+	if len(all) > 0 {
+		pct = oks * 100 / len(all)
+	}
+	a.log.Info("availability", fmt.Sprintf("[total] %d%% (%d/%d) — standard %d/%d, user %d/%d",
+		pct, oks, len(all),
+		countOK(report.Default), len(report.Default),
+		countOK(report.User), len(report.User)))
+}
+
+// getResourceStatusForced does a force check (bypasses cache) and returns the raw report.
+func (a *App) getResourceStatusForced() *blockcheck.BulkReport {
+	defaultTargets, _ := blockcheck.ReadTargets(blockcheck.DefaultTargetsPath(a.cfg.GetZapretPath()))
+
+	var userTargets []blockcheck.BulkTarget
+	if body, err := os.ReadFile(filepath.Join(a.cfg.ListsDir(), "list-general-user.txt")); err == nil {
+		userTargets = blockcheck.ParseTargets(string(body))
+	}
+
+	defaultTargets = a.filterSkipped(defaultTargets)
+	userTargets = a.filterSkipped(userTargets)
+
+	bc := a.cfg.GetBlockCheckConfig()
+	checker := blockcheck.NewChecker(bc.CheckTCP, bc.CheckTLS, bc.CheckHTTP, bc.TimeoutSec)
+	report := checker.BulkCheck(defaultTargets, userTargets)
+
+	now := time.Now()
+	a.resourceCacheMu.Lock()
+	a.resourceCache = report
+	a.resourceCacheTime = now
+	a.resourceCacheMu.Unlock()
+
+	return report
+}
+
+// IsCheckingNow returns whether a resource check is currently in progress.
+func (a *App) IsCheckingNow() bool {
+	a.checkingNowMu.Lock()
+	defer a.checkingNowMu.Unlock()
+	return a.checkingNow
 }
 
 // safeGo запускает функцию в горутине с защитой от panic.
@@ -440,8 +525,9 @@ func (a *App) Quit() {
 			// не доходит до OnShutdown при скрытом в трей окне.
 			select {
 			case <-a.shutdownDone:
-			case <-time.After(1 * time.Second):
-				a.log.Warn("app", "Shutdown timeout reached, forcing exit")
+			case <-time.After(3 * time.Second):
+				// Normal when window hidden in tray - Wails is slow to process quit.
+				// Force exit is fine, not an error.
 			}
 		}
 		// Гарантированно завершаем процесс (убивает горутину трея и фоновые задачи)
@@ -528,6 +614,11 @@ func (a *App) startTrafficSnapshots() {
 
 // startDataRotation — ротация старых данных (каждый час).
 func (a *App) startDataRotation() {
+	// Очистка сразу при старте, затем каждый час
+	cleanOldSnapshots(24 * time.Hour)
+	cleanOldConnections(7 * 24 * time.Hour)
+	database.CleanOldAvailability(24 * time.Hour)
+
 	ticker := time.NewTicker(1 * time.Hour)
 	defer ticker.Stop()
 	for {
@@ -535,7 +626,7 @@ func (a *App) startDataRotation() {
 		case <-ticker.C:
 			cleanOldSnapshots(24 * time.Hour)
 			cleanOldConnections(7 * 24 * time.Hour)
-			database.CleanOldAvailability(30 * 24 * time.Hour)
+			database.CleanOldAvailability(24 * time.Hour)
 		case <-a.stopCh:
 			return
 		}

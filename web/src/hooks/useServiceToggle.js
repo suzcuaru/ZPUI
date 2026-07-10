@@ -34,15 +34,18 @@ export function useServiceToggle(service, isRunning, showToast, messages = {}) {
         }
       } else {
         // zapret / proxy: POST /api/<service>/start|stop
-        await apiCall(
-          () => api('POST', `/api/${service}/${isRunning ? 'stop' : 'start'}`),
-          isRunning ? messages.stopMsg : messages.startMsg,
-          showToast
-        );
+        const result = await api('POST', `/api/${service}/${isRunning ? 'stop' : 'start'}`);
+        if (result?.error) {
+          showToast(result.error, 'error');
+        } else if (isRunning ? messages.stopMsg : messages.startMsg) {
+          showToast(isRunning ? messages.stopMsg : messages.startMsg, 'success');
+        }
       }
 
       // Сохраняем состояния компонентов
       await apiCall(() => api('POST', '/api/component-states'));
+    } catch {
+      if (showToast) showToast('Не удалось выполнить операцию', 'error');
     } finally {
       setLoading(false);
     }

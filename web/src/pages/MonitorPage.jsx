@@ -1,84 +1,114 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { api } from '../api';
 import { formatBytes } from '../utils';
 import { useT } from '../i18n';
 import { usePolling } from '../hooks/usePolling';
-import { ArrowDown, ArrowUp } from 'lucide-react';
 
-function TrafficChart({ data, color, height }) {
-  const canvasRef = useRef(null);
-  const h = height || 64;
+function TrafficChart({ data, color, label, height }) {
+  const { t } = useT();
+  const wrapRef = useRef(null);
+  const [w, setW] = useState(0);
+  const [hoverIdx, setHoverIdx] = useState(null);
+  const H = height || 110;
+  const padL = 8, padR = 8, padT = 8, padB = 16;
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    const dpr = window.devicePixelRatio || 1;
-    const cw = canvas.offsetWidth;
-    const ch = h;
-    canvas.width = cw * dpr;
-    canvas.height = ch * dpr;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const el = wrapRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver((entries) => {
+      const cw = entries[0]?.contentRect?.width;
+      if (cw) setW(cw);
+    });
+    ro.observe(el);
+    setW(el.clientWidth);
+    return () => ro.disconnect();
+  }, []);
 
-    ctx.clearRect(0, 0, cw, ch);
+  const plotW = Math.max(0, w - padL - padR);
+  const plotH = H - padT - padB;
 
-    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    const gridColor = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)';
-    for (let i = 0; i < 4; i++) {
-      const y = (ch / 4) * i;
-      ctx.strokeStyle = gridColor;
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(cw, y);
-      ctx.stroke();
-    }
-
-    if (!data || data.length < 2) return;
-
+  const computed = useMemo(() => {
+    if (!data || data.length < 1 || plotW <= 0) return null;
     const mx = Math.max(...data, 1);
-    const step = cw / (data.length - 1);
+    const step = data.length > 1 ? plotW / (data.length - 1) : plotW;
+    const pts = data.map((v, i) => ({
+      x: padL + i * step,
+      y: padT + (1 - v / mx) * plotH,
+      val: v,
+    }));
+    const line = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+    const fill = pts.length > 0
+      ? `${line} L${pts[pts.length - 1].x.toFixed(1)},${(padT + plotH).toFixed(1)} L${pts[0].x.toFixed(1)},${(padT + plotH).toFixed(1)} Z`
+      : '';
+    return { pts, line, fill, mx, step };
+  }, [data, plotW, plotH, padL, padT]);
 
-    const cMain = color === 'accent'
-      ? (isDark ? '#6ba3ff' : '#4f8ff7')
-      : (isDark ? '#34d058' : '#28a745');
-    const cFill = color === 'accent'
-      ? (isDark ? 'rgba(107,163,255,0.2)' : 'rgba(79,143,247,0.15)')
-      : (isDark ? 'rgba(52,208,88,0.2)' : 'rgba(40,167,69,0.15)');
-
-    ctx.beginPath();
-    ctx.moveTo(0, ch);
-    data.forEach((v, i) => {
-      const x = i * step;
-      const y = ch - (v / mx) * (ch - 6) - 3;
-      ctx.lineTo(x, y);
+  const onMove = (e) => {
+    if (!computed) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    let bestIdx = 0, bestDist = Infinity;
+    computed.pts.forEach((p, i) => {
+      const d = Math.abs(p.x - mx);
+      if (d < bestDist) { bestDist = d; bestIdx = i; }
     });
-    ctx.lineTo(cw, ch);
-    ctx.closePath();
-    ctx.fillStyle = cFill;
-    ctx.fill();
+    setHoverIdx(bestIdx);
+  };
 
-    ctx.beginPath();
-    data.forEach((v, i) => {
-      const x = i * step;
-      const y = ch - (v / mx) * (ch - 6) - 3;
-      if (i === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
-    });
-    ctx.strokeStyle = cMain;
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
+  if (!computed) {
+    return <div className="avail-chart-empty" ref={wrapRef} style={{height: H}}><span>—</span></div>;
+  }
 
-    const lastVal = data[data.length - 1];
-    const lastX = (data.length - 1) * step;
-    const lastY = ch - (lastVal / mx) * (ch - 6) - 3;
-    ctx.beginPath();
-    ctx.arc(lastX, lastY, 2.5, 0, Math.PI * 2);
-    ctx.fillStyle = cMain;
-    ctx.fill();
-  }, [data, color, h]);
+  return (
+    <div className="tchart-wrap" ref={wrapRef}>
+      <svg
+        width={w || '100%'} height={H} className="avail-chart-svg"
+        onMouseMove={onMove}
+        onMouseLeave={() => setHoverIdx(null)}
+      >
+        <defs>
+          <linearGradient id={`tc-grad-${label}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={color} stopOpacity="0.22" />
+            <stop offset="100%" stopColor={color} stopOpacity="0" />
+          </linearGradient>
+        </defs>
 
-  return <canvas ref={canvasRef} style={{ width: '100%', height: h, display: 'block' }} />;
+        {[0, 0.5, 1].map((f) => {
+          const y = padT + f * plotH;
+          return <line key={f} x1={padL} y1={y} x2={padL + plotW} y2={y}
+            stroke="var(--border-light)" strokeWidth="1" strokeDasharray={f === 0 || f === 1 ? '0' : '3 3'} />;
+        })}
+
+        <path d={computed.fill} fill={`url(#tc-grad-${label})`} />
+        <path d={computed.line} fill="none" stroke={color} strokeWidth="2"
+          strokeLinecap="round" strokeLinejoin="round" />
+
+        {computed.pts.map((p, i) => (
+          (i === computed.pts.length - 1 || i === hoverIdx) && (
+            <circle key={i} cx={p.x} cy={p.y} r={i === hoverIdx ? 3.5 : 2.6}
+              fill="var(--bg-card)" stroke={color} strokeWidth="1.8" />
+          )
+        ))}
+
+        {hoverIdx !== null && computed.pts[hoverIdx] && (
+          <line x1={computed.pts[hoverIdx].x} y1={padT}
+            x2={computed.pts[hoverIdx].x} y2={padT + plotH}
+            stroke="var(--text-tertiary)" strokeWidth="1" opacity="0.5" />
+        )}
+      </svg>
+
+      {hoverIdx !== null && computed.pts[hoverIdx] && (
+        <div className="tchart-tooltip" style={{
+          left: Math.min(Math.max(computed.pts[hoverIdx].x, 50), (w || 300) - 50),
+        }}>
+          <span className="avail-tooltip-row">
+            <span className="avail-tooltip-dot" style={{ background: color }} />
+            {formatBytes(computed.pts[hoverIdx].val)}/s
+          </span>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function MonitorPage({ status, showToast }) {
@@ -120,38 +150,45 @@ export default function MonitorPage({ status, showToast }) {
 
   return (
     <>
-      <div className="page-title">{t('monitor.title')}</div>
-
       <div className="mon-grid">
         <div className="card-section" style={{ gap: 4 }}>
           <div className="mon-chart-header">
             <span className="card-section-title">{t('monitor.download')}</span>
-            <span className="mon-chart-val mono" style={{ color: 'var(--accent)' }}>{m.dl_speed_fmt || '0 B/s'}</span>
+            <span className="mon-chart-val mono mon-chart-dl">{m.dl_speed_fmt || '0 B/s'}</span>
           </div>
-          <TrafficChart data={liveHistory.dl} color="accent" height={64} />
+          <TrafficChart data={liveHistory.dl} color="var(--accent)" label="dl" height={110} />
         </div>
 
         <div className="card-section" style={{ gap: 4 }}>
           <div className="mon-chart-header">
             <span className="card-section-title">{t('monitor.upload')}</span>
-            <span className="mon-chart-val mono" style={{ color: 'var(--success)' }}>{m.ul_speed_fmt || '0 B/s'}</span>
+            <span className="mon-chart-val mono mon-chart-ul">{m.ul_speed_fmt || '0 B/s'}</span>
           </div>
-          <TrafficChart data={liveHistory.ul} color="success" height={64} />
+          <TrafficChart data={liveHistory.ul} color="var(--success)" label="ul" height={110} />
         </div>
       </div>
 
       <div className="mon-stats-row">
         <div className="mon-stat">
           <span className="mon-stat-label">{t('monitor.totalDown')}</span>
-          <span className="mon-stat-val mono">{m.download_fmt || '0 B'}</span>
+          <span className="mon-stat-val mono mon-stat-dl">{m.download_fmt || '0 B'}</span>
         </div>
         <div className="mon-stat">
           <span className="mon-stat-label">{t('monitor.totalUp')}</span>
-          <span className="mon-stat-val mono">{m.upload_fmt || '0 B'}</span>
+          <span className="mon-stat-val mono mon-stat-ul">{m.upload_fmt || '0 B'}</span>
         </div>
         <div className="mon-stat">
           <span className="mon-stat-label">{t('monitor.viaProxy')}</span>
-          <span className="mon-stat-val mono"><ArrowDown size={12} strokeWidth={2.5} />{formatBytes(totalDown)} <ArrowUp size={12} strokeWidth={2.5} />{formatBytes(totalUp)}</span>
+          <div className="mon-stat-split">
+            <div className="mon-stat-split-item">
+              <span className="mon-stat-split-tag dl">DL</span>
+              <span className="mono">{formatBytes(totalDown)}</span>
+            </div>
+            <div className="mon-stat-split-item">
+              <span className="mon-stat-split-tag ul">UP</span>
+              <span className="mono">{formatBytes(totalUp)}</span>
+            </div>
+          </div>
         </div>
         <div className="mon-stat">
           <span className="mon-stat-label">{t('monitor.devices')}</span>

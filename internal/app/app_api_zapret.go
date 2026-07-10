@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync/atomic"
+	"time"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 
@@ -126,6 +127,20 @@ func (a *App) GetInstallLog() map[string]interface{} {
 // DefaultStrategy — стратегия по умолчанию (первый general ALT).
 func (a *App) DefaultStrategy() map[string]interface{} {
 	return map[string]interface{}{"strategy": a.zapret.DefaultStrategyName()}
+}
+
+// GetAutoTestResults — результаты последнего автотеста/автоподбора из JSON.
+func (a *App) GetAutoTestResults() map[string]interface{} {
+	jsonPath := filepath.Join(a.cfg.LogsDir(), "auto_test_results.json")
+	data, err := os.ReadFile(jsonPath)
+	if err != nil {
+		return map[string]interface{}{"results": []interface{}{}}
+	}
+	var results []map[string]interface{}
+	if err := json.Unmarshal(data, &results); err != nil {
+		return map[string]interface{}{"results": []interface{}{}}
+	}
+	return map[string]interface{}{"results": results}
 }
 
 // ============================================================
@@ -293,9 +308,7 @@ func (a *App) UpdateHosts() map[string]interface{} {
 // ============================================================
 
 func (a *App) HasLocalZapret() bool {
-	winws := filepath.Join(a.cfg.GetZapretPath(), "bin", "winws.exe")
-	_, err := os.Stat(winws)
-	return err == nil
+	return a.zapret.VerifyFiles().AllPresent
 }
 
 func (a *App) HasSystemZapretService() bool {
@@ -375,4 +388,109 @@ func (a *App) SendTestNotification() map[string]interface{} {
 		return errResp(err.Error())
 	}
 	return okResp()
+}
+
+// ============================================================
+// SKIP RESOURCES
+// ============================================================
+
+func (a *App) GetSkipResources() map[string]interface{} {
+	path := a.cfg.GetSkipResourcesFilePath()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return map[string]interface{}{"content": "", "lines": []string{}}
+	}
+	content := string(data)
+	lines := []string{}
+	for _, l := range strings.Split(content, "\n") {
+		l = strings.TrimSpace(l)
+		if l != "" && !strings.HasPrefix(l, "#") {
+			lines = append(lines, l)
+		}
+	}
+	return map[string]interface{}{"content": content, "lines": lines, "count": len(lines)}
+}
+
+func (a *App) SaveSkipResources(content string) map[string]interface{} {
+	path := a.cfg.GetSkipResourcesFilePath()
+	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+		return errResp(err.Error())
+	}
+	return okResp()
+}
+
+func (a *App) AddSkipResource(host string) map[string]interface{} {
+	if err := a.cfg.AddSkipResource(host); err != nil {
+		return errResp(err.Error())
+	}
+	return okResp()
+}
+
+// ============================================================
+// FULL REINSTALL
+// ============================================================
+
+// FullReinstall — полная переустановка zapret: удаляет папку, скачивает заново.
+// Пользовательские списки бекапятся и восстанавливаются.
+func (a *App) FullReinstall() map[string]interface{} {
+	a.log.Info("zapret", "Full reinstall started")
+
+	snap := a.zapret.CaptureState()
+
+	zapretDir := a.cfg.GetZapretPath()
+	a.log.Info("zapret", "Removing zapret directory: "+zapretDir)
+
+	a.zapret.Stop()
+	a.zapret.RemoveService()
+
+	executil.HiddenCmd("taskkill", "/IM", "winws.exe", "/F").Run()
+	executil.HiddenCmd("sc", "stop", "WinDivert").Run()
+	executil.HiddenCmd("sc", "stop", "WinDivert14").Run()
+	executil.HiddenCmd("sc", "delete", "WinDivert").Run()
+	executil.HiddenCmd("sc", "delete", "WinDivert14").Run()
+
+	time.Sleep(2 * time.Second)
+
+	if err := os.RemoveAll(zapretDir); err != nil {
+		a.log.Warn("zapret", "Failed to remove zapret dir: "+err.Error())
+	}
+
+	if err := os.MkdirAll(zapretDir, 0755); err != nil {
+		return errResp("не удалось создать папку: " + err.Error())
+	}
+
+	a.log.Info("zapret", "Downloading fresh zapret...")
+	if err := a.zapret.DownloadAndInstall(nil); err != nil {
+		a.log.Error("zapret", "Download failed: "+err.Error())
+		a.zapret.RestoreState(snap)
+		return errResp("скачивание не удалось: " + err.Error())
+	}
+
+	a.zapret.RefreshVersion()
+
+	strategy := snap.Strategy
+	if strategy == "" {
+		strategy = a.zapret.DefaultStrategyName()
+	}
+	a.cfg.SetCurrentStrategy(strategy)
+
+	a.log.Info("zapret", "Restoring user lists and starting service...")
+	a.zapret.RestoreState(snap)
+
+	a.zapret.EnsureUserLists()
+
+	if err := a.zapret.SetStrategy(strategy); err != nil {
+		a.log.Warn("zapret", "Strategy apply failed: "+err.Error())
+	}
+
+	return map[string]interface{}{
+		"status":   "ok",
+		"version":  a.zapret.GetVersion(),
+		"strategy": strategy,
+	}
+}
+
+// IsServiceInstalled — проверяет, установлена ли служба zapret.
+func (a *App) IsServiceInstalled() map[string]interface{} {
+	return map[string]interface{}{"installed": a.HasSystemZapretService()}
 }

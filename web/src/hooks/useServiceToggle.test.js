@@ -32,19 +32,19 @@ describe('useServiceToggle', () => {
 
     expect(api).toHaveBeenCalledWith('POST', '/api/zapret/start');
     expect(api).toHaveBeenCalledWith('POST', '/api/component-states');
-    // start message passed to apiCall (isRunning=false -> startMsg)
-    expect(apiCall.mock.calls[0][1]).toBe('started');
+    expect(toast).toHaveBeenCalledWith('started', 'success');
   });
 
   it('stops proxy when running', async () => {
+    const toast = vi.fn();
     const { result } = renderHook(() =>
-      useServiceToggle('proxy', true, vi.fn(), { startMsg: 's', stopMsg: 'stopped' })
+      useServiceToggle('proxy', true, toast, { startMsg: 's', stopMsg: 'stopped' })
     );
 
     await act(async () => { await result.current.toggle(); });
 
     expect(api).toHaveBeenCalledWith('POST', '/api/proxy/stop');
-    expect(apiCall.mock.calls[0][1]).toBe('stopped');
+    expect(toast).toHaveBeenCalledWith('stopped', 'success');
   });
 
   it('toggles xboxdns via config (enabled inverted)', async () => {

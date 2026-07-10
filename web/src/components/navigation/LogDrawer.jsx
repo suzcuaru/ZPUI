@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { api } from '../../api';
 import { useT } from '../../i18n';
-import { X, Trash2, Copy, Download, Search, AlertTriangle } from 'lucide-react';
+import { X, Trash2, Copy, Download, Search, AlertTriangle, ChevronDown, Check } from 'lucide-react';
+import { useConfirm } from '../ui/ConfirmDialog';
 
-// Категории логов. 'config' убран — пользователь не должен видеть служебные логи конфигурации.
 const CATS = ['all', 'app', 'zapret', 'network', 'availability', 'tray', 'xboxdns'];
 const ALL_FETCH = ['app', 'zapret', 'network', 'availability', 'tray', 'xboxdns'];
 
@@ -34,8 +34,46 @@ if (typeof window !== 'undefined' && !window.__zpui_log_init) {
 
 const LEVELS = ['ALL', 'ERROR', 'WARN', 'INFO'];
 
+function CatDropdown({ cat, setCat, catLabel }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  return (
+    <div className="lg-cat-dd" ref={ref}>
+      <button className="lg-cat-dd-btn" onClick={() => setOpen(!open)}>
+        <span>{catLabel(cat)}</span>
+        <ChevronDown size={12} strokeWidth={2.5} className={'lg-cat-dd-arrow' + (open ? ' open' : '')} />
+      </button>
+      {open && (
+        <div className="lg-cat-dd-menu">
+          {CATS.map(c => (
+            <button
+              key={c}
+              className={'lg-cat-dd-item' + (cat === c ? ' active' : '')}
+              onClick={() => { setCat(c); setOpen(false); }}
+            >
+              <span>{catLabel(c)}</span>
+              {cat === c && <Check size={12} strokeWidth={2.5} />}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function LogDrawer({ open, onClose }) {
   const { t } = useT();
+  const confirm = useConfirm();
   const [cat, setCat] = useState('all');
   const [level, setLevel] = useState('ALL');
   const [search, setSearch] = useState('');
@@ -59,8 +97,6 @@ export default function LogDrawer({ open, onClose }) {
         const results = await Promise.all(
           ALL_FETCH.map(c => api('GET', `/api/logs?category=${c}&lines=100`))
         );
-        // ВАЖНО: используем индекс, не переменную `c` (она вне scope после map).
-        // Раньше тут был баг "ReferenceError: c is not defined".
         be = results.flatMap((d, i) => {
           const categoryName = ALL_FETCH[i];
           return (d?.lines || []).map(l => ({
@@ -81,7 +117,6 @@ export default function LogDrawer({ open, onClose }) {
     return () => clearInterval(iv);
   }, [open, cat]);
 
-  // Загрузка списка срезов ошибок (для кнопки-индикатора)
   useEffect(() => {
     if (!open) return;
     const loadErr = async () => {
@@ -98,7 +133,18 @@ export default function LogDrawer({ open, onClose }) {
     if (d?.content) setErrorContent(d.content);
   };
 
-  // Фильтрация: по уровню + по подстроке
+  const deleteError = async (name, e) => {
+    e.stopPropagation();
+    const d = await api('POST', '/api/logs/error/delete', { name });
+    if (d?.error) return;
+    const refresh = await api('GET', '/api/logs/errors');
+    if (refresh?.files) setErrorSnapshots(refresh.files);
+    if (selectedError === name) {
+      setSelectedError(null);
+      setErrorContent('');
+    }
+  };
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return raw.filter(l => {
@@ -112,7 +158,6 @@ export default function LogDrawer({ open, onClose }) {
     });
   }, [raw, level, search]);
 
-  // Счётчики по уровням
   const counts = useMemo(() => {
     const c = { ALL: raw.length, ERROR: 0, WARN: 0, INFO: 0 };
     raw.forEach(l => {
@@ -137,19 +182,15 @@ export default function LogDrawer({ open, onClose }) {
     if (text) navigator.clipboard.writeText(text);
   };
 
-  // Очистка: полностью удаляет записи выбранной категории (или все если "all")
   const handleClear = async () => {
     if (clearing) return;
     const confirmMsg = cat === 'all'
-      ? 'Удалить ВСЕ логи? Это очистит все файлы логов безвозвратно.'
-      : `Удалить все записи категории "${cat}"?`;
-    if (!window.confirm(confirmMsg)) return;
+      ? t('logs.clearAllConfirm')
+      : t('logs.clearCatConfirm', { cat });
+    if (!await confirm({ message: confirmMsg, variant: 'danger', confirmText: t('logs.clearBtn') })) return;
 
     setClearing(true);
-    // 1. Очищаем FE логи (sessionStorage) всегда
     sessionStorage.removeItem(FE_KEY);
-
-    // 2. Очищаем BE логи выбранной категории
     const d = await api('POST', '/api/logs/clear-bucket', { category: cat });
     setClearing(false);
 
@@ -158,10 +199,7 @@ export default function LogDrawer({ open, onClose }) {
       return;
     }
 
-    // 3. Перезагружаем логи
     setRaw([]);
-    // Принудительный reload через интервал сработает через 3 сек,
-    // но лучше сразу перечитать.
     setTimeout(async () => {
       let be = [];
       if (cat === 'all') {
@@ -197,29 +235,20 @@ export default function LogDrawer({ open, onClose }) {
       <div className={'lg-drawer' + (open ? ' open' : '')}>
         <div className="lg-head">
           <span className="lg-head-title">{t('logs.title')}</span>
-          {counts.ERROR > 0 && <span className="lg-head-badge" data-tooltip="Ошибки в логах">{counts.ERROR}</span>}
-          {/* Категории логов — справа от заголовка, в шапке */}
-          <div className="lg-head-cats">
-            {CATS.map(c => (
-              <button key={c} className={'lg-chip' + (cat === c ? ' on' : '')} onClick={() => setCat(c)}>
-                {catLabel(c)}
-              </button>
-            ))}
-          </div>
+          <CatDropdown cat={cat} setCat={setCat} catLabel={catLabel} />
+          {counts.ERROR > 0 && <span className="lg-head-badge">{counts.ERROR}</span>}
           <div className="lg-spacer" />
           <button
             className={'lg-head-errors-btn' + (errorSnapshots.length > 0 ? ' has-errors' : '')}
             onClick={() => setShowErrors(!showErrors)}
-            data-tooltip={`Срезы ошибок (${errorSnapshots.length})`}
             aria-label="Срезы ошибок"
           >
             <AlertTriangle size={14} strokeWidth={2} />
             {errorSnapshots.length > 0 && <span className="lg-err-count">{errorSnapshots.length}</span>}
           </button>
-          <button className="lg-head-close" data-tooltip={t('common.close')} onClick={onClose}><X size={16} strokeWidth={2.5} /></button>
+          <button className="lg-head-close" onClick={onClose}><X size={16} strokeWidth={2.5} /></button>
         </div>
 
-        {/* Тулбар с поиском и уровнями */}
         <div className="lg-toolbar">
           <div className="lg-toolbar-row">
             <div className="lg-levels">
@@ -237,7 +266,7 @@ export default function LogDrawer({ open, onClose }) {
               <button
                 className={'lg-btn' + (autoScroll ? ' on' : '')}
                 onClick={() => setAutoScroll(!autoScroll)}
-                data-tooltip={autoScroll ? 'Автопрокрутка вкл' : 'Автопрокрутка выкл'}
+                title={autoScroll ? 'Автопрокрутка вкл' : 'Автопрокрутка выкл'}
                 aria-label="Автопрокрутка"
               >
                 ↓
@@ -246,15 +275,15 @@ export default function LogDrawer({ open, onClose }) {
                 className={'lg-btn' + (clearing ? ' on' : '')}
                 onClick={handleClear}
                 disabled={clearing}
-                data-tooltip={clearing ? 'Очистка...' : (cat === 'all' ? 'Очистить все логи' : `Очистить «${catLabel(cat)}»`)}
+                title={clearing ? 'Очистка...' : (cat === 'all' ? 'Очистить все логи' : `Очистить «${catLabel(cat)}»`)}
                 aria-label="Очистить"
               >
                 {clearing ? <span className="mini-spin" /> : <Trash2 size={15} strokeWidth={2} />}
               </button>
-              <button className={'lg-btn' + (exporting ? ' on' : '')} onClick={exportLogs} disabled={exporting} data-tooltip="Экспорт в ZIP">
+              <button className={'lg-btn' + (exporting ? ' on' : '')} onClick={exportLogs} disabled={exporting} title="Экспорт в ZIP">
                 {exporting ? <span className="mini-spin" /> : <Download size={15} strokeWidth={2} />}
               </button>
-              <button className="lg-btn" onClick={copyAll} data-tooltip={t('common.copy')}><Copy size={15} strokeWidth={2} /></button>
+              <button className="lg-btn" onClick={copyAll} title={t('common.copy')}><Copy size={15} strokeWidth={2} /></button>
             </div>
             <div className="lg-search-wrap">
               <Search size={13} strokeWidth={2} className="lg-search-icon" />
@@ -276,7 +305,6 @@ export default function LogDrawer({ open, onClose }) {
           </div>
         </div>
 
-        {/* Тело: либо логи, либо модалка срезов ошибок поверх */}
         <div className="lg-body" ref={bodyRef}>
           {showErrors ? (
             <div className="lg-errors-view">
@@ -287,10 +315,15 @@ export default function LogDrawer({ open, onClose }) {
               <div className="lg-split">
                 <div className="lg-file-list">
                   {errorSnapshots.length > 0 ? errorSnapshots.map(f => (
-                    <button key={f.name} className={'lg-file-item' + (selectedError === f.name ? ' active' : '')} onClick={() => readError(f.name)}>
-                      <span className="lg-file-name">{f.name}</span>
-                      <span className="lg-file-meta">{fmtSize(f.size)}</span>
-                    </button>
+                    <div key={f.name} className={'lg-file-row' + (selectedError === f.name ? ' active' : '')} onClick={() => readError(f.name)}>
+                      <button className="lg-file-item">
+                        <span className="lg-file-name">{f.name}</span>
+                        <span className="lg-file-meta">{fmtSize(f.size)}</span>
+                      </button>
+                      <button className="lg-file-del" onClick={(e) => deleteError(f.name, e)} title="Удалить срез">
+                        <Trash2 size={12} strokeWidth={2} />
+                      </button>
+                    </div>
                   )) : <div className="lg-empty">Нет срезов ошибок</div>}
                 </div>
                 <div className="lg-file-content">
@@ -299,7 +332,7 @@ export default function LogDrawer({ open, onClose }) {
                   ) : <div className="lg-empty">Выберите файл слева</div>}
                   {selectedError && (
                     <div className="lg-file-actions">
-                      <button className="lg-btn" data-tooltip={t('common.copy')} onClick={() => navigator.clipboard.writeText(errorContent)}>⎘</button>
+                      <button className="lg-btn" title={t('common.copy')} onClick={() => navigator.clipboard.writeText(errorContent)}>⎘</button>
                     </div>
                   )}
                 </div>

@@ -91,6 +91,17 @@ func (a *App) ReadErrorSnapshot(name string) map[string]interface{} {
 	return map[string]interface{}{"content": string(data), "name": name}
 }
 
+func (a *App) DeleteErrorSnapshot(name string) map[string]interface{} {
+	if name == "" {
+		return errResp("name required")
+	}
+	path := filepath.Join(a.cfg.LogsDir(), "errors", name)
+	if err := os.Remove(path); err != nil {
+		return errResp(err.Error())
+	}
+	return okResp()
+}
+
 func (a *App) GetArchiveLogs() map[string]interface{} {
 	archiveDir := filepath.Join(a.cfg.LogsDir(), "archive")
 	return map[string]interface{}{"files": listLogDir(archiveDir)}

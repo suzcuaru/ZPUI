@@ -9,6 +9,7 @@ import HealthCheckModal from './components/HealthCheckModal';
 import AutoSelectModal from './components/AutoSelectModal';
 import SetupWizard from './components/SetupWizard';
 import DiagnosticsModal from './components/DiagnosticsModal';
+import { ConfirmProvider } from './components/ui/ConfirmDialog';
 import DashboardPage from './pages/DashboardPage';
 import ZapretPage from './pages/ZapretPage';
 import SettingsPage from './pages/SettingsPage';
@@ -40,6 +41,7 @@ export default function App() {
   const [toasts, setToasts] = useState([]);
   const [logsOpen, setLogsOpen] = useState(false);
   const [checkerOpen, setCheckerOpen] = useState(false);
+  const [checkerInitialUrl, setCheckerInitialUrl] = useState('');
   const [autoSelectOpen, setAutoSelectOpen] = useState(false);
   const [backendOnline, setBackendOnline] = useState(true);
   const [theme, setTheme] = useState('dark');
@@ -204,7 +206,7 @@ export default function App() {
   const pageContent = backendOnline ? (
     <div className="main-area page-fade" key={activePage}>
         {PageComponent ? (
-         <PageComponent status={status} showToast={showToast} onNavigate={setActivePage} onOpenLogs={() => setLogsOpen(true)} onOpenDiagnostics={() => setDiagOpen(true)} />
+         <PageComponent status={status} showToast={showToast} onNavigate={setActivePage} onOpenLogs={() => setLogsOpen(true)} onOpenDiagnostics={() => setDiagOpen(true)} onOpenCheckerWithUrl={(url) => { setCheckerInitialUrl(url); setCheckerOpen(true); }} />
        ) : null}
     </div>
   ) : (
@@ -223,6 +225,7 @@ export default function App() {
   );
 
   return (
+    <ConfirmProvider>
     <div className="app">
         <Sidebar
           activePage={activePage}
@@ -241,11 +244,12 @@ export default function App() {
         <Footer status={status} />
       </div>
       <LogDrawer open={logsOpen} onClose={() => setLogsOpen(false)} />
-      {checkerOpen && <ResourceChecker onClose={() => setCheckerOpen(false)} showToast={showToast} />}
+      {checkerOpen && <ResourceChecker onClose={() => setCheckerOpen(false)} showToast={showToast} initialUrl={checkerInitialUrl} />}
       {healthOpen && <HealthCheckModal onClose={() => setHealthOpen(false)} />}
       <AutoSelectModal open={autoSelectOpen} onClose={() => setAutoSelectOpen(false)} showToast={showToast} />
       <DiagnosticsModal open={diagOpen} onClose={() => setDiagOpen(false)} showToast={showToast} />
       <Toast toasts={toasts} onRemove={removeToast} version={status?.mod?.version} />
     </div>
+    </ConfirmProvider>
   );
 }

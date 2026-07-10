@@ -28,7 +28,7 @@ func (a *App) EnableAutostart() map[string]interface{} {
 		executil.HiddenCmd("schtasks", "/delete", "/tn", "ZPUI", "/f").Run()
 		cmd := executil.HiddenCmd("schtasks", "/create",
 			"/tn", "ZPUI",
-			"/tr", fmt.Sprintf(`"%s"`, exePath),
+			"/tr", fmt.Sprintf(`"%s" --hidden`, exePath),
 			"/sc", "onlogon",
 			"/rl", "highest",
 			"/f")
@@ -38,7 +38,7 @@ func (a *App) EnableAutostart() map[string]interface{} {
 			executil.HiddenCmd("reg", "add",
 				`HKCU\Software\Microsoft\Windows\CurrentVersion\Run`,
 				"/v", "ZPUI", "/t", "REG_SZ", "/d",
-				fmt.Sprintf(`"%s"`, exePath), "/f").Run()
+				fmt.Sprintf(`"%s" --hidden`, exePath), "/f").Run()
 		} else {
 			a.log.Info("autostart", "Scheduled task created")
 		}
@@ -97,6 +97,7 @@ func (a *App) GetConfig() map[string]interface{} {
 		"notify_service_crash": a.cfg.NotifyServiceCrash,
 		"notify_resource_drop":  a.cfg.NotifyResourceDrop,
 		"resource_drop_pct":     a.cfg.GetResourceDropPct(),
+		"resource_check_interval": a.cfg.GetResourceCheckInterval(),
 		"show_strategy_modal":   a.cfg.ShowStrategyModal,
 		"notify_strategy_test":  a.cfg.NotifyStrategyTest,
 		"logs":                a.cfg.Logs,
@@ -149,6 +150,9 @@ func (a *App) SetConfig(opts map[string]interface{}) map[string]interface{} {
 	}
 	if v, ok := opts["resource_drop_pct"].(float64); ok {
 		a.cfg.SetResourceDropPct(int(v))
+	}
+	if v, ok := opts["resource_check_interval"].(float64); ok {
+		a.cfg.SetResourceCheckInterval(int(v))
 	}
 	if err := a.cfg.Save(); err != nil {
 		a.log.Error("config", "Save error: "+err.Error())

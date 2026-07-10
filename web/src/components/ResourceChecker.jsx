@@ -29,8 +29,8 @@ function LayerBadge({ ok, label, detail, ms }) {
   );
 }
 
-export default function ResourceChecker({ onClose, showToast }) {
-  const [url, setUrl] = useState('');
+export default function ResourceChecker({ onClose, showToast, initialUrl }) {
+  const [url, setUrl] = useState(initialUrl || '');
   const [loading, setLoading] = useState(false);
   const [report, setReport] = useState(null);
   const [adding, setAdding] = useState(false);

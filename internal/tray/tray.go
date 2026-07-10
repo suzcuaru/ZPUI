@@ -70,13 +70,6 @@ func (a *App) Run() error {
 		})
 
 		go a.handleClicks()
-
-		go func() {
-			time.Sleep(800 * time.Millisecond)
-			if !a.cfg.StartMinimized {
-				a.controller.ShowWindow()
-			}
-		}()
 	}
 
 	systray.Run(onReady, func() {

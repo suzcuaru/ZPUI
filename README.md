@@ -17,6 +17,7 @@
 **[Скачать](#-установка)** ·
 **[Что это](#-что-это-и-зачем)** ·
 **[Установка](#-установка)** ·
+**[Скриншоты](#-скриншоты)** ·
 **[Использование](#-как-пользоваться)** ·
 **[Частые вопросы](#-частые-вопросы)**
 
@@ -52,7 +53,7 @@
 
 ### Способ 1: Установщик (проще всего)
 
-1. Скачайте `ZPUI-Setup-1.4.33-win32.exe` со [страницы релизов](https://github.com/suzcuaru/ZPUI/releases/latest)
+1. Скачайте `ZPUI-Setup-x.x.x-win32.exe` со [страницы релизов](https://github.com/suzcuaru/ZPUI/releases/latest)
    (или с [Яндекс.Диска](https://disk.yandex.ru/d/1WD-A1MHklliaw), если GitHub недоступен)
 2. Запустите скачанный файл
 3. Следуйте инструкциям установщика
@@ -60,7 +61,7 @@
 
 ### Способ 2: Портативная версия (без установки)
 
-1. Скачайте `zpui-win32.zip` со [страницы релизов](https://github.com/suzcuaru/ZPUI/releases/latest)
+1. Скачайте `ZPUI-x.x.x-win32-portable.zip` со [страницы релизов](https://github.com/suzcuaru/ZPUI/releases/latest)
 2. Распакуйте архив в любую папку (например, `C:\ZPUI`)
 3. Запустите `zpui.exe`
 
@@ -69,6 +70,43 @@
 - Windows 10 или Windows 11 (64-бит или 32-бит)
 - Права администратора (нужны для работы с сетью)
 - Антивирус может ругаться на драйвер WinDivert — это нормально, добавьте в исключения
+
+---
+
+## 📸 Скриншоты
+
+### Дашборд — обзор системы
+<img src="web/public/docs/dashboard.png" width="600" alt="Дашборд" />
+
+### Запрет (Zapret) — управление обходом
+<img src="web/public/docs/zapret.png" width="600" alt="Запрет" />
+
+### Автовыбор стратегии
+<img src="web/public/docs/autoselect.png" width="600" alt="Автовыбор" />
+
+### Прокси (SOCKS5)
+<img src="web/public/docs/proxy.png" width="600" alt="Прокси" />
+
+### Xbox DNS
+<img src="web/public/docs/xboxdns.png" width="600" alt="Xbox DNS" />
+
+### Монитор трафика
+<img src="web/public/docs/monitor.png" width="600" alt="Монитор" />
+
+### Проверка ресурсов
+<img src="web/public/docs/checker.png" width="600" alt="Проверка ресурсов" />
+
+### Диагностика
+<img src="web/public/docs/diag.png" width="600" alt="Диагностика" />
+
+### Настройки
+<img src="web/public/docs/settings.png" width="600" alt="Настройки" />
+
+### Боковая панель
+<img src="web/public/docs/sidebar.png" width="600" alt="Боковая панель" />
+
+### Мастер первого запуска
+<img src="web/public/docs/start.png" width="600" alt="Первый запуск" />
 
 ---
 
@@ -187,10 +225,16 @@ cd ZPUI
 # Установить Wails
 go install github.com/wailsapp/wails/v2/cmd/wails@latest
 
-# Собрать
-wails build
+# Собрать (фронтенд + бэкенд + модули + инсталлятор)
+build.bat
 
-# Готовый .exe будет в build/bin/
+# Готовый .exe будет в build/dist/
+```
+
+Для публикации релиза на GitHub (после `build.bat`):
+
+```bash
+release.bat   # коммит, тег, push, gh release create с ассетами
 ```
 
 ---

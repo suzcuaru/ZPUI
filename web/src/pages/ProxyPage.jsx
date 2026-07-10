@@ -53,8 +53,6 @@ export default function ProxyPage({ status, showToast }) {
 
   return (
     <>
-      <div className="page-title">{t('proxy.title')}</div>
-
       <div className={'proxy-hero' + (pRun ? ' running' : '')}>
         <div className="proxy-hero-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 010 20M12 2a15 15 0 000 20"/></svg>
@@ -80,13 +78,12 @@ export default function ProxyPage({ status, showToast }) {
             </div>
           </div>
         )}
-        <button
-          className={'proxy-hero-btn ' + (pRun ? 'stop' : 'start')}
-          onClick={proxy.toggle}
-          disabled={proxy.loading}
-        >
-          {proxy.loading ? <span className="mini-spin" /> : pRun ? t('common.stop') : t('common.start')}
-        </button>
+        <div className="proxy-hero-toggle">
+          <span className={'proxy-toggle-label ' + (pRun ? 'on' : 'off')}>
+            {proxy.loading ? t('common.wait') : pRun ? t('status.running') : t('status.stopped')}
+          </span>
+          <Switch checked={pRun} onChange={proxy.toggle} loading={proxy.loading} />
+        </div>
       </div>
 
       <div className="proxy-2col">

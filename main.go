@@ -89,6 +89,15 @@ func main() {
 	// Создаём Wails-приложение
 	app := zpuiapp.NewApp(cfg, logMgr, zapretMgr, proxyServer, trafficMonitor, xboxDnsMgr, version, exeDir)
 
+	// Окно запускается скрытым при запуске с ПК или если включён "start_minimized"
+	startHidden := cfg.StartMinimized
+	for _, arg := range os.Args[1:] {
+		if arg == "--hidden" || arg == "--tray" {
+			startHidden = true
+		}
+	}
+	app.SetStartHidden(startHidden)
+
 	// Создаём tray (контроллер = app, управляет окном через Wails runtime)
 	trayApp := tray.New(cfg, logMgr, zapretMgr, proxyServer, app, version, trayIcon)
 	go func() {
@@ -120,10 +129,11 @@ func main() {
 		AssetServer: &assetserver.Options{
 			Assets: distFS,
 		},
-		OnStartup:     app.Startup,
-		OnShutdown:    app.Shutdown,
-		OnBeforeClose: app.BeforeClose,
-		Bind:          []interface{}{app},
+		OnStartup:        app.Startup,
+		OnShutdown:       app.Shutdown,
+		OnBeforeClose:    app.BeforeClose,
+		StartHidden:      startHidden,
+		Bind:             []interface{}{app},
 		Windows: &windows.Options{
 			WebviewIsTransparent: false,
 			WindowIsTranslucent:  false,

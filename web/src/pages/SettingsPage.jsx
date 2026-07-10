@@ -2,15 +2,20 @@ import { useState, useEffect, useCallback } from 'react';
 import Switch from '../components/ui/Switch';
 import { api, apiCall } from '../api';
 import { useT } from '../i18n';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Trash2, RefreshCw, Download, AlertTriangle, Power } from 'lucide-react';
 import { usePolling } from '../hooks/usePolling';
 import { useDebouncedSave } from '../hooks/useDebouncedSave';
 import { useUpdateCheck, resetZapretCheck, checkZapretUpdate } from '../hooks/useUpdateCheck';
+import { useConfirm } from '../components/ui/ConfirmDialog';
 
 export default function SettingsPage({ status, showToast, onOpenLogs }) {
   const { t, lang, changeLang } = useT();
+  const confirm = useConfirm();
   const [config, setConfig] = useState(null);
   const [versions, setVersions] = useState(null);
+  const [serviceInstalled, setServiceInstalled] = useState(false);
+  const [reinstalling, setReinstalling] = useState(false);
+  const [fullReinstalling, setFullReinstalling] = useState(false);
 
   const { zpuiCheck, zapretCheck } = useUpdateCheck();
 
@@ -24,14 +29,23 @@ export default function SettingsPage({ status, showToast, onOpenLogs }) {
     if (d) setVersions(d);
   };
 
-  useEffect(() => { loadConfig(); }, []);
+  const loadServiceStatus = async () => {
+    const d = await api('GET', '/api/zapret/service-installed');
+    if (d) setServiceInstalled(!!d.installed);
+  };
+
+  useEffect(() => { loadConfig(); loadServiceStatus(); }, []);
   usePolling(loadVersions, 10000);
+  usePolling(loadServiceStatus, 15000);
 
   const saveConfig = useDebouncedSave('/api/config', 500, null);
   const update = useCallback((patch) => {
-    setConfig(prev => ({ ...prev, ...patch }));
-    if (config) saveConfig(patch, config);
-  }, [saveConfig, config]);
+    setConfig(prev => {
+      const next = { ...prev, ...patch };
+      saveConfig(patch, prev);
+      return next;
+    });
+  }, [saveConfig]);
 
   const handleLanguage = (newLang) => {
     changeLang(newLang);
@@ -80,7 +94,6 @@ export default function SettingsPage({ status, showToast, onOpenLogs }) {
 
   return (
     <div className="settings-page">
-      <div className="page-title">{t('settings.title')}</div>
       <div className="set-columns">
 
         <div className="section">
@@ -116,6 +129,18 @@ export default function SettingsPage({ status, showToast, onOpenLogs }) {
           <MiniRow label={t('settings.startMinimized')}><Switch checked={config.start_minimized || false} onChange={() => update({ start_minimized: !config.start_minimized })} /></MiniRow>
           <MiniRow label={t('settings.closeToTray')}><Switch checked={config.close_to_tray !== false} onChange={() => update({ close_to_tray: !config.close_to_tray })} /></MiniRow>
           <MiniRow label={t('settings.updateCheck')}><Switch checked={config.auto_update_check !== false} onChange={() => update({ auto_update_check: !config.auto_update_check })} /></MiniRow>
+          <div className="set-row" style={{ padding: '3px 0' }}>
+            <div className="set-row-info">
+              <span className="set-row-title">{t('settings.checkInterval')}</span>
+              <span className="set-row-desc">{t('settings.checkIntervalDesc')}</span>
+            </div>
+            <div className="set-interval-row">
+              {[5, 10, 15, 30].map(m => (
+                <button key={m} className={'set-theme-btn sm' + ((config.resource_check_interval || 10) === m ? ' active' : '')}
+                  onClick={() => update({ resource_check_interval: m })}>{m}m</button>
+              ))}
+            </div>
+          </div>
         </div>
 
         <div className="section">
@@ -176,52 +201,119 @@ export default function SettingsPage({ status, showToast, onOpenLogs }) {
           </div>
         </div>
 
-        <div className="section">
-          <div className="section-title">{t('settings.zapretSection')}</div>
-          <div className="set-row" style={{ padding: '3px 0' }}>
-            <div className="set-row-info"><span className="set-row-title">{t('settings.localInstall')}</span></div>
-            <span className="set-static mono" style={{ fontSize: 10 }}>{'<app>\\zapret\\'}</span>
-          </div>
-          <div className="set-row" style={{ padding: '3px 0' }}>
-            <div className="set-row-info"><span className="set-row-title">{t('settings.status')}</span></div>
-            <span className={'set-static ' + (config.zapret_skipped ? 'warn' : status?.zapret?.status === 'running' ? 'ok' : 'err')} style={{ fontSize: 10 }}>
-              {config.zapret_skipped ? t('zapret.skippedStatus') : status?.zapret?.status === 'running' ? t('status.running') : t('status.stopped')}
-            </span>
-          </div>
-          <div className="set-row" style={{ padding: '3px 0' }}>
-            <div className="set-row-info">
-              <span className="set-row-title">{t('settings.removeService')}</span>
-              <span className="set-row-desc">{t('settings.removeServiceDesc')}</span>
+        <div className="section zpset-section">
+          <div className="section-title" style={{ marginBottom: '10px' }}>Zapret</div>
+
+          <div className="zpset-status-row">
+            <span className={'zpset-status-dot ' + (config.zapret_skipped ? 'off' : status?.zapret?.status === 'running' ? 'on' : 'off')} />
+            <div className="zpset-status-info">
+              <span className="zpset-status-label">
+                {config.zapret_skipped ? t('zapret.skippedStatus') : status?.zapret?.status === 'running' ? t('status.running') : t('status.stopped')}
+              </span>
+              <span className="zpset-status-meta">
+                {status?.zapret?.version ? `v${status.zapret.version}` : '—'}
+                {' · '}
+                {(config.current_strategy || 'general.bat').replace('.bat', '')}
+              </span>
             </div>
-            <div className="set-row-actions">
-              <button className="btn btn-danger btn-xs" onClick={() => {
-                if (window.confirm(t('settings.removeServiceConfirm'))) {
-                  apiCall(async () => api('POST', '/api/zapret/service/remove'), t('settings.serviceRemoved'), showToast);
+          </div>
+
+          <div className="zpset-svc-row">
+            <div className="zpset-svc-label">
+              <Power size={13} strokeWidth={2} />
+              <span>{serviceInstalled ? t('settings.serviceMode') : t('settings.processMode')}</span>
+            </div>
+            <div className="zpset-svc-actions">
+              {serviceInstalled ? (
+                <button className="btn btn-danger btn-sm" disabled={reinstalling} onClick={async () => {
+                  if (!await confirm({ message: t('settings.removeServiceConfirm'), variant: 'danger', confirmText: t('settings.removeServiceBtn') })) return;
+                  setReinstalling(true);
+                  await apiCall(async () => api('POST', '/api/zapret/service/remove'), t('settings.serviceRemoved'), showToast);
+                  setReinstalling(false);
+                  loadServiceStatus();
+                }}>
+                  {reinstalling ? <span className="mini-spin" /> : <Trash2 size={13} strokeWidth={2.2} />}
+                  {t('settings.removeServiceBtn')}
+                </button>
+              ) : (
+                <button className="btn btn-accent btn-sm" disabled={reinstalling} onClick={async () => {
+                  setReinstalling(true);
+                  const strategy = config.current_strategy || '';
+                  const result = await api('POST', '/api/zapret/service/install', { strategy });
+                  if (result?.error) {
+                    showToast(result.error, 'error');
+                  } else {
+                    showToast(t('settings.serviceInstalled'), 'success');
+                  }
+                  setReinstalling(false);
+                  loadServiceStatus();
+                }}>
+                  {reinstalling ? <span className="mini-spin" /> : <Download size={13} strokeWidth={2.2} />}
+                  {t('settings.installServiceBtn')}
+                </button>
+              )}
+              <button className="btn btn-sm" disabled={reinstalling} onClick={async () => {
+                if (!await confirm({ message: t('settings.reinstallServiceConfirm'), variant: 'danger', confirmText: t('settings.reinstallServiceBtn') })) return;
+                setReinstalling(true);
+                await apiCall(async () => api('POST', '/api/zapret/stop'), null, showToast);
+                await apiCall(async () => api('POST', '/api/zapret/service/remove'), null, showToast);
+                await new Promise(r => setTimeout(r, 1000));
+                const result = await api('POST', '/api/zapret/start');
+                if (result?.error) {
+                  showToast(result.error, 'error');
+                } else {
+                  showToast(t('settings.serviceReinstalled'), 'success');
                 }
+                setReinstalling(false);
+                loadServiceStatus();
               }}>
-                {t('settings.removeServiceBtn')}
-              </button>
-              <button className="btn btn-xs" onClick={() => {
-                if (window.confirm(t('settings.reinstallServiceConfirm'))) {
-                  apiCall(async () => api('POST', '/api/zapret/stop'), null, showToast);
-                  apiCall(async () => api('POST', '/api/zapret/service/remove'), null, showToast);
-                  setTimeout(() => {
-                    apiCall(async () => api('POST', '/api/zapret/start'), t('settings.serviceReinstalled'), showToast);
-                  }, 1000);
-                }
-              }}>
+                {reinstalling ? <span className="mini-spin" /> : <RefreshCw size={13} strokeWidth={2.2} />}
                 {t('settings.reinstallServiceBtn')}
               </button>
             </div>
           </div>
-          {config.zapret_skipped && (
-            <div className="set-row" style={{ padding: '3px 0' }}>
-              <div className="set-row-info">
-                <span className="set-row-title">{t('settings.installZapret')}</span>
-                <span className="set-row-desc">{t('settings.installZapretDesc')}</span>
+
+          <div className="zpset-danger-zone">
+            <div className="zpset-danger-info">
+              <AlertTriangle size={14} strokeWidth={2.2} className="zpset-danger-icon" />
+              <div>
+                <span className="zpset-danger-title">{t('settings.fullReinstall')}</span>
+                <span className="zpset-danger-desc">{t('settings.fullReinstallDesc')}</span>
               </div>
-              <button className="btn btn-accent btn-xs" onClick={() => {
-                if (window.confirm(t('settings.installZapretConfirm'))) {
+            </div>
+            <button
+              className="btn btn-danger btn-sm"
+              disabled={fullReinstalling}
+              onClick={async () => {
+                if (!await confirm({ message: t('settings.fullReinstallConfirm'), variant: 'danger', confirmText: t('settings.fullReinstallBtn') })) return;
+                setFullReinstalling(true);
+                showToast(t('settings.fullReinstallStarted'), 'info');
+                const result = await api('POST', '/api/zapret/full-reinstall');
+                setFullReinstalling(false);
+                if (result?.error) {
+                  showToast(result.error, 'error');
+                } else {
+                  showToast(t('settings.fullReinstallComplete'), 'success');
+                }
+                loadServiceStatus();
+              }}
+            >
+              {fullReinstalling ? <span className="mini-spin" /> : <RefreshCw size={13} strokeWidth={2.2} />}
+              {t('settings.fullReinstallBtn')}
+            </button>
+          </div>
+
+          {config.zapret_skipped && (
+            <div className="zpset-install-prompt">
+              <div className="zpset-install-info">
+                <Download size={14} strokeWidth={2.2} className="zpset-install-icon" />
+                <div>
+                  <span className="zpset-install-title">{t('settings.installZapret')}</span>
+                  <span className="zpset-install-desc">{t('settings.installZapretDesc')}</span>
+                </div>
+              </div>
+              <button className="btn btn-accent btn-sm" onClick={async () => {
+                if (await confirm({ message: t('settings.installZapretConfirm'), confirmText: t('settings.installZapretBtn') })) {
                   api('POST', '/api/app/restart');
                 }
               }}>

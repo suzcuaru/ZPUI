@@ -21,52 +21,62 @@ import (
 // RESOURCE STATUS
 // ============================================================
 
-// GetResourceStatus returns resource status with 30s cache.
-// Use RefreshResourceStatus for manual checks (refresh button).
+// GetResourceStatus returns cached resource status.
+// NEVER triggers a new check - only returns what is in cache.
+// Checks are done by startResourceMonitor (5/10 min) and RefreshResourceStatus (manual).
+// Frontend polls this every 30s to get checking_now flag + cached data.
 func (a *App) GetResourceStatus() map[string]interface{} {
-	return a.getResourceStatusInternal(false)
-}
-
-// RefreshResourceStatus forces resource check ignoring cache.
-// Used by the UI refresh button so user sees fresh results.
-func (a *App) RefreshResourceStatus() map[string]interface{} {
-	return a.getResourceStatusInternal(true)
-}
-
-func (a *App) getResourceStatusInternal(force bool) map[string]interface{} {
-	if !force {
-		a.resourceCacheMu.Lock()
-		if time.Since(a.resourceCacheTime) < 30*time.Second && a.resourceCache != nil {
-			cached := a.resourceCache
-			cachedAt := a.resourceCacheTime
-			a.resourceCacheMu.Unlock()
-			return a.buildResourceStatusResponse(cached, cachedAt, true)
-		}
-		a.resourceCacheMu.Unlock()
-	}
-
-	defaultTargets, _ := blockcheck.ReadTargets(blockcheck.DefaultTargetsPath(a.cfg.GetZapretPath()))
-
-	var userTargets []blockcheck.BulkTarget
-	if body, err := os.ReadFile(filepath.Join(a.cfg.ListsDir(), "list-general-user.txt")); err == nil {
-		userTargets = blockcheck.ParseTargets(string(body))
-	}
-
-	// Filter out resources in the skip list (always-down / no-point-checking).
-	defaultTargets = a.filterSkipped(defaultTargets)
-	userTargets = a.filterSkipped(userTargets)
-
-	bc := a.cfg.GetBlockCheckConfig()
-	checker := blockcheck.NewChecker(bc.CheckTCP, bc.CheckTLS, bc.CheckHTTP, bc.TimeoutSec)
-	report := checker.BulkCheck(defaultTargets, userTargets)
-
-	now := time.Now()
 	a.resourceCacheMu.Lock()
-	a.resourceCache = report
-	a.resourceCacheTime = now
+	report := a.resourceCache
+	checkedAt := a.resourceCacheTime
 	a.resourceCacheMu.Unlock()
 
-	return a.buildResourceStatusResponse(report, now, false)
+	if report == nil {
+		return map[string]interface{}{
+			"default":        []blockcheck.BulkResult{},
+			"user":           []blockcheck.BulkResult{},
+			"checked_at":     "",
+			"checked_at_unix": 0,
+			"cached":         false,
+			"checking_now":   a.IsCheckingNow(),
+		}
+	}
+
+	// Always return cached data (even if old). Stale = true if older than 30s.
+	stale := time.Since(checkedAt) > 30*time.Second
+	return a.buildResourceStatusResponse(report, checkedAt, stale)
+}
+
+// RefreshResourceStatus starts a manual check ASYNCHRONOUSLY.
+// Returns immediately with checking_now=true so frontend can show
+// "checking..." and disable the button. Frontend polls GetResourceStatus
+// every 2-3s to see when checking_now becomes false (check complete).
+func (a *App) RefreshResourceStatus() map[string]interface{} {
+	// If already checking, just return current state
+	if a.IsCheckingNow() {
+		return a.GetResourceStatus()
+	}
+
+	// Start check in background
+	go a.doResourceCheckAndSave()
+
+	// Return immediately with checking_now=true
+	a.resourceCacheMu.Lock()
+	report := a.resourceCache
+	checkedAt := a.resourceCacheTime
+	a.resourceCacheMu.Unlock()
+
+	if report == nil {
+		return map[string]interface{}{
+			"default":        []blockcheck.BulkResult{},
+			"user":           []blockcheck.BulkResult{},
+			"checking_now":   true,
+			"started":        true,
+		}
+	}
+	resp := a.buildResourceStatusResponse(report, checkedAt, false)
+	resp["started"] = true
+	return resp
 }
 
 // buildResourceStatusResponse assembles response with check metadata:
@@ -76,11 +86,13 @@ func (a *App) getResourceStatusInternal(force bool) map[string]interface{} {
 //   default / user  - result arrays
 func (a *App) buildResourceStatusResponse(report *blockcheck.BulkReport, checkedAt time.Time, cached bool) map[string]interface{} {
 	return map[string]interface{}{
-		"default":         report.Default,
-		"user":            report.User,
-		"checked_at":      checkedAt.Format("2006-01-02 15:04:05"),
-		"checked_at_unix": checkedAt.Unix(),
-		"cached":          cached,
+		"default":                report.Default,
+		"user":                   report.User,
+		"checked_at":             checkedAt.Format("2006-01-02 15:04:05"),
+		"checked_at_unix":        checkedAt.Unix(),
+		"cached":                 cached,
+		"checking_now":           a.IsCheckingNow(),
+		"resource_check_interval": a.cfg.GetResourceCheckInterval(),
 	}
 }
 

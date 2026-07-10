@@ -81,6 +81,8 @@ type Config struct {
 	NotifyErrors        bool `json:"notify_errors"`
 	ResourceDropPct     int  `json:"resource_drop_pct"`
 
+	ResourceCheckInterval int `json:"resource_check_interval"`
+
 	// Последняя версия, о которой уже отправлено уведомление (дедупликация
 	// между запусками, чтобы не спамить тостом при каждом старте).
 	LastNotifiedZPUIVersion   string `json:"last_notified_zpui_version"`
@@ -141,6 +143,7 @@ func defaultConfig(zapretDir string) *Config {
 		NotifyServiceCrash: false,
 		NotifyResourceDrop:  false,
 		ResourceDropPct:     70,
+		ResourceCheckInterval: 10,
 	}
 }
 
@@ -317,6 +320,31 @@ func (c *Config) SetResourceDropPct(pct int) error {
 	return c.save()
 }
 
+func (c *Config) GetResourceCheckInterval() int {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	if c.ResourceCheckInterval < 5 {
+		return 10
+	}
+	if c.ResourceCheckInterval > 60 {
+		return 60
+	}
+	return c.ResourceCheckInterval
+}
+
+func (c *Config) SetResourceCheckInterval(min int) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if min < 5 {
+		min = 5
+	}
+	if min > 60 {
+		min = 60
+	}
+	c.ResourceCheckInterval = min
+	return c.save()
+}
+
 func (c *Config) SetNotifyFlags(flags map[string]bool) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -477,4 +505,27 @@ func (c *Config) GetSkipResourcesFilePath() string {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return filepath.Join(filepath.Dir(c.configPath), "skip-resources.txt")
+}
+
+// AddSkipResource appends a host to skip-resources.txt if not already present.
+func (c *Config) AddSkipResource(host string) error {
+	host = strings.ToLower(strings.TrimSpace(host))
+	if host == "" {
+		return fmt.Errorf("empty host")
+	}
+	path := c.GetSkipResourcesFilePath()
+	for _, existing := range c.GetSkipResources() {
+		if existing == host {
+			return nil
+		}
+	}
+	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	if _, err := fmt.Fprintf(f, "%s\n", host); err != nil {
+		return err
+	}
+	return nil
 }

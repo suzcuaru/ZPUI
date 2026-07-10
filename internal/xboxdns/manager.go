@@ -39,6 +39,34 @@ func (m *Manager) IsEnabled() bool {
 	return m.enabled
 }
 
+// RestoreDHCP сбрасывает DNS всех активных адаптеров на DHCP.
+// Используется при старте, когда автозапуск DNS выключен, но ОС-уровень
+// DNS всё ещё установлен из предыдущей сессии (netsh сохраняется перманентно).
+func (m *Manager) RestoreDHCP() error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	adapters := getActiveAdapters()
+	if len(adapters) == 0 {
+		m.enabled = false
+		return fmt.Errorf("no active network adapters found")
+	}
+
+	m.log.Info("xboxdns", "Restoring DHCP on all adapters")
+	for _, adapter := range adapters {
+		if err := executil.HiddenCmd("netsh", "interface", "ip", "set", "dns",
+			adapter, "source=dhcp").Run(); err != nil {
+			m.log.Warn("xboxdns", fmt.Sprintf("Failed to restore %s to DHCP: %v", adapter, err))
+		} else {
+			m.log.Info("xboxdns", fmt.Sprintf("Restored %s DNS to DHCP", adapter))
+		}
+	}
+	m.enabled = false
+	m.originalDNS = nil
+	m.log.Info("xboxdns", "DNS restored to DHCP")
+	return nil
+}
+
 func (m *Manager) CheckAvailable() bool {
 	ips, err := net.LookupHost("xbox-dns.ru")
 	if err != nil || len(ips) == 0 {

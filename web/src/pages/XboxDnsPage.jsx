@@ -30,21 +30,22 @@ export default function XboxDnsPage({ status, showToast }) {
 
   if (!cfg) return null;
 
-  const enabled = cfg.enabled;
+  // Источник правды — опрашиваемый status (каждые 2с).
+  // Так тумблер синхронизируется и при переключении из боковой панели.
+  const enabled = status?.xbox_dns?.enabled ?? cfg.enabled ?? false;
   const primary = cfg.primary_dns || '111.88.96.50';
   const secondary = cfg.secondary_dns || '111.88.96.51';
 
   const toggle = async () => {
     const on = !enabled;
     setToggling(true);
-    setCfg(prev => ({ ...prev, enabled: on }));
     const ok = await apiCall(
       () => api('POST', '/api/xbox-dns/config', { ...cfg, enabled: on }),
       on ? t('xboxdns.dnsEnabled') : t('xboxdns.dnsDisabled'),
       showToast
     );
     if (!ok) {
-      setCfg(prev => ({ ...prev, enabled: !on }));
+      load();
     }
     setToggling(false);
     load();
@@ -59,8 +60,6 @@ export default function XboxDnsPage({ status, showToast }) {
 
   return (
     <>
-      <div className="page-title">{t('nav.xboxdns')}</div>
-
       <div className={'xdns-status-card' + (enabled ? ' on' : '')}>
         <div className="xdns-status-left">
           <div className={'xdns-status-icon' + (enabled ? ' on' : '')}>

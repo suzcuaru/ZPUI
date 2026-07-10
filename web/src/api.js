@@ -83,6 +83,9 @@ const GET_ROUTES = {
   '/api/zapret/system-service': (app) => app.HasSystemZapretService(),
   '/api/zapret/install-log': (app) => app.GetInstallLog(),
   '/api/zapret/default-strategy': (app) => app.DefaultStrategy(),
+  '/api/zapret/auto-test-results': (app) => app.GetAutoTestResults(),
+  '/api/zapret/skip-resources': (app) => app.GetSkipResources(),
+  '/api/zapret/service-installed': (app) => app.IsServiceInstalled(),
   '/api/wizard/done': (app) => app.CheckWizardDone(),
   '/api/versions': (app) => app.GetVersions(),
   '/api/components/check': (app) => app.CheckComponentUpdates(),
@@ -121,6 +124,9 @@ const POST_ROUTES = {
   '/api/zapret/install': (app, b) => app.InstallZapret(b.source_dir || ''),
   '/api/zapret/cache/clear': (app, b) => app.ClearCache(b.target || ''),
   '/api/zapret/lists/save': (app, b) => app.SaveList(b.name || '', b.content || ''),
+  '/api/zapret/skip-resources/save': (app, b) => app.SaveSkipResources(b.content || ''),
+  '/api/zapret/skip-resources/add': (app, b) => app.AddSkipResource(b.host || ''),
+  '/api/zapret/full-reinstall': (app) => app.FullReinstall(),
   '/api/proxy/start': (app) => app.ProxyStart(),
   '/api/proxy/stop': (app) => app.ProxyStop(),
   '/api/proxy/config': (app, b) => app.SetProxyConfig(b || {}),
@@ -150,6 +156,7 @@ const POST_ROUTES = {
   '/api/logs/clear': (app) => app.ClearLogs(),
   '/api/logs/clear-bucket': (app, b) => app.ClearLogBucket(b.category || 'all'),
   '/api/logs/export': (app) => app.ExportLogs(),
+  '/api/logs/error/delete': (app, b) => app.DeleteErrorSnapshot(b.name || ''),
   '/api/logs/debug': (app, b) => app.SetLogDebug(b.category || '', b.enabled === true),
   '/api/test-notification': (app) => app.SendTestNotification(),
   '/api/setup/remove-thirdparty': (app) => app.RemoveThirdPartyZapret(),
@@ -352,7 +359,6 @@ export function createStream(path) {
       for (const name of this._eventNames) {
         try { rt.EventsOff(name); } catch {}
       }
-      // Отмена автотеста при закрытии strategy/autoselect stream
       if (path === '/api/strategy/stream' || path === '/api/autoselect/stream') {
         try { app.CancelAutoTest(); } catch {}
       }

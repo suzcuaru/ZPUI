@@ -294,7 +294,7 @@ func detectZapretVersion(cfg *config.Config) string {
 			if len(parts) == 2 {
 				v := strings.TrimSpace(parts[1])
 				// Обрезаем возможный inline-комментарий
-				if idx := strings.IndexAny(v, "&"); idx >= 0 {
+				if idx := strings.Index(v, "&"); idx >= 0 {
 					v = v[:idx]
 				}
 				v = strings.Trim(strings.TrimSpace(v), `"`)
@@ -562,10 +562,9 @@ func (m *Manager) CaptureState() *BackupSnapshot {
 		}
 	}
 
-	if gfPath := filepath.Join(m.cfg.GetZapretPath(), "utils", "game_filter.enabled"); true {
-		if data, err := os.ReadFile(gfPath); err == nil {
-			snap.GameFilter = strings.TrimSpace(string(data))
-		}
+	gfPath := filepath.Join(m.cfg.GetZapretPath(), "utils", "game_filter.enabled")
+	if data, err := os.ReadFile(gfPath); err == nil {
+		snap.GameFilter = strings.TrimSpace(string(data))
 	}
 
 	m.log.Info("zapret", fmt.Sprintf("CaptureState: стратегия=%s, списков=%d, game_filter=%q, версия=%s", snap.Strategy, len(snap.UserLists), snap.GameFilter, snap.Version))
