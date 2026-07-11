@@ -93,6 +93,10 @@ type Config struct {
 
 	DisabledMods []string `json:"disabled_mods"`
 
+	EngineVersion     string `json:"engine_version"`
+	Zapret2Path       string `json:"zapret2_path"`
+	CurrentStrategyV2 string `json:"current_strategy_v2"`
+
 	configPath string
 }
 
@@ -144,6 +148,8 @@ func defaultConfig(zapretDir string) *Config {
 		NotifyResourceDrop:  false,
 		ResourceDropPct:     70,
 		ResourceCheckInterval: 10,
+
+		EngineVersion: "v1",
 	}
 }
 
@@ -528,4 +534,63 @@ func (c *Config) AddSkipResource(host string) error {
 		return err
 	}
 	return nil
+}
+
+func (c *Config) GetEngineVersion() string {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	if c.EngineVersion == "" {
+		return "v1"
+	}
+	return c.EngineVersion
+}
+
+func (c *Config) SetEngineVersion(v string) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.EngineVersion = v
+	return c.save()
+}
+
+func (c *Config) GetZapret2Path() string {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.Zapret2Path
+}
+
+func (c *Config) SetZapret2Path(path string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.Zapret2Path = path
+}
+
+func (c *Config) GetCurrentStrategyV2() string {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	if c.CurrentStrategyV2 == "" {
+		return "general2.cmd"
+	}
+	return c.CurrentStrategyV2
+}
+
+func (c *Config) SetCurrentStrategyV2(strategy string) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.CurrentStrategyV2 = strategy
+	return c.save()
+}
+
+func (c *Config) Zapret2BinDir() string {
+	return filepath.Join(c.GetZapret2Path(), "binaries")
+}
+
+func (c *Config) Zapret2LuaDir() string {
+	return filepath.Join(c.GetZapret2Path(), "lua")
+}
+
+func (c *Config) Zapret2StrategyPath(name string) string {
+	if !strings.HasSuffix(name, ".cmd") {
+		name += ".cmd"
+	}
+	return filepath.Join(c.GetZapret2Path(), name)
 }

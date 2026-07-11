@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"zpui/internal/executil"
+	"zpui/internal/security"
 	"zpui/internal/updater"
 )
 
@@ -186,6 +187,22 @@ func (m *Manager) PerformUpdate(progress chan<- UpdateProgress) error {
 		return dlErr
 	}
 	m.log.Info("updater", "Download complete")
+
+	sendProgress(progress, "Scanning for malware", 50)
+	scanResult, scanErr := security.ScanZip(tempZip, []string{"bin", "lists"})
+	if scanErr != nil {
+		m.RestoreState(snap)
+		progress <- UpdateProgress{Step: "Error", Error: fmt.Sprintf("Security scan failed: %v", scanErr)}
+		return scanErr
+	}
+	if !scanResult.Clean {
+		m.RestoreState(snap)
+		err := fmt.Errorf("SECURITY: update rejected — %d threat(s) detected", len(scanResult.Threats))
+		progress <- UpdateProgress{Step: "Error", Error: security.FormatScanResult(scanResult)}
+		m.log.Error("updater", security.FormatScanResult(scanResult))
+		return err
+	}
+	m.log.Info("updater", security.FormatScanResult(scanResult))
 
 	sendProgress(progress, "Extracting update", 60)
 	if err := m.extractUpdate(tempZip); err != nil {
@@ -531,6 +548,19 @@ func (m *Manager) DownloadAndInstall(progressFn ProgressFn) error {
 				os.Remove(tempZip)
 				continue
 			}
+			m.log.Info("updater", "Scanning for malware...")
+			scanResult, scanErr := security.ScanZip(tempZip, []string{"bin", "lists"})
+			if scanErr != nil {
+				m.log.Warn("updater", "Security scan error: "+scanErr.Error())
+				os.Remove(tempZip)
+				continue
+			}
+			if !scanResult.Clean {
+				m.log.Error("updater", security.FormatScanResult(scanResult))
+				os.Remove(tempZip)
+				return fmt.Errorf("SECURITY: update rejected — %d threat(s) detected. Update NOT applied", len(scanResult.Threats))
+			}
+			m.log.Info("updater", security.FormatScanResult(scanResult))
 			zipOK = true
 			break
 		}

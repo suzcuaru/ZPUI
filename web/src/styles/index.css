@@ -1094,6 +1094,13 @@ input, textarea { user-select:text; -webkit-user-select:text; }
 /* Zapret panel in settings */
 .zpset-section { display:flex; flex-direction:column; gap:8px; }
 
+.zpset-status-dot {
+  width:7px; height:7px; border-radius:50%; flex-shrink:0;
+  background:var(--text-tertiary);
+}
+.zpset-status-dot.on { background:var(--success); box-shadow:0 0 6px rgba(76,175,80,0.5); }
+.zpset-status-dot.off { background:var(--danger); }
+
 .zpset-status-row { display:flex; align-items:center; gap:8px; }
 .zpset-status-dot {
   width:8px; height:8px; border-radius:50%; flex-shrink:0;
@@ -1131,6 +1138,37 @@ input, textarea { user-select:text; -webkit-user-select:text; }
 .zpset-install-icon { color:var(--accent); flex-shrink:0; margin-top:1px; }
 .zpset-install-title { display:block; font-size:11px; font-weight:600; color:var(--text-primary); }
 .zpset-install-desc { display:block; font-size:10px; color:var(--text-secondary); }
+
+.zpset-head {
+  display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+}
+.zpset-head-title { font-size:13px; font-weight:700; color:var(--text-primary); }
+.zpset-engine-toggle {
+  display:flex; gap:0; border-radius:var(--radius-sm); overflow:hidden;
+  border:1px solid var(--border);
+}
+.zpset-engine-btn {
+  padding:2px 10px; font-size:10px; font-weight:600;
+  border:none; background:var(--bg-card); color:var(--text-secondary);
+  cursor:pointer; transition:all 150ms ease;
+}
+.zpset-engine-btn:hover:not(:disabled) { background:var(--bg-hover); color:var(--text-primary); }
+.zpset-engine-btn.active { background:var(--accent); color:#fff; }
+.zpset-engine-btn:disabled { opacity:0.6; cursor:default; }
+
+.zpset-head-meta {
+  display:flex; align-items:center; gap:4px;
+  font-size:10px; color:var(--text-tertiary); margin-left:auto;
+}
+.zpset-head-sep { opacity:0.5; }
+
+.zpset-v2-prompt {
+  display:flex; align-items:center; gap:8px;
+  padding:6px 10px; border-radius:var(--radius-sm);
+  background:var(--accent-soft); border:1px solid var(--accent);
+  color:var(--accent); font-size:11px;
+}
+.zpset-v2-title { font-weight:600; color:var(--text-primary); flex:1; }
 
 .mini-spin {
   display:inline-block;

@@ -317,7 +317,21 @@
     "fullReinstallBtn": "Full reinstall",
     "fullReinstallConfirm": "WARNING: Zapret folder will be completely deleted and re-downloaded. This may take several minutes. Continue?",
     "fullReinstallStarted": "Full reinstall started. This will take a few minutes.",
-    "fullReinstallComplete": "Full reinstall complete"
+    "fullReinstallComplete": "Full reinstall complete",
+    "engine": "Engine",
+    "engineSwitchConfirm": "Switch engine to {engine}? Current service will be stopped.",
+    "engineSwitchBtn": "Switch",
+    "engineSwitched": "Engine switched to {engine}",
+    "engineV2NeedDownload": "Zapret2 is not installed. Download it in settings.",
+    "engineV2Downloading": "Downloading Zapret2…",
+    "engineV2DownloadTitle": "Zapret2 not installed",
+    "engineV2DownloadDesc": "Download Zapret2 (Lua) engine to use it",
+    "engineV2DownloadBtn": "Download",
+    "engineV2Downloaded": "Zapret2 downloaded successfully",
+    "engineV2DownloadError": "Zapret2 download error: {error}",
+    "engineV2DevLabel": "dev",
+    "engineV2DevWarning": "Zapret2 is under development. Enabling may break the application.",
+    "engineSwitchConfirmV2": "Switch to Zapret2 (dev)? Current service will be stopped.\n\n⚠ WARNING: Zapret2 is under development. Enabling may break the application."
   },
   "startup": {
     "loadingSystem": "Loading system…",

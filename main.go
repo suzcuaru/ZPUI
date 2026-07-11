@@ -26,6 +26,7 @@ import (
 	"zpui/internal/updater"
 	"zpui/internal/xboxdns"
 	"zpui/internal/zapret"
+	"zpui/internal/zapret2"
 )
 
 //go:embed all:web/dist
@@ -82,12 +83,16 @@ func main() {
 	logMgr.Info("main", "Database initialized")
 
 	zapretMgr := zapret.NewManager(cfg, logMgr)
+
+	zapret2Dir := filepath.Join(exeDir, "zapret2")
+	cfg.SetZapret2Path(zapret2Dir)
+	zapret2Mgr := zapret2.NewManager(cfg, logMgr)
 	proxyServer := proxy.NewSOCKS5(cfg, logMgr)
 	trafficMonitor := monitor.NewTrafficMonitor(logMgr)
 	xboxDnsMgr := xboxdns.NewManager(logMgr)
 
 	// Создаём Wails-приложение
-	app := zpuiapp.NewApp(cfg, logMgr, zapretMgr, proxyServer, trafficMonitor, xboxDnsMgr, version, exeDir)
+	app := zpuiapp.NewApp(cfg, logMgr, zapretMgr, zapret2Mgr, proxyServer, trafficMonitor, xboxDnsMgr, version, exeDir)
 
 	// Окно запускается скрытым при запуске с ПК или если включён "start_minimized"
 	startHidden := cfg.StartMinimized

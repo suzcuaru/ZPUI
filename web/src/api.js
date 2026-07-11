@@ -103,6 +103,10 @@ const GET_ROUTES = {
   '/api/setup/strategies': (app, p) => app.SetupListStrategies(p.strategy || ''),
   '/api/setup/test-strategy': (app, p) => app.SetupTestStrategy(p.strategy || ''),
   '/api/setup/control-check': (app) => app.SetupControlCheck(),
+  '/api/engine/status': (app) => app.GetEngineStatus(),
+  '/api/zapret2/strategies': (app) => app.GetZapret2Strategies(),
+  '/api/zapret2/verify-files': (app) => app.VerifyZapret2Files(),
+  '/api/updates/check/zapret2': (app) => app.CheckZapret2Updates(),
 };
 
 /**
@@ -168,6 +172,12 @@ const POST_ROUTES = {
   '/api/setup/configure-proxy': (app, b) => app.SetupConfigureProxy(b.enable === true, parseInt(b.port) || 1080, b.bind_host || ''),
   '/api/setup/skip': (app) => app.SetupSkip(),
   '/api/setup/complete': (app) => app.SetupComplete(),
+  '/api/engine/switch': (app, b) => app.SwitchEngine(b.engine || ''),
+  '/api/zapret2/download': (app) => app.DownloadZapret2(),
+  '/api/zapret2/set-strategy': (app, b) => app.SetStrategyV2(b.filename || ''),
+  '/api/zapret2/service/install': (app, b) => app.InstallZapret2Service(b.strategy || ''),
+  '/api/zapret2/service/remove': (app) => app.RemoveZapret2Service(),
+  '/api/zapret2/update/apply': (app) => app.ApplyZapret2Update(),
 };
 
 const DELETE_ROUTES = {

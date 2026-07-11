@@ -22,6 +22,7 @@ import (
 	"zpui/internal/updater"
 	"zpui/internal/xboxdns"
 	"zpui/internal/zapret"
+	"zpui/internal/zapret2"
 )
 
 // App — главный контекст Wails-приложения.
@@ -31,6 +32,7 @@ type App struct {
 	cfg     *config.Config
 	log     *logger.Logger
 	zapret  *zapret.Manager
+	zapret2 *zapret2.Manager
 	proxy   *proxy.SOCKS5Server
 	monitor *monitor.TrafficMonitor
 	xboxDns *xboxdns.Manager
@@ -83,6 +85,7 @@ func NewApp(
 	cfg *config.Config,
 	logMgr *logger.Logger,
 	zapretMgr *zapret.Manager,
+	zapret2Mgr *zapret2.Manager,
 	proxySrv *proxy.SOCKS5Server,
 	trafficMon *monitor.TrafficMonitor,
 	xboxDnsMgr *xboxdns.Manager,
@@ -93,6 +96,7 @@ func NewApp(
 		cfg:           cfg,
 		log:           logMgr,
 		zapret:        zapretMgr,
+		zapret2:       zapret2Mgr,
 		proxy:         proxySrv,
 		monitor:       trafficMon,
 		xboxDns:       xboxDnsMgr,

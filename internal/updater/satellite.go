@@ -11,6 +11,8 @@ import (
 	"runtime"
 	"strings"
 	"time"
+
+	"zpui/internal/security"
 )
 
 const (
@@ -240,6 +242,15 @@ func ReplaceModule(exeDir, name string) error {
 		if err := downloadFromYandex(yaURL, targetPath+".tmp"); err != nil {
 			return fmt.Errorf("yandex download failed: %w", err)
 		}
+		scanResult, scanErr := security.ScanFile(targetPath + ".tmp")
+		if scanErr != nil {
+			os.Remove(targetPath + ".tmp")
+			return fmt.Errorf("security scan failed: %w", scanErr)
+		}
+		if !scanResult.Clean {
+			os.Remove(targetPath + ".tmp")
+			return fmt.Errorf("SECURITY: module rejected — %s", security.FormatScanResult(scanResult))
+		}
 		// File already in place (targetPath.tmp), skip zip extraction.
 		bm := NewBackupManager(exeDir)
 		if _, err := os.Stat(targetPath); err == nil {
@@ -254,6 +265,14 @@ func ReplaceModule(exeDir, name string) error {
 		return nil
 	}
 	defer os.Remove(tmpZip)
+
+	scanResult, scanErr := security.ScanZip(tmpZip, []string{})
+	if scanErr != nil {
+		return fmt.Errorf("security scan failed: %w", scanErr)
+	}
+	if !scanResult.Clean {
+		return fmt.Errorf("SECURITY: module update rejected — %s", security.FormatScanResult(scanResult))
+	}
 
 	if err := extractFromZip(tmpZip, fileName, targetPath); err != nil {
 		return fmt.Errorf("extract failed: %w", err)

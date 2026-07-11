@@ -317,7 +317,21 @@
     "fullReinstallBtn": "Полная переустановка",
     "fullReinstallConfirm": "ВНИМАНИЕ: папка Zapret будет полностью удалена и скачана заново. Это может занять несколько минут. Продолжить?",
     "fullReinstallStarted": "Полная переустановка началась. Это займёт несколько минут.",
-    "fullReinstallComplete": "Полная переустановка завершена"
+    "fullReinstallComplete": "Полная переустановка завершена",
+    "engine": "Движок",
+    "engineSwitchConfirm": "Переключить движок на {engine}? Текущая служба будет остановлена.",
+    "engineSwitchBtn": "Переключить",
+    "engineSwitched": "Движок переключён на {engine}",
+    "engineV2NeedDownload": "Zapret2 не установлен. Скачайте его в настройках.",
+    "engineV2Downloading": "Скачивание Zapret2…",
+    "engineV2DownloadTitle": "Zapret2 не установлен",
+    "engineV2DownloadDesc": "Скачайте движок Zapret2 (Lua) для использования",
+    "engineV2DownloadBtn": "Скачать",
+    "engineV2Downloaded": "Zapret2 успешно скачан",
+    "engineV2DownloadError": "Ошибка скачивания Zapret2: {error}",
+    "engineV2DevLabel": "dev",
+    "engineV2DevWarning": "Zapret2 находится в разработке. Включение может привести к неработоспособности приложения.",
+    "engineSwitchConfirmV2": "Переключить на Zapret2 (dev)? Текущая служба будет остановлена.\n\n⚠ ВНИМАНИЕ: Zapret2 находится в стадии разработки. Включение может сломать работу приложения."
   },
   "startup": {
     "loadingSystem": "Загрузка системы…",

@@ -18,11 +18,21 @@ import (
 	"zpui/internal/zapret"
 )
 
+func (a *App) isV2() bool {
+	return a.cfg.GetEngineVersion() == "v2"
+}
+
 // ============================================================
 // ZAPRET CONTROL
 // ============================================================
 
 func (a *App) ZapretStart() map[string]interface{} {
+	if a.isV2() {
+		if err := a.zapret2.Start(); err != nil {
+			return errResp(err.Error())
+		}
+		return okResp()
+	}
 	if a.zapret.IsAutoTestRunning() {
 		return errResp("strategy test in progress")
 	}
@@ -33,6 +43,10 @@ func (a *App) ZapretStart() map[string]interface{} {
 }
 
 func (a *App) ZapretStop() map[string]interface{} {
+	if a.isV2() {
+		a.zapret2.Stop()
+		return okResp()
+	}
 	if a.zapret.IsAutoTestRunning() {
 		return errResp("strategy test in progress")
 	}
@@ -41,6 +55,12 @@ func (a *App) ZapretStop() map[string]interface{} {
 }
 
 func (a *App) ZapretRestart() map[string]interface{} {
+	if a.isV2() {
+		if err := a.zapret2.Restart(); err != nil {
+			return errResp(err.Error())
+		}
+		return map[string]interface{}{"status": "restarted"}
+	}
 	if a.zapret.IsAutoTestRunning() {
 		return errResp("strategy test in progress")
 	}
@@ -55,10 +75,22 @@ func (a *App) ZapretRestart() map[string]interface{} {
 // ============================================================
 
 func (a *App) GetStrategies() map[string]interface{} {
+	if a.isV2() {
+		return map[string]interface{}{"strategies": a.zapret2.ListStrategies()}
+	}
 	return map[string]interface{}{"strategies": a.zapret.ListStrategies()}
 }
 
 func (a *App) SetStrategy(filename string) map[string]interface{} {
+	if a.isV2() {
+		if filename == "" {
+			return errResp("filename required")
+		}
+		if err := a.zapret2.SetStrategy(filename); err != nil {
+			return errResp(err.Error())
+		}
+		return map[string]interface{}{"status": "ok", "strategy": filename}
+	}
 	if filename == "" {
 		return errResp("filename required")
 	}
@@ -76,6 +108,19 @@ func (a *App) SetStrategy(filename string) map[string]interface{} {
 // ============================================================
 
 func (a *App) InstallService(strategy string) map[string]interface{} {
+	if a.isV2() {
+		if strategy == "" {
+			strategy = a.zapret2.GetCurrentStrategy()
+		}
+		res, err := a.zapret2.InstallServiceLogged(strategy)
+		if err != nil {
+			return errResp(err.Error())
+		}
+		if len(res.Errors) > 0 {
+			return map[string]interface{}{"error": res.Errors[0]}
+		}
+		return map[string]interface{}{"status": "installed", "running": res.Running}
+	}
 	if strategy == "" {
 		strategy = a.zapret.GetCurrentStrategy()
 	}
@@ -86,11 +131,18 @@ func (a *App) InstallService(strategy string) map[string]interface{} {
 }
 
 func (a *App) RemoveService() map[string]interface{} {
+	if a.isV2() {
+		a.zapret2.RemoveService()
+		return map[string]interface{}{"status": "removed"}
+	}
 	a.zapret.RemoveService()
 	return map[string]interface{}{"status": "removed"}
 }
 
 func (a *App) GetServiceStatus() interface{} {
+	if a.isV2() {
+		return a.zapret2.GetServiceStatus()
+	}
 	return a.zapret.GetServiceStatus()
 }
 

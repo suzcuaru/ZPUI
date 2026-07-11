@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"zpui/internal/logger"
+	"zpui/internal/security"
 )
 
 var version = "1.0.0"
@@ -79,7 +80,25 @@ func main() {
 		os.Exit(1)
 	}
 
-	log("Extracting...")
+		log("Scanning update for malware...")
+		scanResult, scanErr := security.ScanZip(zipPath, []string{})
+		if scanErr != nil {
+			logErr("Security scan failed: " + scanErr.Error())
+			log("Restoring backup...")
+			copyFile(filepath.Join(backupDir, "zpui.exe.bak"), zpuiExe)
+			os.Remove(zipPath)
+			os.Exit(1)
+		}
+		if !scanResult.Clean {
+			logErr(security.FormatScanResult(scanResult))
+			log("Restoring backup...")
+			copyFile(filepath.Join(backupDir, "zpui.exe.bak"), zpuiExe)
+			os.Remove(zipPath)
+			os.Exit(1)
+		}
+		log(security.FormatScanResult(scanResult))
+
+		log("Extracting...")
 	if err := unzipTo(zipPath, exeDir); err != nil {
 		logErr("Extract failed: " + err.Error())
 		log("Restoring backup...")
