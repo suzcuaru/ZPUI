@@ -1,57 +1,330 @@
 # AGENTS.md
 
-Guidance for AI agents (and humans) working on ZPUI.
+Подробное руководство для AI-агентов (и разработчиков), работающих над ZPUI.
 
-## Project layout
+> **Сначала читай документацию.** В папке [`Документы/`](./Документы/) лежат исчерпывающие описания продукта. Перед любой нетривиальной правкой сверяйся с ними:
+>
+> - [`Документы/Концепция.md`](./Документы/Концепция.md) — продуктовое видение, целевая аудитория, ценностное предложение, сценарии, ограничения.
+> - [`Документы/Архитектура.md`](./Документы/Архитектура.md) — стек, компонентная модель, потоки данных, жизненный цикл, сборка.
+> - [`Документы/Бизнес-логика.md`](./Документы/Бизнес-логика.md) — доменные правила, состояния движка, выбор стратегии, AutoSwitch, обновления.
+> - [`Документы/Функции.md`](./Документы/Функции.md) — пользовательские возможности и карта UI.
+> - [`Документы/Дизайн-и-типографика.md`](./Документы/Дизайн-и-типографика.md) — визуальный язык, токены, компоненты, i18n.
+> - [`Документы/Задачи/`](./Документы/Задачи/) — задачи и планы (пополняется).
 
-- `main.go` — Wails entry point (package `main`); creates and binds `app.App`.
-- `internal/app/` — Wails app core (package `app`): the `App` struct and all `func (a *App)` methods (Wails bindings exposed to the frontend as `window.go.app.App`). Includes `app*.go`, `versions.go`, `window_windows.go`.
-- `internal/` — backend packages by domain: `app`, `wizard`, `autoselect`, `zapret`, `proxy`, `monitor`, `config`, `database`, `updater`, `xboxdns`, `blockcheck`, `sysinfo`, `tray`, `logger`, `executil`, `autostart`, `singleinstance`, `mods`.
-- `cmd/{autoselect,selfupdate,wizard,zapretupdate}` — module executables (thin CLI wrappers over `internal/wizard` and `internal/autoselect`; `selfupdate`/`zapretupdate` are standalone updaters).
-- `web/` — React + Vite frontend. `web/src/api.js` is a shim that routes `api('GET','/api/...')` calls to Wails bindings (`window.go.app.App.*`).
+---
 
-## Build & verify commands
+## 1. Что такое ZPUI (кратко)
+
+**ZPUI** — настольное приложение для Windows, которое одним нажатием включает обход блокировок Discord, YouTube и других ресурсов через движок [zapret](https://github.com/bol-van/zapret) (дистрибутив [Flowseal/zapret-discord-youtube](https://github.com/Flowseal/zapret-discord-youtube)). Дополнительно: SOCKS5-прокси и Xbox DNS для раздачи обхода на другие устройства в домашней сети.
+
+- **Платформа:** только Windows 10/11 (x86 и x64).
+- **Лицензия:** MIT, бесплатно, open-source, без телеметрии.
+- **Стек:** Go (Wails v2) + React 18 (Vite) + SQLite + NSIS-инсталлер.
+- **Подробно:** см. [`Документы/Концепция.md`](./Документы/Концепция.md).
+
+---
+
+## 2. Skills (ОБЯЗАТЕЛЬНО ЗАГРУЖАЙ)
+
+В проекте два opencode-скилла в `.opencode/skills/`. Загружай через `skill` tool, когда задача релевантна:
+
+1. **`zpui-design-system`** — при создании/изменении ЛЮБОГО UI (React, CSS, страницы, компоненты, тосты, wizard). Покрывает CSS-переменные, паттерны компонентов, темизацию, отступы, правила i18n, конвенции анимаций. **Всегда проверяй перед добавлением стилей или компонентов.**
+
+2. **`zpui-project-guide`** — при работе с backend (Go), скриптами сборки, GitHub CI/CD, релизами, bat-файлами, модулями-исполняемыми, версионированием, инфраструктурой. Покрывает структуру проекта, команды сборки, git-флоу, биндинги Wails, систему обновлений.
+
+---
+
+## 3. Технологический стек
 
 ### Backend (Go)
 
-```bash
-go vet ./...        # static checks — must pass
-go test ./...       # unit tests (config, monitor, zapret)
-go build ./...      # compile all packages
-```
-
-Run these from the repo root after any Go change.
+| Компонент | Технология | Назначение |
+|---|---|---|
+| Язык | **Go 1.21+** | основная логика |
+| Каркас | **Wails v2** | связка Go ↔ web-фронтенд, нативное WebView2-окно |
+| БД | **modernc.org/sqlite** (pure Go, без cgo) | история мониторинга, события |
+| Логи | `log/slog` + собственный `internal/logger` | структурные логи в файл |
+| Сеть | stdlib `net/http`, `net` | HTTP-клиент, SOCKS5, DNS |
+| Win32 | `golang.org/x/sys/windows`, `golang.org/x/sys/windows/registry` | трей, реестр, named mutex |
+| Движок обхода | внешний `winws.exe` (zapret) через дочерний процесс | модификация пакетов через WinDivert |
 
 ### Frontend (web/)
 
-Run from `web/`:
+| Компонент | Технология | Назначение |
+|---|---|---|
+| Каркас | **React 18** | UI |
+| Сборщик | **Vite 5** | дев-сервер + production-бандл |
+| Роутинг | **React Router v6** | навигация по вкладкам |
+| i18n | собственный `useT` + `locales/{ru,en}.json` | локализация |
+| Стили | чистый CSS + CSS Custom Properties | дизайн-система без Tailwind |
+| Тесты | **Vitest** | unit-тесты утилит и хуков |
 
-```bash
-npm install
-npm run build       # production build (vite) — must pass
-npm test            # run vitest once
-npm run test:watch  # vitest in watch mode
-npm run dev         # dev server on :3000
+### Инфраструктура
+
+| Компонент | Технология | Назначение |
+|---|---|---|
+| Инсталлер | **NSIS** (`installer/ZPUI.nsi`) | `.exe`-установщик |
+| CI | **GitHub Actions** | `.github/workflows/ci.yml` (windows-latest), `release.yml` (ubuntu-latest) |
+| Сборка | `build.bat` | оркестрация полной сборки |
+| Релиз | `release.bat` | помощник публикации релиза |
+| Git | `git-manager.bat` | рутинные операции |
+| Зеркало | Яндекс.Диск (WebDAV) | резервный канал + primary для selfupdate |
+
+Подробно — в [`Документы/Архитектура.md`](./Документы/Архитектура.md) §1.
+
+---
+
+## 4. Структура проекта
+
+```
+ZPUI/
+├── main.go                    # точка входа Wails, биндит app.App
+├── go.mod / go.sum            # зависимости Go
+├── version.txt                # версия ZPUI core (бампится build.bat)
+├── wails.json                 # конфигурация Wails
+├── build.bat / release.bat / git-manager.bat
+├── AGENTS.md                  # этот файл
+├── README.md / GIT_WORKFLOW.md
+├── Документы/                 # продуктовая и техническая документация
+│   ├── Концепция.md
+│   ├── Архитектура.md
+│   ├── Бизнес-логика.md
+│   ├── Функции.md
+│   ├── Дизайн-и-типографика.md
+│   └── Задачи/                # задачи и планы
+│
+├── internal/                  # бэкенд-пакеты
+│   ├── app/                   # ЯДРО: App struct + все Wails-биндинги
+│   │   ├── app.go             # конструктор, OnStartup/OnShutdown
+│   │   ├── app_api_types.go   # errResp()/okResp() и типы ответов
+│   │   ├── app_*.go           # группы методов по доменам
+│   │   ├── versions.go        # чтение версий модулей
+│   │   └── window_windows.go  # окно 960×640, отключён maximize
+│   ├── wizard/                # мастер первого запуска
+│   ├── autoselect/            # автоподбор стратегии
+│   ├── zapret/                # управление winws.exe (manager.go, service.go)
+│   ├── proxy/                 # SOCKS5-сервер
+│   ├── xboxdns/               # DNS-сервер для Xbox
+│   ├── monitor/               # фоновый мониторинг доступности
+│   ├── blockcheck/            # проверка факта блокировки ресурса
+│   ├── config/                # чтение/запись config.json
+│   ├── database/              # слой SQLite
+│   ├── updater/               # обновления ZPUI и zapret
+│   ├── sysinfo/               # сведения о системе
+│   ├── tray/                  # системный трей
+│   ├── logger/                # структурное логирование
+│   ├── executil/              # безопасный запуск внешних процессов
+│   ├── autostart/             # автозапуск (реестр Windows)
+│   ├── singleinstance/        # named-mutex одного экземпляра
+│   └── mods/                  # модули-расширения
+│
+├── cmd/                       # автономные исполняемые модули
+│   ├── wizard/                # CLI-мастер (var version)
+│   ├── autoselect/            # CLI-автоподбор (var version)
+│   ├── selfupdate/            # обновлятор ZPUI (Яндекс.Диск) (var version)
+│   └── zapretupdate/          # обновлятор zapret (GitHub) (var version)
+│
+├── web/                       # React + Vite фронтенд
+│   ├── package.json / vite.config.js / index.html
+│   └── src/
+│       ├── main.jsx / App.jsx
+│       ├── api.js             # ШИМ: api('GET','/api/...') → window.go.app.App.*
+│       ├── hooks/             # usePolling, useDebouncedSave, useServiceToggle
+│       ├── components/ui/     # Row, Switch, Modal, Button, Card, ...
+│       ├── locales/{ru,en}.json
+│       ├── i18n.js            # useT() / tr()
+│       └── styles/            # CSS с переменными
+│
+├── installer/ZPUI.nsi         # NSIS-скрипт
+├── build/dist/                # артефакты сборки (gitignored)
+└── .github/workflows/         # ci.yml, release.yml
 ```
 
-### Full release build
+Назначение каждого пакета — в [`Документы/Архитектура.md`](./Документы/Архитектура.md) §3–4.
+
+---
+
+## 5. Команды сборки и проверки
+
+### Backend (Go) — из корня репозитория
 
 ```bash
-build.bat           # bumps ZPUI version, builds frontend + Wails core + 4 modules → build/dist/
+go vet ./...        # статические проверки — ДОЛЖНО проходить
+go test ./...       # unit-тесты (config, monitor, zapret)
+go build ./...      # компиляция всех пакетов
 ```
 
-Requires `go`, `node`, and the `wails` CLI on PATH.
+Запускать после **любого** изменения Go-кода.
 
-## Conventions
+### Frontend (web/) — из папки `web/`
 
-- Frontend → backend calls go through `web/src/api.js` (route map). Add new endpoints there and as a `func (a *App)` method in `internal/app/`.
-- Shared frontend logic lives in `web/src/hooks/` (`usePolling`, `useDebouncedSave`, `useServiceToggle`) and `web/src/components/ui/` (`Row`, `Switch`, `Modal`).
-- All user-facing strings go through i18n (`web/src/locales/{ru,en}.json` + `useT`). Non-React modules use the `tr()` accessor from `i18n`.
-- Backend responses use `map[string]interface{}` with `{"error": "..."}` / `{"status": "ok"}`; helpers `errResp()` / `okResp()` live in `internal/app/app_api_types.go`.
-- No comments unless explaining non-obvious logic.
+```bash
+npm install         # установка зависимостей (после изменения package.json)
+npm run build       # production-сборка (vite) — ДОЛЖНО проходить
+npm test            # vitest однократно
+npm run test:watch  # vitest в watch-режиме
+npm run dev         # дев-сервер на :3000
+```
 
-## Module versions
+### Полная релизная сборка
 
-Each module (`cmd/{wizard,autoselect,selfupdate,zapretupdate}`) has its own independent version defined as `var version = "1.0.0"` in its `main.go`. These are **not** bumped by `build.bat` or `release.yml` — the build reads them from source.
+```bash
+build.bat           # bump версии ZPUI → build frontend → Wails core → 4 модуля → build/dist/
+```
 
-**When updating a module**, bump its `var version` in the corresponding `cmd/*/main.go` file. The next build will automatically pick up the new version in `versions.json`.
+Требует `go`, `node` и `wails` CLI на PATH.
+
+### Релиз и git-операции
+
+```bash
+release.bat         # интерактивный помощник релиза (tag, push, заметки)
+git-manager.bat     # рутинные git-операции
+```
+
+Правила git-флоу — в [`GIT_WORKFLOW.md`](./GIT_WORKFLOW.md).
+
+---
+
+## 6. Конвенции кода
+
+### Общие
+
+- **Без комментариев**, кроме случаев, когда логика действительно неочевидна (и тогда — короткий поясняющий).
+- Имена пакетов и файлов — короткие, строчные, английские.
+- Файлы группы — с префиксом: `app_zapret.go`, `app_proxy.go` и т. п.
+
+### Backend (Go)
+
+- Frontend → backend вызовы идут **только** через `web/src/api.js` (карта маршрутов). Новый эндпоинт = (1) добавить в карту в `api.js` + (2) реализовать как `func (a *App)` метод в `internal/app/`.
+- Ответы API — единый формат через хелперы из `internal/app/app_api_types.go`:
+  - `okResp(data)` → `{"status":"ok", ...data}`
+  - `errResp(msg)` → `{"error":"..."}`
+  - фронтенд проверяет наличие поля `error`.
+- Долгие операции пушат прогресс через `runtime.EventsEmit("событие", {...})` — фронтенд слушает через `runtime.EventsOn`.
+- Логи — через `slog` (не `fmt.Println`, не `log`).
+- Ошибки возвращаются явно (`if err != nil`), не паникуем.
+
+### Frontend (React)
+
+- Переиспользуемая логика — в `web/src/hooks/` (`usePolling`, `useDebouncedSave`, `useServiceToggle`).
+- Базовые кирпичики UI — в `web/src/components/ui/` (`Row`, `Switch`, `Modal`, `Button`, `Card`, ...). **Не дублируй** стили; используй токены из дизайн-системы.
+- **Все** пользовательские строки — через i18n (`useT`/`t('...')`). Никаких захардкоженных русских строк в JSX. Вне React — `tr()`.
+- Стили — через CSS Custom Properties из дизайн-системы. **Никаких хардкод-цветов и магических чисел.**
+- API-вызовы — только через `api(method, route, body)` из `web/src/api.js`. Не вызывай `window.go.app.App.*` напрямую из компонентов.
+- Состояние настроек — `config.json` единственный источник истины. Сохранение через `useDebouncedSave`.
+
+### Версионирование
+
+- **ZPUI core** — SemVer в `version.txt`, бампится `build.bat`.
+- **4 модуля** (`cmd/{wizard,autoselect,selfupdate,zapretupdate}`) — каждый имеет `var version = "1.0.0"` в `main.go`. **НЕ** бампятся автоматически — ручное изменение при правках модуля.
+- `versions.json` — собираемый артефакт (читается build'ом из исходников), не редактируется вручную.
+
+---
+
+## 7. Что МОЖНО делать
+
+- Добавлять новые `func (a *App)` методы-биндинги (с обязательной регистрацией в `web/src/api.js`).
+- Добавлять UI-компоненты в `web/src/components/ui/` (по дизайн-системе — загружай скилл `zpui-design-system`).
+- Расширять пакеты `internal/*` новыми возможностями.
+- Добавлять стратегии zapret, ресурсы мониторинга, пресеты.
+- Пополнять локали `web/src/locales/{ru,en}.json`.
+- Добавлять Vitest/Golang unit-тесты для нетривиальной логики.
+- Документировать решения в [`Документы/`](./Документы/).
+
+---
+
+## 8. Что НЕЛЬЗЯ делать
+
+- **Коммитить без проверки:** `go vet ./...` и `npm run build` обязаны проходить.
+- **Захардкоживать** цвета, размеры, строки вне i18n.
+- **Менять размер окна** 960×640 или включать maximize (`window_windows.go`) — это сознательное продуктовое решение.
+- **Добавлять телеметрию, аналитику, рекламу** — нарушает продуктовые принципы (см. [`Документы/Концепция.md`](./Документы/Концепция.md) §8).
+- **Менять лицензию** (MIT) без согласования.
+- **Бампить версию модуля** без реальных изменений в нём.
+- **Поддерживать macOS/Linux** — не в дорожной карте (WinDivert Windows-only).
+- **Писать комментарии** где логика очевидна.
+- **Коммитить секреты, ключи, токены** — никогда.
+- **Менять формат API-ответов** (оставаться на `okResp`/`errResp`).
+- **Использовать HTTP-сервер** для связи frontend↔backend — только Wails bindings через `api.js`.
+- **Менять `versions.json` вручную** — он собираемый.
+- **Форсить/ amend / интерактивный rebase / пустые коммиты** без явного запроса пользователя.
+
+---
+
+## 9. Архитектурные принципы (кратко)
+
+1. **Единый процесс:** ZPUI.exe содержит и backend (Go), и фронтенд (WebView2), и сетевые серверы (SOCKS5, DNS), и порождает дочерний `winws.exe`.
+2. **Backend — источник истины:** состояние хранится в `config.json` и SQLite. UI — отражение.
+3. **Связь frontend↔backend:** только через Wails bindings (`window.go.app.App.*`), обёрнутые в `web/src/api.js`. Никаких HTTP/REST между ними.
+4. **Движок — внешний процесс:** zapret (`winws.exe`) управляется как дочерний процесс, а не линкуется в Go.
+5. **Асинхронщина:** долгие операции пушат прогресс через `EventsEmit`/`EventsOn`, не блокируют UI.
+6. **Безопасность:** UAC-elevation для WinDivert и DNS:53; проверка SHA-256 скачиваемых архивов; нет телеметрии.
+7. **Один экземпляр:** named-mutex гарантирует единственный запущенный ZPUI.
+8. **Корректное завершение:** `OnShutdown` останавливает winws, закрывает серверы, flush'ит логи.
+
+Подробно — в [`Документы/Архитектура.md`](./Документы/Архитектура.md).
+
+---
+
+## 10. Доменные правила (кратко)
+
+- **Движок zapret** имеет состояния: `stopped / starting / running / error / restarting`. Лимит рестартов: 5 за 60 сек, далее — `error`.
+- **Автоподбор** перебирает стратегии, выбирает с максимальной доступностью; приемлемый минимум — 70%.
+- **AutoSwitch** срабатывает при доступности ниже порога (дефолт 60%) ≥ 2 подряд сэмплов, с cooldown 10 мин.
+- **Доступность** = TCP + TLS + HTTP по пулу ресурсов, скользящее окно 3 сэмпла для UI.
+- **Мастер первого запуска** обязателен до автозапуска движка (`config.wizard.completed`).
+- **Обновления zapret** — с резервной копией и откатом; **ZPUI** — через отдельный `selfupdate` (холодная замена).
+
+Полные правила — в [`Документы/Бизнес-логика.md`](./Документы/Бизнес-логика.md).
+
+---
+
+## 11. CI/CD
+
+### `ci.yml` (windows-latest)
+
+На push/PR:
+
+- `go vet ./...`
+- `go test ./...`
+- `cd web && npm install && npm run build`
+- (опционально) `go build ./...`
+
+### `release.yml` (ubuntu-latest)
+
+**Важно:** этот job **НЕ собирает** бинарники (Windows-нативная сборка через Wails + NSIS на Ubuntu невозможна). Он:
+
+1. Реагирует на tag `v*.*.*`.
+2. Берёт артефакты из `build/dist/` (залитые через `build.bat` локально или отдельным Windows-runner).
+3. Формирует GitHub Release.
+4. (Опционально) зеркалирует на Яндекс.Диск.
+
+---
+
+## 12. Версии модулей
+
+Каждый модуль (`cmd/{wizard,autoselect,selfupdate,zapretupdate}`) имеет независимую версию `var version = "1.0.0"` в своём `main.go`. **Не** бампятся `build.bat` или `release.yml` — build читает их из исходников в `versions.json`.
+
+**При обновлении модуля** — bump его `var version` в соответствующем `cmd/*/main.go`. Следующая сборка подхватит новую версию.
+
+---
+
+## 13. Перед началом работы: чек-лист
+
+1. Прочитал ли релевантный документ из [`Документы/`](./Документы/)?
+2. Загрузил ли нужный скилл (`zpui-design-system` для UI / `zpui-project-guide` для инфраструктуры)?
+3. Понимаю ли конвенции (§6)?
+4. Знаю ли, что НЕЛЬЗЯ делать (§8)?
+5. После правок: `go vet ./...`, `go test ./...`, `cd web && npm run build` — прошли?
+6. Не коммичу без явного запроса пользователя.
+
+---
+
+## 14. Ссылки
+
+- **Документация:** [`Документы/`](./Документы/)
+- **Git-флоу:** [`GIT_WORKFLOW.md`](./GIT_WORKFLOW.md)
+- **Пользовательский README:** [`README.md`](./README.md)
+- **Скиллы:** [`.opencode/skills/`](./.opencode/skills/)
+- **Движок zapret:** https://github.com/bol-van/zapret
+- **Дистрибутив:** https://github.com/Flowseal/zapret-discord-youtube
