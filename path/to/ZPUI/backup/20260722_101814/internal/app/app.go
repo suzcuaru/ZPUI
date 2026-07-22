@@ -305,9 +305,7 @@ func (a *App) doResourceCheckAndSave() {
 		return
 	}
 
-	all := make([]blockcheck.BulkResult, 0, len(report.Default)+len(report.User))
-	all = append(all, report.Default...)
-	all = append(all, report.User...)
+	all := append(report.Default, report.User...)
 	if len(all) == 0 {
 		return
 	}
@@ -582,13 +580,6 @@ func (a *App) GetCachedResourcePercent() int {
 	total := 0
 	oks := 0
 	for _, r := range report.Default {
-		total++
-		if r.OK {
-			oks++
-		}
-	}
-	// FIX: Include User resources in tray percentage
-	for _, r := range report.User {
 		total++
 		if r.OK {
 			oks++

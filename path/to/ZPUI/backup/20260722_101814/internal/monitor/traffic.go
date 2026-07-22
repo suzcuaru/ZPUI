@@ -83,8 +83,6 @@ func (m *TrafficMonitor) monitorLoop() {
 	}
 }
 
-// FIX: TODO replace PowerShell with gopsutil (github.com/shirou/gopsutil/v4/net)
-// Reduces latency from ~400ms to <5ms
 func (m *TrafficMonitor) readNetworkStats() *TrafficStats {
 	stats := &TrafficStats{
 		Timestamp: time.Now(),

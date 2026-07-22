@@ -77,18 +77,14 @@ export default function SettingsPage({ status, showToast, onOpenLogs }) {
     showToast(t('settings.componentUpdateStarted', { name }));
     if (name === 'Zapret') {
       resetZapretCheck();
-      const abortCtrl = new AbortController();
-      const pollSafe = async () => {
+      const poll = async () => {
         for (let i = 0; i < 15; i++) {
-          if (abortCtrl.signal.aborted) return;
           await new Promise(r => setTimeout(r, 3000));
-          if (abortCtrl.signal.aborted) return;
           await checkZapretUpdate();
           loadVersions();
         }
       };
-      pollSafe();
-      return () => { abortCtrl.abort(); };
+      poll();
     } else {
       setTimeout(loadVersions, 3000);
     }

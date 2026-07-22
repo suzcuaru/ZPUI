@@ -91,7 +91,6 @@ export default function DashboardPage({ status, showToast, onNavigate, onOpenChe
       // и сам разблокирует кнопку когда checking_now станет false
     } catch {
       showToast?.('Не удалось запустить проверку', 'error');
-      setCheckingNow(false);  // FIX
     }
   };
 

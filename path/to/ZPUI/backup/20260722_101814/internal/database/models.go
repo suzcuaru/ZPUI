@@ -56,25 +56,3 @@ type TrafficSnapshot struct {
 	TotalUL   int64     `json:"total_ul"`
 	ConnCount int       `json:"conn_count"`
 }
-
-// ErrorLog — structured error record in DB
-type ErrorLog struct {
-        ID          string    `json:"id"`
-        Timestamp   time.Time `json:"timestamp"`
-        Level       string    `json:"level"`
-        Category    string    `json:"category"`
-        Message     string    `json:"message"`
-        ContextJSON string    `json:"context_json,omitempty"`
-}
-
-// DiagnosticReport — saved diagnostic report
-type DiagnosticReport struct {
-        ID          string     `json:"id"`
-        GeneratedAt time.Time  `json:"generated_at"`
-        PeriodStart *time.Time `json:"period_start,omitempty"`
-        PeriodEnd   *time.Time `json:"period_end,omitempty"`
-        Frequency   string     `json:"frequency"`
-        Content     string     `json:"content"`
-        Uploaded    bool       `json:"uploaded"`
-        UploadedAt  *time.Time `json:"uploaded_at,omitempty"`
-}

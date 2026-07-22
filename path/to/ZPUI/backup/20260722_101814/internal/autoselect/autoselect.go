@@ -61,7 +61,5 @@ func RunWithManager(ctx context.Context, m *zapret.Manager, onResult func(zapret
 
 // Run — автономный запуск (для CLI-обёртки): создаёт менеджер из cfg/log.
 func Run(ctx context.Context, cfg *config.Config, log *logger.Logger, onResult func(zapret.AutoTestResult)) Result {
-	mgr := zapret.NewManager(cfg, log)
-	defer mgr.Stop()
-	return RunWithManager(ctx, mgr, onResult)
+	return RunWithManager(ctx, zapret.NewManager(cfg, log), onResult)
 }

@@ -119,20 +119,8 @@ func (m *Manager) Enable() error {
 		}
 	}
 
-	// FIX: Rollback on ANY adapter failure
-	if len(errs) > 0 {
-		m.log.Warn("xboxdns", fmt.Sprintf("Rolling back DNS on %d failed adapters", len(errs)))
-		for _, entry := range m.originalDNS {
-			parts := strings.SplitN(entry, "|", 2)
-			if len(parts) != 2 { continue }
-			adapter, origDNS := parts[0], parts[1]
-			if origDNS == "" || origDNS == "dhcp" {
-				_ = executil.HiddenCmd("netsh", "interface", "ip", "set", "dns", adapter, "source=dhcp").Run()
-			} else {
-				_ = executil.HiddenCmd("netsh", "interface", "ip", "set", "dns", adapter, "static", origDNS).Run()
-			}
-		}
-		return fmt.Errorf("failed to set DNS on adapters: %s", strings.Join(errs, ", "))
+	if len(errs) == len(adapters) {
+		return fmt.Errorf("failed to set DNS on all adapters: %s", strings.Join(errs, "; "))
 	}
 
 	m.enabled = true
@@ -211,7 +199,7 @@ func getActiveAdapters() []string {
 		if len(fields) >= 4 {
 			state := fields[1]
 			name := strings.Join(fields[3:], " ")
-			if state == "Connected" || state == "Подключено" || strings.EqualFold(state, "connected") {
+			if state == "Connected" || state == "Подключено" {
 				adapters = append(adapters, name)
 			}
 		}
@@ -228,7 +216,7 @@ func getDefaultAdapter() []string {
 		"(Get-NetAdapter | Where-Object Status -eq 'Up' | Select-Object -First 1).Name")
 	output, err := cmd.Output()
 	if err != nil {
-		return nil
+		return []string{"Ethernet"}
 	}
 	name := strings.TrimSpace(string(output))
 	if name == "" {
@@ -260,12 +248,7 @@ func getCurrentDNS(adapter string) string {
 	return "dhcp"
 }
 
-// FIX: isIP now supports IPv6 via net.ParseIP
 func isIP(s string) bool {
-	return net.ParseIP(s) != nil
-}
-
-func _isIPOld(s string) bool {
 	parts := strings.Split(s, ".")
 	if len(parts) != 4 {
 		return false

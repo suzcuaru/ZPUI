@@ -40,17 +40,6 @@ type BlockCheckConfig struct {
 	TimeoutSec  int  `json:"timeout_sec"`
 }
 
-type DiagnosticReportsConfig struct {
-        Enabled          bool   `json:"enabled"`
-        Frequency        string `json:"frequency"`
-        PeriodDays       int    `json:"period_days"`
-        YandexDiskUpload struct {
-                Enabled   bool   `json:"enabled"`
-                PublicKey string `json:"public_key"`
-        } `json:"yandex_disk_upload"`
-        AutoSaveMD bool `json:"auto_save_md"`
-}
-
 type Config struct {
 	mu              sync.RWMutex
 	ZapretPath      string        `json:"zapret_path"`
@@ -102,9 +91,7 @@ type Config struct {
 	ShowStrategyModal  bool `json:"show_strategy_modal"`
 	NotifyStrategyTest bool `json:"notify_strategy_test"`
 
-	DisabledMods        []string               `json:"disabled_mods"`
-
-	DiagnosticReports   DiagnosticReportsConfig `json:"diagnostic_reports"`
+	DisabledMods []string `json:"disabled_mods"`
 
 	configPath string
 }
@@ -157,12 +144,6 @@ func defaultConfig(zapretDir string) *Config {
 		NotifyResourceDrop:  false,
 		ResourceDropPct:     70,
 		ResourceCheckInterval: 10,
-		DiagnosticReports: DiagnosticReportsConfig{
-			Enabled:    false,
-			Frequency:  "weekly",
-			PeriodDays: 7,
-			AutoSaveMD: true,
-		},
 	}
 }
 

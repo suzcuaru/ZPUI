@@ -37,7 +37,6 @@ type Logger struct {
 	// OnError callback - called when an ERROR-level message is logged.
 	// Used by App to show desktop notifications (if NotifyErrors is enabled).
 	onError         func(category, msg string)
-	onLogDB         func(level, category, msg string)
 }
 
 type ringEntry struct {
@@ -102,12 +101,6 @@ func (l *Logger) SetOnError(fn func(category, msg string)) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	l.onError = fn
-}
-
-func (l *Logger) SetOnLogDB(fn func(level, category, msg string)) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	l.onLogDB = fn
 }
 
 func (l *Logger) Error(category, msg string) {

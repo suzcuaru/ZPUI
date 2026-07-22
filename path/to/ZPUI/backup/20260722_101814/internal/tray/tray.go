@@ -88,18 +88,10 @@ func (a *App) handleClicks() {
 		case <-a.mRestart.ClickedCh:
 			a.log.Info("tray", "Restart requested")
 			go func() {
-				// FIX: read flags before stopping
-				restoreProxy := a.cfg.LastProxyState
-				restoreZapret := a.cfg.LastZapretState
-
 				a.proxy.Stop()
 				a.zapret.Stop()
-				// FIX: wait for actual stop
-				for i := 0; i < 15; i++ {
-					if a.zapret.GetStatus() != "running" && !a.proxy.IsRunning() { break }
-					time.Sleep(500 * time.Millisecond)
-				}
-				if restoreProxy {
+				time.Sleep(2 * time.Second)
+				if a.cfg.LastProxyState {
 					a.proxy.Start()
 				}
 				if a.cfg.LastZapretState {

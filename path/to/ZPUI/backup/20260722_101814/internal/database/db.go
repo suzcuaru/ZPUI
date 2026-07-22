@@ -82,31 +82,7 @@ func migrate() error {
 			total_dl BIGINT DEFAULT 0,
 			total_ul BIGINT DEFAULT 0,
 			is_online BOOLEAN DEFAULT FALSE
-);
-
-                CREATE TABLE IF NOT EXISTS error_logs (
-                        id TEXT PRIMARY KEY,
-                        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-                        level TEXT NOT NULL,
-                        category TEXT NOT NULL,
-                        message TEXT NOT NULL,
-                        context_json TEXT
-                );
-                CREATE INDEX IF NOT EXISTS idx_errlog_ts ON error_logs(timestamp);
-                CREATE INDEX IF NOT EXISTS idx_errlog_level ON error_logs(level);
-                CREATE INDEX IF NOT EXISTS idx_errlog_cat ON error_logs(category);
-
-                CREATE TABLE IF NOT EXISTS diagnostic_reports (
-                        id TEXT PRIMARY KEY,
-                        generated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                        period_start DATETIME,
-                        period_end DATETIME,
-                        frequency TEXT,
-                        content TEXT NOT NULL,
-                        uploaded BOOLEAN DEFAULT FALSE,
-                        uploaded_at DATETIME
-                );
-                CREATE INDEX IF NOT EXISTS idx_diagrep_ts ON diagnostic_reports(generated_at);
+		);
 
 		CREATE TABLE IF NOT EXISTS device_connections (
 			id TEXT PRIMARY KEY,

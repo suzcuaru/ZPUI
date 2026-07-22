@@ -99,8 +99,6 @@ const GET_ROUTES = {
   '/api/logs/archive': (app) => app.GetArchiveLogs(),
   '/api/logs/archive/read': (app, p) => app.ReadArchiveLog(p.name || ''),
   '/api/logs/debug': (app) => app.GetLogDebug(),
-  '/api/reports/history': (app, p) => app.GetReportHistory(parseInt(p.limit) || 20),
-  '/api/reports/content': (app, p) => app.GetReportContent(p.id || ''),
   '/api/setup/detect-thirdparty': (app) => app.DetectThirdPartyZapret(),
   '/api/setup/strategies': (app, p) => app.SetupListStrategies(p.strategy || ''),
   '/api/setup/test-strategy': (app, p) => app.SetupTestStrategy(p.strategy || ''),
@@ -173,7 +171,7 @@ const POST_ROUTES = {
 };
 
 const DELETE_ROUTES = {
-  // FIX: handled by handleDeviceRoute
+  '/api/devices': (app) => app.DeleteDevice(''),
 };
 
 // ─── Device sub-routes (path parameters) ──────────────
@@ -240,8 +238,7 @@ export async function api(method, path, body) {
     return result;
   } catch (err) {
     console.error('[api] Error calling', method, path, err);
-    // FIX: error propagation instead of silent null
-    return { error: String(err?.message || err || 'Unknown error') };
+    return null;
   }
 }
 
