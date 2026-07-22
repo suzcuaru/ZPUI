@@ -2,6 +2,7 @@ package app
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -240,4 +241,200 @@ func (a *App) UpdateComponent(name string) map[string]interface{} {
 	default:
 		return map[string]interface{}{"error": "unknown component: " + name}
 	}
+}
+
+// DownloadUpdate скачивает обновление для указанного компонента с прогрессом.
+// Прогресс эмитится через Wails Events "update:download-progress".
+func (a *App) DownloadUpdate(name string) map[string]interface{} {
+	exeDir := a.getExeDir()
+	tmpDir := filepath.Join(exeDir, ".update-tmp")
+	os.MkdirAll(tmpDir, 0755)
+
+	switch name {
+	case "ZPUI":
+		remote, err := updater.FetchRemoteVersions()
+		if err != nil {
+			return map[string]interface{}{"error": "Failed to fetch versions: " + err.Error()}
+		}
+		if remote.ZPUI == "" || !updater.IsNewer(a.version, remote.ZPUI) {
+			return map[string]interface{}{"error": "No update available"}
+		}
+
+		// Build download URLs: GitHub first, Yandex fallback
+		arch := "win64"
+		ghURL := fmt.Sprintf("https://github.com/suzcuaru/ZPUI/releases/latest/download/zpui-%s.zip", arch)
+		yaURL, _ := updater.YandexDownloadURL(updater.YandexPublicURL, "", "zpui.exe")
+		urls := updater.ChooseBestSource(ghURL, yaURL, remote.ZPUI, remote.ZPUI)
+
+		dest := filepath.Join(tmpDir, "zpui-update.zip")
+		go func() {
+			err := updater.DownloadFromBestSource(urls, dest, func(downloaded, total int64) {
+				pct := 0
+				if total > 0 {
+					pct = int(downloaded * 100 / total)
+				}
+				a.emitUpdateProgress("downloading", pct)
+			})
+			if err != nil {
+				a.emitUpdateProgress("error", 0)
+				a.log.Error("updater", "Download failed: "+err.Error())
+				return
+			}
+			a.emitUpdateProgress("downloaded", 100)
+			a.log.Info("updater", "ZPUI update downloaded to "+dest)
+		}()
+		return map[string]interface{}{"status": "download_started", "dest": dest}
+
+	case "Zapret":
+		dest := filepath.Join(tmpDir, "zapret-update.zip")
+		go func() {
+			info, err := a.zapret.CheckForUpdates()
+			if err != nil || !info.UpdateNeeded {
+				a.emitUpdateProgress("error", 0)
+				return
+			}
+			urls := []string{info.DownloadURL}
+			urls = append(urls, info.FallbackURLs...)
+			if yaURL, _, yErr := updater.YandexFindZapretZip(updater.YandexPublicURL); yErr == nil && yaURL != "" {
+				urls = append(urls, yaURL)
+			}
+			err = updater.DownloadFromBestSource(urls, dest, func(downloaded, total int64) {
+				pct := 0
+				if total > 0 {
+					pct = int(downloaded * 100 / total)
+				}
+				a.emitUpdateProgress("downloading", pct)
+			})
+			if err != nil {
+				a.emitUpdateProgress("error", 0)
+				a.log.Error("updater", "Zapret download failed: "+err.Error())
+				return
+			}
+			a.emitUpdateProgress("downloaded", 100)
+			a.log.Info("updater", "Zapret update downloaded to "+dest)
+		}()
+		return map[string]interface{}{"status": "download_started", "dest": dest}
+
+	default:
+		return map[string]interface{}{"error": "unknown component: " + name}
+	}
+}
+
+// VerifyUpdate проверяет скачанный файл обновления.
+func (a *App) VerifyUpdate(name string) map[string]interface{} {
+	exeDir := a.getExeDir()
+	tmpDir := filepath.Join(exeDir, ".update-tmp")
+
+	var path string
+	switch name {
+	case "ZPUI":
+		path = filepath.Join(tmpDir, "zpui-update.zip")
+	case "Zapret":
+		path = filepath.Join(tmpDir, "zapret-update.zip")
+	default:
+		return map[string]interface{}{"error": "unknown component: " + name}
+	}
+
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		return map[string]interface{}{"error": "Downloaded file not found"}
+	}
+
+	// Verify file size
+	if err := updater.VerifyFileSize(path, 1024, 200<<20); err != nil {
+		a.log.Error("updater", "Verification failed: "+err.Error())
+		return map[string]interface{}{"error": err.Error()}
+	}
+
+	a.log.Info("updater", "Update verified: "+path)
+	return map[string]interface{}{"status": "verified", "path": path}
+}
+
+// InstallUpdate устанавливает ранее скачанное обновление.
+func (a *App) InstallUpdate(name string) map[string]interface{} {
+	exeDir := a.getExeDir()
+	tmpDir := filepath.Join(exeDir, ".update-tmp")
+
+	switch name {
+	case "ZPUI":
+		zipPath := filepath.Join(tmpDir, "zpui-update.zip")
+		if _, err := os.Stat(zipPath); os.IsNotExist(err) {
+			return map[string]interface{}{"error": "Downloaded file not found. Download first."}
+		}
+		go func() {
+			a.emitUpdateProgress("installing", 0)
+			selfUpdate := filepath.Join(exeDir, "selfupdate.exe")
+			if _, err := os.Stat(selfUpdate); err == nil {
+				// Use selfupdate.exe for cold replacement
+				cmd := executil.DetachedCmd(selfUpdate)
+				if err := cmd.Start(); err != nil {
+					a.emitUpdateProgress("error", 0)
+					a.log.Error("updater", "Self-update start failed: "+err.Error())
+					return
+				}
+				a.emitUpdateProgress("installed", 100)
+			} else {
+				a.emitUpdateProgress("error", 0)
+				a.log.Error("updater", "selfupdate.exe not found")
+			}
+		}()
+		return map[string]interface{}{"status": "install_started"}
+
+	case "Zapret":
+		zipPath := filepath.Join(tmpDir, "zapret-update.zip")
+		if _, err := os.Stat(zipPath); os.IsNotExist(err) {
+			return map[string]interface{}{"error": "Downloaded file not found. Download first."}
+		}
+		go func() {
+			a.emitUpdateProgress("installing", 0)
+			progress := make(chan struct{})
+			go func() {
+				if err := a.zapret.PerformUpdate(nil); err != nil {
+					a.log.Error("updater", "Zapret install failed: "+err.Error())
+					a.emitUpdateProgress("error", 0)
+				} else {
+					a.zapret.RefreshVersion()
+					a.emitUpdateProgress("installed", 100)
+				}
+				close(progress)
+			}()
+			<-progress
+		}()
+		return map[string]interface{}{"status": "install_started"}
+
+	default:
+		return map[string]interface{}{"error": "unknown component: " + name}
+	}
+}
+
+// GetReleaseInfo получает информацию о последнем релизе с GitHub.
+func (a *App) GetReleaseInfo(component string) map[string]interface{} {
+	switch component {
+	case "ZPUI":
+		rel, err := updater.FetchReleaseInfo()
+		if err != nil {
+			return map[string]interface{}{"error": err.Error()}
+		}
+		return map[string]interface{}{
+			"tag_name": rel.TagName,
+			"assets":   rel.Assets,
+		}
+	case "Zapret":
+		info, err := a.zapret.CheckForUpdates()
+		if err != nil {
+			return map[string]interface{}{"error": err.Error()}
+		}
+		return map[string]interface{}{
+			"current_version": info.CurrentVersion,
+			"latest_version":  info.LatestVersion,
+			"release_page":    info.ReleasePage,
+			"download_url":    info.DownloadURL,
+		}
+	default:
+		return map[string]interface{}{"error": "unknown component: " + component}
+	}
+}
+
+// emitUpdateProgress отправляет прогресс обновления на фронтенд.
+func (a *App) emitUpdateProgress(step string, percent int) {
+	a.log.Info("updater", fmt.Sprintf("Update progress: %s %d%%", step, percent))
 }

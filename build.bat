@@ -4,18 +4,14 @@ setlocal enabledelayedexpansion
 set "BAT_DIR=%~dp0"
 cd /d "%BAT_DIR%"
 
-REM --- Auto-increment version ---
+REM --- Read version from file (no auto-increment) ---
 if exist "%BAT_DIR%version.txt" (
-    set /p OLD_VER=<"%BAT_DIR%version.txt"
+    set /p VERSION=<"%BAT_DIR%version.txt"
 ) else (
-    set "OLD_VER=1.0.0"
+    set "VERSION=1.0.0"
+    echo %VERSION%>"%BAT_DIR%version.txt"
 )
-for /f "tokens=1-3 delims=." %%a in ("%OLD_VER%") do (
-    set /a "PATCH=%%c+1"
-    set "VERSION=%%a.%%b.!PATCH!"
-)
-echo %VERSION%>"%BAT_DIR%version.txt"
-echo [INFO] Version updated: %OLD_VER% ^> %VERSION%
+echo [INFO] Version: %VERSION%
 
 REM --- Sync wails.json productVersion ---
 powershell -NoProfile -Command "& {$p='%BAT_DIR%wails.json'; $c=Get-Content $p -Raw | ConvertFrom-Json; $c.info.productVersion='%VERSION%'; $enc=New-Object System.Text.UTF8Encoding $false; [System.IO.File]::WriteAllText($p, ($c | ConvertTo-Json -Depth 10), $enc)}" > nul 2>&1

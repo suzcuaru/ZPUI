@@ -58,9 +58,9 @@ func newGitHubRequest(url string) (*http.Request, error) {
 	return req, nil
 }
 
-// fetchReleaseInfo получает информацию о последнем релизе с кешированием
+// FetchReleaseInfo получает информацию о последнем релизе с кешированием
 // (in-memory TTL 5 минут + ETag/If-None-Match для экономии rate-limit GitHub).
-func fetchReleaseInfo() (*releaseInfo, error) {
+func FetchReleaseInfo() (*releaseInfo, error) {
 	cacheMu.RLock()
 	if cachedRel != nil && time.Since(cachedAt) < releaseCacheTTL {
 		r := *cachedRel
@@ -232,8 +232,8 @@ func ReplaceModule(exeDir, name string) error {
 
 	tmpZip := filepath.Join(exeDir, "zpui-modules-tmp.zip")
 	if err := downloadFile(zipURL, tmpZip); err != nil {
-		// Fallback: download individual .exe from Yandex Disk
-		yaURL, yErr := yandexDownloadURL(YandexPublicURL, "", fileName)
+	// Fallback: download individual .exe from Yandex Disk
+		yaURL, yErr := YandexDownloadURL(YandexPublicURL, "", fileName)
 		if yErr != nil || yaURL == "" {
 			return fmt.Errorf("download failed (github: %v, yandex: %v)", err, yErr)
 		}

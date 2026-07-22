@@ -323,11 +323,11 @@ func yandexDownloadFolderAsZip(publicKey, folderPath string) (string, error) {
         return r.Href, nil
 }
 
-// yandexDownloadURL возвращает прямую ссылку на скачивание файла с Яндекс.Диска.
+// YandexDownloadURL возвращает прямую ссылку на скачивание файла с Яндекс.Диска.
 // Для новой структуры: ищет в папке с самой свежей версией.
 // Для старой: ищет в корне или указанной подпапке.
 // Если файл не найден — возвращает пустую строку.
-func yandexDownloadURL(publicKey, path, filename string) (string, error) {
+func YandexDownloadURL(publicKey, path, filename string) (string, error) {
         if publicKey == "" {
                 return "", nil
         }

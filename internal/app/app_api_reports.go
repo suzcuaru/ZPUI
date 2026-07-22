@@ -5,7 +5,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"time"
 
 	"zpui/internal/database"
@@ -17,9 +16,6 @@ func (a *App) GenerateAndDownloadReport() map[string]interface{} {
 	a.log.Info("reports", "User requested diagnostic report")
 
 	periodDays := 7
-	if dr := a.cfg.GetDiagnosticReports(); dr.PeriodDays > 0 {
-		periodDays = dr.PeriodDays
-	}
 
 	gen := reports.NewGenerator(a.version, a.cfg.GetZapretPath())
 	content, err := gen.Generate(periodDays)
