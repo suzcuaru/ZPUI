@@ -293,7 +293,7 @@ func (a *App) RunAutoSelectStream() {
 		return
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
 	defer cancel()
 
 	results := make(chan zapret.AutoTestResult, 50)
