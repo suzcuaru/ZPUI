@@ -57,27 +57,36 @@ jobs:
         shell: bash
         run: |
           V="${{ steps.version.outputs.VERSION }}"
-
           PREV_TAG=$(git tag --sort=-version:refname | head -2 | tail -1)
 
-          NOTES="## What's Changed\n\n"
+          NOTES="# ZPUI v${V}\n\n"
+
           if [ -n "$PREV_TAG" ]; then
-            NOTES+="Changes since **${PREV_TAG}**:\n\n"
-            while IFS= read -r line; do
-              NOTES+="- ${line}\n"
-            done < <(git log --pretty=format:"%s" "$PREV_TAG..HEAD")
+            NOTES+="## Список изменений\n\n"
+
+            added=""; fixed=""; changed=""; removed=""; other=""
+
+            while IFS= read -r msg; do
+              lc="${msg,,}"
+              case "$lc" in
+                feat:*|add*|добавл*|нов*|реализован*) added+="  - ${msg}\n" ;;
+                fix:*|исправ*|почин*|устран*) fixed+="  - ${msg}\n" ;;
+                refactor*|change*|измен*|перепис*|обновл*) changed+="  - ${msg}\n" ;;
+                remove*|удал*|del*) removed+="  - ${msg}\n" ;;
+                *) other+="  - ${msg}\n" ;;
+              esac
+            done < <(git log --pretty=format:"%s" "${PREV_TAG}..HEAD" 2>/dev/null)
+
+            [ -n "$added" ]    && NOTES+="### Добавлено\n${added}\n"
+            [ -n "$fixed" ]    && NOTES+="### Исправлено\n${fixed}\n"
+            [ -n "$changed" ]  && NOTES+="### Изменено\n${changed}\n"
+            [ -n "$removed" ]  && NOTES+="### Удалено\n${removed}\n"
+            [ -n "$other" ]    && NOTES+="### Прочее\n${other}\n"
           else
-            NOTES+="Initial release.\n\n"
-            while IFS= read -r line; do
-              NOTES+="- ${line}\n"
+            NOTES+="## Первый релиз\n\n"
+            while IFS= read -r msg; do
+              NOTES+="  - ${msg}\n"
             done < <(git log --pretty=format:"%s" HEAD)
-          fi
-
-          NOTES+="\n---\n"
-
-          VERDIR="${{ steps.check.outputs.verdir }}"
-          if [ -f "${VERDIR}/versions.json" ]; then
-            NOTES+="\n### Components\n\`\`\`json\n$(cat "${VERDIR}/versions.json")\n\`\`\`\n"
           fi
 
           printf '%b\n' "$NOTES" > release/notes.md
