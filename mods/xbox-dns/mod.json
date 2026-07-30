@@ -1,0 +1,14 @@
+{
+  "id": "xbox-dns",
+  "name": "Xbox DNS",
+  "version": "1.0.0",
+  "description": "DNS-серверы для Xbox и не только",
+  "author": "ZPUI",
+  "icon": "dns",
+  "color": "#28a745",
+  "min_core": "1.0.0",
+  "entry": "index.js",
+  "placements": ["sidebar"],
+  "repository": "https://github.com/anomalyco/zpui-mods",
+  "type": "builtin"
+}

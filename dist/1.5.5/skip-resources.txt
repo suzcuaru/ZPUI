@@ -1,0 +1,41 @@
+# skip-resources.txt - resources excluded from availability checks.
+#
+# These domains are always down (dead CDN, retired subdomains, etc) so
+# there is no point in checking them. Edit this file manually to add/remove.
+# One host per line. Lines starting with # are comments. Blank lines ignored.
+# Subdomains are matched automatically: "google.com" excludes "drive.google.com".
+
+# Cloudflare service/test domains (always unavailable)
+cloudflareapps.com
+cloudflarebolt.com
+cloudflareclient.com
+cloudflarepartners.com
+cloudflareresolve.com
+cloudflaressl.com
+cloudflarestatus.com
+cloudflarestorage.com
+cloudflaretest.com
+
+# Cloudfront CDN
+cloudfront.net
+
+# Discord service subdomains
+discord.dev
+discord.media
+discord.status
+discord-activities.com
+discordactivities.com
+discordapp.net
+discordpartygames.com
+
+# Other service/unavailable
+localizeapi.com
+live-video.net
+
+# PornHub CDN - always unavailable in RU
+phncdn.com
+pix-cdn77.phncdn.com
+winhanced.com
+domain.example.abc
+7tv.io
+7tv.app
