@@ -52,16 +52,32 @@ jobs:
       - name: Generate release notes
         if: steps.check.outputs.exists == 'true'
         id: notes
+        shell: bash
         run: |
           VERDIR="${{ steps.check.outputs.verdir }}"
           V="${{ steps.version.outputs.VERSION }}"
-          NOTES="## ZPUI v${V}\n\n"
-          if [ -f "${VERDIR}/checksums.sha256" ]; then
-            NOTES+="### SHA256 Checksums\n\`\`\`\n$(cat "${VERDIR}/checksums.sha256")\n\`\`\`\n"
-          fi
+
+          NOTES="## ZPUI v${V}\n\n### SHA256 Checksums\n\`\`\`\n"
+          for f in "$VERDIR"/*.exe; do
+            [ -f "$f" ] || continue
+            h=$(sha256sum "$f" | cut -d' ' -f1)
+            sz=$(stat -c%s "$f")
+            name=$(basename "$f")
+            NOTES+="${h}  ${name} (${sz} bytes)\n"
+          done
+          for f in "$VERDIR"/components/*/*.exe; do
+            [ -f "$f" ] || continue
+            h=$(sha256sum "$f" | cut -d' ' -f1)
+            sz=$(stat -c%s "$f")
+            name=$(basename "$(dirname "$f")")/$(basename "$f")
+            NOTES+="${h}  ${name} (${sz} bytes)\n"
+          done
+          NOTES+="\`\`\`\n"
+
           if [ -f "${VERDIR}/versions.json" ]; then
             NOTES+="\n### Components\n\`\`\`json\n$(cat "${VERDIR}/versions.json")\n\`\`\`\n"
           fi
+
           printf '%b\n' "$NOTES" > release/notes.md
 
       - name: Create Release
