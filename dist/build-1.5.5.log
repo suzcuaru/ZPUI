@@ -1,6 +1,6 @@
 ================================================ 
   ZPUI Build Log  v1.5.5                     
-  30.07.2026 22:54:03,21                                   
+  30.07.2026 23:35:32,47                                   
 ================================================ 
  
 Versions: ZPUI=1.5.5 selfupdate=3.1.1 report=1.0.0 security=1.0.0 
@@ -20,7 +20,7 @@ computing gzip size...
 [2mdist/[22m[32mindex.html                 [39m[1m[2m  0.56 kB[22m[1m[22m[2m │ gzip:   0.37 kB[22m
 [2mdist/[22m[35massets/index-Dzx0TksD.css  [39m[1m[2m131.69 kB[22m[1m[22m[2m │ gzip:  20.60 kB[22m
 [2mdist/[22m[36massets/index-dCsmJiUL.js   [39m[1m[2m379.69 kB[22m[1m[22m[2m │ gzip: 110.49 kB[22m
-[32m✓ built in 2.22s[39m
+[32m✓ built in 3.38s[39m
 Web build OK 
 
 > selfupdate-frontend@3.0.0 build
@@ -34,7 +34,7 @@ computing gzip size...
 [2mdist/[22m[32mindex.html                 [39m[1m[2m  0.47 kB[22m[1m[22m[2m │ gzip:  0.35 kB[22m
 [2mdist/[22m[35massets/index-Bk_SjnH3.css  [39m[1m[2m  7.03 kB[22m[1m[22m[2m │ gzip:  2.05 kB[22m
 [2mdist/[22m[36massets/index-DgJjX65_.js   [39m[1m[2m153.51 kB[22m[1m[22m[2m │ gzip: 49.48 kB[22m
-[32m✓ built in 578ms[39m
+[32m✓ built in 785ms[39m
 Selfupdate frontend build OK 
 [3/10] Version resources 
 [4/10] ZPUI core 
@@ -74,16 +74,16 @@ Using lzma (compress whole) compression.
 
 EXE header size:              410624 / 38912 bytes
 Install code:                          (63462 bytes)
-Install data:                          (51177923 bytes)
+Install data:                          (51186115 bytes)
 Uninstall code+data:                   (397500 bytes)
-Compressed data:            14721669 / 51638885 bytes
-CRC (0x351A41AB):                  4 / 4 bytes
+Compressed data:            14725444 / 51647077 bytes
+CRC (0x508003A6):                  4 / 4 bytes
 
-Total size:                 15132297 / 51677801 bytes (29.2%)
+Total size:                 15136072 / 51685993 bytes (29.2%)
 
 1 warning:
   6001: Variable "ExistingDir" not referenced or never set, wasting memory!
   [OK] ZPUI-Setup-1.5.5-win32.exe 
 ================================================ 
-  Build completed: 30.07.2026 22:54:48,82                  
+  Build completed: 30.07.2026 23:36:32,84                  
 ================================================ 
