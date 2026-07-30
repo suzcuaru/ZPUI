@@ -89,15 +89,5 @@ jobs:
           name: ZPUI v${{ steps.version.outputs.VERSION }}
           body_path: release/notes.md
           files: |
-            ${{ steps.check.outputs.verdir }}/ZPUI.exe
             ${{ steps.check.outputs.verdir }}/ZPUI-Setup-*.exe
-            ${{ steps.check.outputs.verdir }}/selfupdate.exe
-            ${{ steps.check.outputs.verdir }}/report.exe
-            ${{ steps.check.outputs.verdir }}/security.exe
-            ${{ steps.check.outputs.verdir }}/components/**/*.exe
-            ${{ steps.check.outputs.verdir }}/components/**/checksum.sha256
-            ${{ steps.check.outputs.verdir }}/components/**/version.txt
-            ${{ steps.check.outputs.verdir }}/versions.json
-            ${{ steps.check.outputs.verdir }}/checksums.sha256
             release/ZPUI-${{ steps.version.outputs.VERSION }}-portable.zip
-            release/zapret-${{ steps.version.outputs.VERSION }}.zip
