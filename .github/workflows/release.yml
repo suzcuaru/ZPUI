@@ -43,14 +43,6 @@ jobs:
           cp -r "$VERDIR/mods" release/portable/
           cd release/portable && zip -r "../ZPUI-${{ steps.version.outputs.VERSION }}-portable.zip" .
 
-      - name: Package zapret
-        if: steps.check.outputs.exists == 'true'
-        run: |
-          VERDIR="${{ steps.check.outputs.verdir }}"
-          if [ -d "$VERDIR/zapret" ]; then
-            cd "$VERDIR" && zip -r "$OLDPWD/release/zapret-${{ steps.version.outputs.VERSION }}.zip" zapret/
-          fi
-
       - name: Generate release notes
         if: steps.check.outputs.exists == 'true'
         id: notes
