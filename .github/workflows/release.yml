@@ -50,17 +50,19 @@ jobs:
           fi
 
       - name: Generate release notes
+        if: steps.check.outputs.exists == 'true'
         id: notes
         run: |
           VERDIR="${{ steps.check.outputs.verdir }}"
-          NOTES="## ZPUI v${{ steps.version.outputs.VERSION }}\n\n"
-          if [ -f "$VERDIR/checksums.sha256" ]; then
-            NOTES+="### SHA256 Checksums\n\`\`\`\n$(cat "$VERDIR/checksums.sha256")\n\`\`\`\n"
+          V="${{ steps.version.outputs.VERSION }}"
+          NOTES="## ZPUI v${V}\n\n"
+          if [ -f "${VERDIR}/checksums.sha256" ]; then
+            NOTES+="### SHA256 Checksums\n\`\`\`\n$(cat "${VERDIR}/checksums.sha256")\n\`\`\`\n"
           fi
-          if [ -f "$VERDIR/versions.json" ]; then
-            NOTES+="\n### Components\n\`\`\`json\n$(cat "$VERDIR/versions.json")\n\`\`\`\n"
+          if [ -f "${VERDIR}/versions.json" ]; then
+            NOTES+="\n### Components\n\`\`\`json\n$(cat "${VERDIR}/versions.json")\n\`\`\`\n"
           fi
-          echo -e "$NOTES" > release/notes.md
+          printf '%b\n' "$NOTES" > release/notes.md
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
