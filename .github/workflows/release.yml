@@ -13,6 +13,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Extract version from tag
         id: version
@@ -54,44 +56,28 @@ jobs:
         id: notes
         shell: bash
         run: |
-          VERDIR="${{ steps.check.outputs.verdir }}"
           V="${{ steps.version.outputs.VERSION }}"
-          NOTES=""
 
-          NOTES+="## ZPUI v${V}\n\n"
+          PREV_TAG=$(git tag --sort=-version:refname | head -2 | tail -1)
 
-          sha_line() {
-            local f=$1 label=$2
-            local h=$(sha256sum "$f" | cut -d' ' -f1)
-            local sz=$(stat -c%s "$f")
-            printf "${h}  ${label} (${sz} bytes)\\n"
-          }
+          NOTES="## What's Changed\n\n"
+          if [ -n "$PREV_TAG" ]; then
+            NOTES+="Changes since **${PREV_TAG}**:\n\n"
+            while IFS= read -r line; do
+              NOTES+="- ${line}\n"
+            done < <(git log --pretty=format:"%s" "$PREV_TAG..HEAD")
+          else
+            NOTES+="Initial release.\n\n"
+            while IFS= read -r line; do
+              NOTES+="- ${line}\n"
+            done < <(git log --pretty=format:"%s" HEAD)
+          fi
 
-          NOTES+="### Installer\n\`\`\`\n"
-          for f in "$VERDIR"/ZPUI-Setup-*.exe; do
-            [ -f "$f" ] || continue
-            NOTES+="$(sha_line "$f" "$(basename "$f")")"
-          done
-          NOTES+="\`\`\`\n\n"
+          NOTES+="\n---\n"
 
-          NOTES+="### Binaries\n\`\`\`\n"
-          for name in ZPUI.exe selfupdate.exe report.exe security.exe; do
-            f="$VERDIR/$name"
-            [ -f "$f" ] || continue
-            NOTES+="$(sha_line "$f" "$name")"
-          done
-          NOTES+="\`\`\`\n\n"
-
-          NOTES+="### Components\n\`\`\`\n"
-          for f in "$VERDIR"/components/*/*.exe; do
-            [ -f "$f" ] || continue
-            label="$(basename "$(dirname "$f")")/$(basename "$f")"
-            NOTES+="$(sha_line "$f" "$label")"
-          done
-          NOTES+="\`\`\`\n"
-
+          VERDIR="${{ steps.check.outputs.verdir }}"
           if [ -f "${VERDIR}/versions.json" ]; then
-            NOTES+="\n### Versions\n\`\`\`json\n$(cat "${VERDIR}/versions.json")\n\`\`\`\n"
+            NOTES+="\n### Components\n\`\`\`json\n$(cat "${VERDIR}/versions.json")\n\`\`\`\n"
           fi
 
           printf '%b\n' "$NOTES" > release/notes.md
