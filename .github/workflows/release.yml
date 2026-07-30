@@ -49,39 +49,8 @@ jobs:
         shell: bash
         run: |
           V="${{ steps.version.outputs.VERSION }}"
-          PREV_TAG=$(git tag --sort=-version:refname | head -2 | tail -1)
-
-          NOTES="# ZPUI v${V}\n\n"
-
-          if [ -n "$PREV_TAG" ]; then
-            NOTES+="## Список изменений\n\n"
-
-            added=""; fixed=""; changed=""; removed=""; other=""
-
-            while IFS= read -r msg; do
-              lc="${msg,,}"
-              case "$lc" in
-                feat:*|add*|добавл*|нов*|реализован*) added+="  - ${msg}\n" ;;
-                fix:*|исправ*|почин*|устран*) fixed+="  - ${msg}\n" ;;
-                refactor*|change*|измен*|перепис*|обновл*) changed+="  - ${msg}\n" ;;
-                remove*|удал*|del*) removed+="  - ${msg}\n" ;;
-                *) other+="  - ${msg}\n" ;;
-              esac
-            done < <(git log --pretty=format:"%s" "${PREV_TAG}..HEAD" 2>/dev/null)
-
-            [ -n "$added" ]    && NOTES+="### Добавлено\n${added}\n"
-            [ -n "$fixed" ]    && NOTES+="### Исправлено\n${fixed}\n"
-            [ -n "$changed" ]  && NOTES+="### Изменено\n${changed}\n"
-            [ -n "$removed" ]  && NOTES+="### Удалено\n${removed}\n"
-            [ -n "$other" ]    && NOTES+="### Прочее\n${other}\n"
-          else
-            NOTES+="## Первый релиз\n\n"
-            while IFS= read -r msg; do
-              NOTES+="  - ${msg}\n"
-            done < <(git log --pretty=format:"%s" HEAD)
-          fi
-
-          printf '%b\n' "$NOTES" > release/notes.md
+          awk -v ver="v${V}" '/^## / {if (found) exit; if ($0 ~ "^## " ver) found=1; next} found' CHANGELOG.md > release/notes.md
+          [ -s release/notes.md ] || echo "ZPUI v${V}" > release/notes.md
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
