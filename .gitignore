@@ -6,6 +6,17 @@ installer/
 web/src/
 web/node_modules/
 web/dist/
+web/wailsjs/
+web/package*.json
+web/vite.config.js
+web/vitest.setup.js
+web/index.html
+web/README.md
+web/IMPLEMENTATION_SUMMARY.md
+web/build.bat
+web/dev.bat
+web/dev-mock.js
+web/db.js
 fonts/
 assets/
 Документы/
@@ -21,18 +32,7 @@ wails.json
 config.example.json
 config.json
 versions.txt
-logo.png
 *.go
-web/package*.json
-web/vite.config.js
-web/vitest.setup.js
-web/index.html
-web/README.md
-web/IMPLEMENTATION_SUMMARY.md
-web/build.bat
-web/dev.bat
-web/dev-mock.js
-web/db.js
 
 # === Промежуточная папка сборки ===
 dist/
