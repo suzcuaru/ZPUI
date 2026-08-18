@@ -46,7 +46,9 @@ jobs:
         shell: bash
         run: |
           V="${{ steps.version.outputs.VERSION }}"
-          awk -v ver="v${V}" '/^## / {if (found) exit; if ($0 ~ "^## " ver) found=1; next} found' CHANGELOG.md > release/notes.md
+          if [ -f "CHANGELOG.md" ]; then
+            awk -v ver="v${V}" '/^## / {if (found) exit; if ($0 ~ "^## " ver) found=1; next} found' CHANGELOG.md > release/notes.md
+          fi
           [ -s release/notes.md ] || echo "ZPUI v${V}" > release/notes.md
 
       - name: Create GitHub Release

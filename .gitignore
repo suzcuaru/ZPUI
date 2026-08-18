@@ -21,8 +21,6 @@ fonts/
 assets/
 Документы/
 AGENTS.md
-CHANGELOG.md
-LICENSE
 backup.bat
 build.bat
 main.go
