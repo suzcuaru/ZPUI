@@ -1,0 +1,60 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      - name: Verify release files exist
+        id: check
+        run: |
+          if [ -f "ZPUI.exe" ] && [ -f "versions.json" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Package portable version
+        if: steps.check.outputs.exists == 'true'
+        run: |
+          V="${{ steps.version.outputs.VERSION }}"
+          mkdir -p release/portable
+          cp ZPUI.exe release/portable/
+          cp versions.json release/portable/
+          [ -f domains.txt ] && cp domains.txt release/portable/
+          [ -f skip-resources.txt ] && cp skip-resources.txt release/portable/
+          cd release/portable && zip -r "../ZPUI-${V}-portable.zip" .
+
+      - name: Generate release notes from CHANGELOG.md
+        if: steps.check.outputs.exists == 'true'
+        id: notes
+        shell: bash
+        run: |
+          V="${{ steps.version.outputs.VERSION }}"
+          awk -v ver="v${V}" '/^## / {if (found) exit; if ($0 ~ "^## " ver) found=1; next} found' CHANGELOG.md > release/notes.md
+          [ -s release/notes.md ] || echo "ZPUI v${V}" > release/notes.md
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: steps.check.outputs.exists == 'true'
+        with:
+          name: ZPUI v${{ steps.version.outputs.VERSION }}
+          body_path: release/notes.md
+          files: |
+            ZPUI-Setup-${{ steps.version.outputs.VERSION }}-win32.exe
+            release/ZPUI-${{ steps.version.outputs.VERSION }}-portable.zip

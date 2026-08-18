@@ -1,0 +1,49 @@
+# === Исходный код (не заливаем в бинарный репо) ===
+internal/
+cmd/
+build/
+installer/
+web/src/
+web/node_modules/
+web/dist/
+fonts/
+assets/
+Документы/
+AGENTS.md
+CHANGELOG.md
+LICENSE
+backup.bat
+build.bat
+main.go
+go.mod
+go.sum
+wails.json
+config.example.json
+config.json
+versions.txt
+logo.png
+*.go
+web/package*.json
+web/vite.config.js
+web/vitest.setup.js
+web/index.html
+web/README.md
+web/IMPLEMENTATION_SUMMARY.md
+web/build.bat
+web/dev.bat
+web/dev-mock.js
+web/db.js
+
+# === Промежуточная папка сборки ===
+dist/
+
+# === Артефакты тестов ===
+coverage
+coverage.txt
+
+# === IDE / OS ===
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
