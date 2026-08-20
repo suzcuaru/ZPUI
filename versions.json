@@ -1,6 +1,6 @@
 {
-    "zpui":  "1.6.0",
-    "selfupdate":  "3.1.1",
+    "zpui":  "1.6.1",
+    "selfupdate":  "3.2.0",
     "report":  "1.3.1",
-    "security":  "1.2.0"
+    "tgproxy":  "1.3.0"
 }
