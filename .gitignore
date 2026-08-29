@@ -8,6 +8,9 @@ web/node_modules/
 web/dist/
 web/wailsjs/
 web/package*.json
+# из web/public трекаем только скриншоты документации (использует README)
+web/public/*
+!web/public/docs/
 web/vite.config.js
 web/vitest.setup.js
 web/index.html
@@ -19,6 +22,7 @@ web/dev-mock.js
 web/db.js
 fonts/
 assets/
+mobile/
 Документы/
 AGENTS.md
 backup.bat
@@ -31,6 +35,27 @@ config.example.json
 config.json
 versions.txt
 *.go
+
+# === Агентские файлы (скиллы/планы) — не для публичного репо ===
+.agents/
+.zcode/
+
+# === Артефакты, не используемые CI/релизом (дистрибуция — GitHub Releases и Яндекс.Диск) ===
+zapret/
+components/
+report.exe
+checksums.sha256
+telegram_links.txt
+
+# === Служебные заглушки и штампы сборки ===
+package-lock.json
+*.md5
+
+# === Страховка от случайного залива ===
+*.zip
+*.backup
+*.log
+*.db
 
 # === Промежуточная папка сборки ===
 dist/
