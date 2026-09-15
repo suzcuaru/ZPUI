@@ -69,3 +69,12 @@ coverage.txt
 *.swp
 .DS_Store
 Thumbs.db
+
+# === Архив припаркованных фич и старых сборок (локально, не для репо) ===
+archive/
+
+# === Сборочные бинарники в корне (дубли build/bin и dist/) ===
+zpui.exe
+ZPUI.exe
+domains.txt
+logs/
