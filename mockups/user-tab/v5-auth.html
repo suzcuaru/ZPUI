@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>ZPUI — Вариант 5: авторизация/регистрация (960×640)</title>
+<style>
+  :root{
+    --bg-page:#141418;
+    --bg-section:#1c1c24;
+    --bg-card:#20202a;
+    --bg-hover:rgba(255,255,255,0.06);
+    --bg-inset:#16161e;
+    --border:#2e2e38;
+    --border-light:#262630;
+    --text-primary:#e5e5ed;
+    --text-secondary:#9094a4;
+    --text-tertiary:#5a5e6a;
+    --accent:#6ba3ff;
+    --accent-hover:#82b3ff;
+    --accent-soft:rgba(107,163,255,0.12);
+    --success:#34d058;
+    --success-bg:rgba(52,208,88,0.12);
+    --danger:#f55e5e;
+    --grad-accent:linear-gradient(135deg,var(--accent),#9b6df2);
+    --radius-sm:6px;
+    --radius-md:10px;
+    --radius-lg:14px;
+    --font:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+    --font-mono:'JetBrains Mono','Cascadia Code','Consolas',monospace;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:#0c0c10;color:var(--text-primary);font-family:var(--font);font-size:13px;line-height:1.45;padding:24px}
+
+  .state-label{max-width:960px;margin:0 auto 8px;font-size:10px;font-weight:600;letter-spacing:.5px;
+       text-transform:uppercase;color:var(--text-secondary);display:flex;align-items:center;gap:10px}
+  .state-label::after{content:'';flex:1;height:1px;background:var(--border)}
+  .state-label .num{color:var(--accent)}
+  .ruler{max-width:960px;margin:22px auto;display:flex;align-items:center;gap:12px;color:var(--text-tertiary);
+       font-size:10px;font-weight:600;letter-spacing:.5px;text-transform:uppercase}
+  .ruler::before,.ruler::after{content:'';flex:1;height:1px;background:var(--border)}
+  .spacer{height:22px}
+
+  /* ── «Окно» приложения 960×640 ── */
+  .win{width:960px;height:640px;margin:0 auto;background:var(--bg-page);border:1px solid var(--border);border-radius:10px;
+       box-shadow:0 8px 24px rgba(0,0,0,.4);overflow:hidden;display:flex;flex-direction:column;position:relative}
+  .win-titlebar{height:32px;flex:none;display:flex;align-items:center;padding:0 12px;background:var(--bg-section);
+       border-bottom:1px solid var(--border);font-size:12px;color:var(--text-secondary)}
+  .win-titlebar .app{font-weight:600;color:var(--text-primary)}
+  .win-titlebar .tbtns{margin-left:auto;display:flex;gap:6px}
+  .win-titlebar .tbtns i{width:10px;height:10px;border-radius:50%;background:var(--border);display:block}
+
+  /* Мягкий фон окна: крупные радиальные пятна + блёклый логотип */
+  .win-bg{position:absolute;inset:32px 0 0 0;overflow:hidden;pointer-events:none}
+  .win-bg::before{content:'';position:absolute;inset:0;
+       background:radial-gradient(560px 380px at 50% 30%,rgba(107,163,255,.08),transparent 70%),
+                  radial-gradient(480px 320px at 78% 75%,rgba(155,109,242,.06),transparent 70%)}
+  .win-bg .watermark{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+       font-size:230px;font-weight:800;letter-spacing:6px;color:rgba(229,229,237,.025);white-space:nowrap;user-select:none}
+  .win-bg .grid{position:absolute;inset:0;
+       background-image:linear-gradient(rgba(229,229,237,.02) 1px,transparent 1px),
+                        linear-gradient(90deg,rgba(229,229,237,.02) 1px,transparent 1px);
+       background-size:48px 48px}
+
+  .win-center{flex:1;min-height:0;position:relative;display:flex;align-items:center;justify-content:center;padding:24px}
+
+  /* ── Карточка авторизации ── */
+  .auth-card{width:100%;max-width:400px;background:var(--bg-card);border:1px solid var(--border);
+       border-radius:var(--radius-lg);box-shadow:0 8px 24px rgba(0,0,0,.3);padding:26px 28px}
+  .logo{font-size:26px;font-weight:800;letter-spacing:1px;background:var(--grad-accent);
+       -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent}
+  .auth-sub{font-size:12px;color:var(--text-secondary);margin:3px 0 18px}
+
+  .seg{display:flex;gap:4px;background:var(--bg-inset);border:1px solid var(--border);border-radius:8px;padding:3px;margin-bottom:18px}
+  .seg button{flex:1;height:28px;border:none;border-radius:8px;background:transparent;color:var(--text-secondary);
+       font-family:var(--font);font-size:12px;font-weight:500;cursor:pointer}
+  .seg button:hover{color:var(--text-primary)}
+  .seg button.active{background:var(--accent);color:#fff;font-weight:600}
+
+  .field{margin-bottom:12px}
+  .field label{display:block;font-size:9.5px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;
+       color:var(--text-secondary);margin-bottom:5px}
+  .field .inp{display:flex;align-items:center;gap:9px;height:34px;background:var(--bg-inset);
+       border:1px solid var(--border);border-radius:8px;padding:0 11px}
+  .field .inp:focus-within{border-color:var(--accent)}
+  .field .inp svg{width:14px;height:14px;stroke:var(--text-tertiary);flex:none}
+  .field .inp:focus-within svg{stroke:var(--accent)}
+  .field input{flex:1;min-width:0;background:transparent;border:none;outline:none;color:var(--text-primary);
+       font-family:var(--font);font-size:12.5px}
+  .field input::placeholder{color:var(--text-tertiary)}
+
+  .btn{display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:500;
+       height:26px;padding:0 12px;border-radius:var(--radius-sm);border:1px solid var(--border);
+       background:var(--bg-card);color:var(--text-primary);cursor:pointer;font-family:var(--font)}
+  .btn:hover{border-color:var(--accent);color:var(--accent)}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  .btn.primary:hover{background:var(--accent-hover);color:#fff}
+  .btn.block{display:flex;width:100%}
+
+  .skip{display:block;text-align:center;margin-top:14px;font-size:11.5px;color:var(--text-tertiary);
+       text-decoration:none;cursor:pointer}
+  .skip:hover{color:var(--accent)}
+  .note{margin-top:16px;padding-top:12px;border-top:1px solid var(--border-light);
+       font-size:10.5px;color:var(--text-tertiary);line-height:1.5}
+  .note b{color:var(--text-secondary);font-weight:600}
+
+  /* ── Код подтверждения ── */
+  .code-row{display:flex;justify-content:center;gap:8px;margin:16px 0 18px}
+  .code-row .digit{width:44px;height:54px;background:var(--bg-inset);border:1px solid var(--border);border-radius:8px;
+       display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:22px;font-weight:600;color:var(--text-primary)}
+  .code-row .digit.caret{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+  .sent{font-size:12px;color:var(--text-secondary);margin-bottom:4px}
+  .sent .mono{color:var(--text-primary);font-size:11.5px}
+  .center{text-align:center}
+</style>
+</head>
+<body>
+
+<div class="state-label"><span class="num">Состояние 1</span> Экран авторизации / регистрации</div>
+
+<div class="win">
+  <div class="win-titlebar"><span class="app">ZPUI</span>&nbsp;· Вход в аккаунт
+    <span class="tbtns"><i></i><i></i><i></i></span>
+  </div>
+  <div class="win-bg">
+    <div class="grid"></div>
+    <div class="watermark">ZPUI</div>
+  </div>
+  <div class="win-center">
+    <div class="auth-card">
+      <div class="logo">ZPUI</div>
+      <div class="auth-sub">Войдите, чтобы синхронизировать устройства и ключи</div>
+
+      <div class="seg">
+        <button class="active">Вход</button>
+        <button>Регистрация</button>
+      </div>
+
+      <div class="field">
+        <label>E-mail</label>
+        <div class="inp">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="3"/><path d="m2 7 10 6 10-6"/></svg>
+          <input type="email" placeholder="user@example.ru" value="user@example.ru">
+        </div>
+      </div>
+      <div class="field">
+        <label>Пароль</label>
+        <div class="inp">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+          <input type="password" placeholder="••••••••" value="••••••••">
+        </div>
+      </div>
+
+      <button class="btn primary block" style="height:32px;font-size:13px;font-weight:600;margin-top:6px">Войти</button>
+      <a class="skip">Продолжить без авторизации</a>
+
+      <div class="note"><b>В состоянии «Регистрация»:</b> сегмент «Регистрация» активен, добавляются поля «Повтор пароля» и «Telegram @username», кнопка — «Зарегистрироваться».</div>
+    </div>
+  </div>
+</div>
+
+<div class="ruler">Состояние 2 · Шаг подтверждения e-mail</div>
+<div class="spacer"></div>
+
+<div class="state-label"><span class="num">Состояние 2</span> Подтверждение кода из письма</div>
+
+<div class="win">
+  <div class="win-titlebar"><span class="app">ZPUI</span>&nbsp;· Подтверждение e-mail
+    <span class="tbtns"><i></i><i></i><i></i></span>
+  </div>
+  <div class="win-bg">
+    <div class="grid"></div>
+    <div class="watermark">ZPUI</div>
+  </div>
+  <div class="win-center">
+    <div class="auth-card">
+      <div class="logo">ZPUI</div>
+      <div class="auth-sub">Подтверждение e-mail</div>
+
+      <div class="sent">Код отправлен на <span class="mono">user@example.ru</span></div>
+
+      <div class="code-row">
+        <div class="digit">4</div>
+        <div class="digit">8</div>
+        <div class="digit">1</div>
+        <div class="digit">9</div>
+        <div class="digit caret"></div>
+        <div class="digit"></div>
+      </div>
+
+      <button class="btn primary block" style="height:32px;font-size:13px;font-weight:600">Подтвердить</button>
+      <a class="skip">Изменить e-mail</a>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

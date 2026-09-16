@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>ZPUI — Вариант 2: Профиль-центр</title>
+<style>
+  :root{
+    --bg:#131418; --panel:#1c1e24; --panel2:#24262e; --text:#e8e9ec; --muted:#9aa0ab;
+    --accent:#5b8cff; --ok:#4caf7d; --warn:#e0a63a; --danger:#e05a5a; --border:#2e313a;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;font-size:13px;line-height:1.5;padding:24px}
+  .variant-note{max-width:1000px;margin:0 auto 20px;padding:14px 18px;background:var(--panel);border:1px solid var(--border);border-radius:10px}
+  .variant-note h1{font-size:15px;font-weight:600}
+  .variant-note p{font-size:12px;color:var(--muted);margin-top:4px}
+  .wrap{max-width:1000px;margin:0 auto;display:grid;grid-template-columns:200px 1fr;gap:16px;align-items:start}
+  .nav{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:8px;position:sticky;top:24px}
+  .nav .nav-title{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;padding:8px 10px 6px}
+  .nav a{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-radius:6px;color:var(--text);text-decoration:none;font-size:13px;margin-bottom:2px}
+  .nav a:hover{background:var(--panel2)}
+  .nav a.active{background:rgba(91,140,255,.12);color:var(--accent);font-weight:600}
+  .nav a .cnt{font-size:11px;color:var(--muted)}
+  .section{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:18px}
+  .section + .section{margin-top:16px}
+  .section h2{font-size:14px;font-weight:600;margin-bottom:4px}
+  .section .desc{font-size:12px;color:var(--muted);margin-bottom:16px}
+  .avatar{width:64px;height:64px;border-radius:12px;background:linear-gradient(135deg,#5b8cff,#7a5bff);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;flex:none}
+  .head{display:flex;gap:16px;align-items:center;margin-bottom:18px}
+  .head .name{font-size:16px;font-weight:600;display:flex;align-items:center;gap:10px}
+  .head .mail{font-size:12px;color:var(--muted)}
+  .badge{display:inline-block;font-size:10px;font-weight:600;padding:2px 8px;border-radius:6px;border:1px solid}
+  .badge.accent{color:var(--accent);border-color:rgba(91,140,255,.4);background:rgba(91,140,255,.08)}
+  .badge.ok{color:var(--ok);border-color:rgba(76,175,125,.4);background:rgba(76,175,125,.08)}
+  .field{margin-bottom:14px;max-width:420px}
+  .field label{display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px}
+  .field .input{display:flex;align-items:center;background:var(--panel2);border:1px solid var(--border);border-radius:8px;height:32px;padding:0 10px;gap:8px}
+  .field .input .val{flex:1;font-size:13px}
+  .field .input .hint{font-size:11px;color:var(--ok)}
+  .btn{display:inline-block;font-size:12px;font-weight:500;padding:5px 12px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text);cursor:pointer;line-height:16px;height:26px}
+  .btn:hover{border-color:var(--accent);color:var(--accent)}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  .btn.primary:hover{opacity:.9;color:#fff}
+  .row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border);max-width:520px}
+  .row:last-child{border-bottom:none}
+  .row .t{font-size:13px;font-weight:500}
+  .row .s{font-size:11px;color:var(--muted);margin-top:2px}
+  .switch{width:34px;height:19px;border-radius:6px;background:var(--panel2);border:1px solid var(--border);position:relative;flex:none}
+  .switch .knob{position:absolute;top:2px;left:2px;width:13px;height:13px;border-radius:4px;background:var(--muted)}
+  .switch.on{background:rgba(91,140,255,.25);border-color:var(--accent)}
+  .switch.on .knob{left:17px;background:var(--accent)}
+  .kv{display:flex;justify-content:space-between;font-size:12px;padding:8px 0;border-bottom:1px solid var(--border);max-width:520px}
+  .kv:last-child{border-bottom:none}
+  .kv .k{color:var(--muted)}
+  .mono{font-family:Consolas,monospace;font-size:12px}
+  .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--ok);margin-right:6px}
+</style>
+</head>
+<body>
+
+<div class="variant-note">
+  <h1>Вариант 2 — Профиль-центр</h1>
+  <p>Акцент на аккаунте: широкая внутренняя навигация слева (Профиль, Устройства, Ключи, Уведомления, Сервер) и крупные редактируемые карточки профиля с тумблерами рассылок. Секции показаны друг под другом.</p>
+</div>
+
+<div class="wrap">
+  <div class="nav">
+    <div class="nav-title">Аккаунт</div>
+    <a class="active" href="#">Профиль</a>
+    <a href="#">Устройства <span class="cnt">2</span></a>
+    <a href="#">Ключи <span class="cnt">1</span></a>
+    <a href="#">Уведомления</a>
+    <a href="#">Сервер</a>
+  </div>
+
+  <div>
+    <div class="section">
+      <h2>Профиль</h2>
+      <div class="desc">Личные данные и способ связи для важных уведомлений.</div>
+      <div class="head">
+        <div class="avatar">А</div>
+        <div>
+          <div class="name">Алексей С. <span class="badge accent">Тестировщик</span></div>
+          <div class="mail">user@example.ru · с 02.03.2025</div>
+          <div style="margin-top:6px"><span class="badge ok">Активен</span></div>
+        </div>
+      </div>
+      <div class="field">
+        <label>Имя</label>
+        <div class="input"><span class="val">Алексей Смирнов</span><button class="btn">Изм.</button></div>
+      </div>
+      <div class="field">
+        <label>Email</label>
+        <div class="input"><span class="val">user@example.ru</span><span class="hint">подтверждён</span></div>
+      </div>
+      <div class="field">
+        <label>Telegram</label>
+        <div class="input"><span class="val">@username</span><button class="btn">Изменить</button></div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn primary">Сохранить</button>
+        <button class="btn">Сменить пароль</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Уведомления</h2>
+      <div class="desc">Рассылки включаются отдельно для каждого канала.</div>
+      <div class="row">
+        <div><div class="t">Email-рассылка</div><div class="s">Обновления, безопасность, важные события</div></div>
+        <div class="switch on"><div class="knob"></div></div>
+      </div>
+      <div class="row">
+        <div><div class="t">Telegram-уведомления</div><div class="s">Статус движка и срочные алерты на @username</div></div>
+        <div class="switch on"><div class="knob"></div></div>
+      </div>
+      <div class="row">
+        <div><div class="t">Новости и тест-драйвы</div><div class="s">Анонсы новых стратегий и бета-функций</div></div>
+        <div class="switch"><div class="knob"></div></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Устройства</h2>
+      <div class="desc">До 5 устройств на один аккаунт.</div>
+      <div class="row">
+        <div><div class="t">DESKTOP-ABC123 <span class="badge accent">Это устройство</span></div><div class="s">Windows 11 · ZPUI 1.8.3 · последний вход: сейчас</div></div>
+        <span class="badge ok">Онлайн</span>
+      </div>
+      <div class="row">
+        <div><div class="t">LAPTOP-K9M2</div><div class="s">Windows 10 · ZPUI 1.8.1 · последний вход: 11.09.2026</div></div>
+        <span class="badge ok">Онлайн</span>
+      </div>
+      <div style="margin-top:12px"><button class="btn">Отвязать устройство</button></div>
+    </div>
+
+    <div class="section">
+      <h2>Ключи</h2>
+      <div class="desc">Ключи активации на весь пул устройств.</div>
+      <div class="row">
+        <div><div class="t mono">ZPUI-a1b2c3d4e5f6</div><div class="s">до 14.12.2026 · устройств: 2 из 5</div></div>
+        <span class="badge ok">Активен</span>
+      </div>
+      <div style="margin-top:12px"><button class="btn primary">Активировать ключ</button></div>
+    </div>
+
+    <div class="section">
+      <h2>Сервер</h2>
+      <div class="desc">Точка подключения и состояние синхронизации.</div>
+      <div class="kv"><span class="k">Адрес</span><span class="mono">relay.zpui.ru</span></div>
+      <div class="kv"><span class="k">Статус</span><span><span class="dot"></span>подключено</span></div>
+      <div class="kv"><span class="k">Пинг</span><span>24 мс</span></div>
+      <div class="kv"><span class="k">Последняя синхронизация</span><span>14.09.2026, 10:02</span></div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

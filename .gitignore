@@ -78,3 +78,7 @@ zpui.exe
 ZPUI.exe
 domains.txt
 logs/
+
+# UI stand
+mockups/app-ui/node_modules/
+mockups/app-ui/dist/

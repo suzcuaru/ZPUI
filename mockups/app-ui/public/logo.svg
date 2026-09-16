@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="zg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#7db3ff"/>
+      <stop offset="1" stop-color="#3a7be5"/>
+    </linearGradient>
+    <linearGradient id="zgloss" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.38"/>
+      <stop offset="0.55" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="zglow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="2" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <g filter="url(#zglow)">
+    <path d="M32 4 L56 14 V32 C56 46 46 56 32 60 C18 56 8 46 8 32 V14 Z" fill="url(#zg)"/>
+    <path d="M32 4 L56 14 V32 C56 46 46 56 32 60 C18 56 8 46 8 32 V14 Z" fill="url(#zgloss)"/>
+    <path d="M32 9 L51 17 V32 C51 43 43 51 32 55 C21 51 13 43 13 32 V17 Z" fill="none" stroke="#ffffff" stroke-opacity="0.22" stroke-width="1.5"/>
+    <circle cx="32" cy="27" r="5.6" fill="#ffffff"/>
+    <path d="M29.2 30.4 L34.8 30.4 L36.4 43 L27.6 43 Z" fill="#ffffff"/>
+  </g>
+</svg>
