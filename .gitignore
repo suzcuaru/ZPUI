@@ -41,7 +41,7 @@ versions.txt
 
 # === Артефакты, не используемые CI/релизом (дистрибуция — GitHub Releases и Яндекс.Диск) ===
 zapret/
-components/
+/components/
 report.exe
 checksums.sha256
 telegram_links.txt
