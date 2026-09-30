@@ -1,6 +1,7 @@
 # === Исходный код (не заливаем в бинарный репо) ===
 internal/
 cmd/
+third_party/
 build/
 installer/
 web/src/
@@ -79,6 +80,9 @@ ZPUI.exe
 domains.txt
 logs/
 
-# UI stand
-mockups/app-ui/node_modules/
-mockups/app-ui/dist/
+# === Вынесенные проекты (30.09.2026 живут отдельными репозиториями рядом) ===
+# server/ -> ../ZPUI-Server, mockups/ -> ../ZPUI-Mockups
+server/
+mockups/
+backups/
+updater.exe
