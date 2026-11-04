@@ -1,0 +1,32 @@
+# skip-resources-system.txt — системный список пропускаемых ресурсов, обновляется с сервера ZPUI.
+# Редактирование не предусмотрено: файл целиком заменяется при смене версии набора с сервера.
+# Формат как у skip-resources.txt: один домен на строку, строки с # — комментарии.
+
+# Cloudflare service/test domains (always unavailable)
+cloudflareapps.com
+cloudflarebolt.com
+cloudflareclient.com
+cloudflarepartners.com
+cloudflareresolve.com
+cloudflaressl.com
+cloudflarestatus.com
+cloudflarestorage.com
+cloudflaretest.com
+
+# Cloudfront CDN
+cloudfront.net
+
+# Discord service subdomains
+discord.dev
+discord.media
+discord.status
+discord-activities.com
+discordactivities.com
+discordapp.net
+discordpartygames.com
+
+zendesk.com
+localizeapi.com
+frankerfacez.com
+discord.design
+freedns.controld.com

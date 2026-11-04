@@ -50,8 +50,8 @@ if not exist "%VERDIR%\versions.json" (
     timeout /t 10 > nul
     exit /b 1
 )
-if not exist "%VERDIR%\ZPUI-Setup-%VERSION%-win32.exe" (
-    echo [ERROR] dist\%VERSION%\ZPUI-Setup-%VERSION%-win32.exe not found. Build is incomplete.
+if not exist "%VERDIR%\ZPUI-Setup-%VERSION%.exe" (
+    echo [ERROR] dist\%VERSION%\ZPUI-Setup-%VERSION%.exe not found. Build is incomplete.
     timeout /t 10 > nul
     exit /b 1
 )
@@ -106,7 +106,7 @@ echo.
 
 REM === [3/7] Refresh repository root from dist ===
 echo [3/7] Refreshing repository root from dist\%VERSION%\...
-del /f /q "%BAT_DIR%ZPUI-Setup-*-win32.exe" > nul 2>&1
+del /f /q "%BAT_DIR%ZPUI-Setup-*.exe" > nul 2>&1
 del /f /q "%BAT_DIR%report.exe" > nul 2>&1
 xcopy /e /i /y /q "%VERDIR%\*" "%BAT_DIR%" > nul
 if errorlevel 1 (
@@ -119,6 +119,12 @@ del /f /q "%BAT_DIR%checksums.sha256" > nul 2>&1
 del /f /q "%BAT_DIR%telegram_links.txt" > nul 2>&1
 rd /s /q "%BAT_DIR%zapret" > nul 2>&1
 rd /s /q "%BAT_DIR%components" > nul 2>&1
+rd /s /q "%BAT_DIR%x86" > nul 2>&1
+rd /s /q "%BAT_DIR%x64" > nul 2>&1
+copy /y "%VERDIR%\x64\domains.txt" "%BAT_DIR%domains.txt" > nul 2>&1
+if not exist "%BAT_DIR%domains.txt" echo   [INFO] domains.txt not produced by build - portable will ship without it
+copy /y "%VERDIR%\x64\skip-resources-system.txt" "%BAT_DIR%skip-resources-system.txt" > nul 2>&1
+if not exist "%BAT_DIR%skip-resources-system.txt" echo   [INFO] skip-resources-system.txt not produced by build - portable will ship without it
 echo   Done.
 echo.
 
@@ -134,8 +140,8 @@ if not exist "%BAT_DIR%versions.json" (
     timeout /t 10 > nul
     exit /b 1
 )
-if not exist "%BAT_DIR%ZPUI-Setup-%VERSION%-win32.exe" (
-    echo [ERROR] ZPUI-Setup-%VERSION%-win32.exe missing in repository root - CI would silently skip the release.
+if not exist "%BAT_DIR%ZPUI-Setup-%VERSION%.exe" (
+    echo [ERROR] ZPUI-Setup-%VERSION%.exe missing in repository root - CI would silently skip the release.
     timeout /t 10 > nul
     exit /b 1
 )

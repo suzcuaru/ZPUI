@@ -1,0 +1,5 @@
+# domains.txt — DNS domains for Xbox/network bypass.
+# One domain per line. Lines starting with # are comments.
+# These domains are intercepted by the DNS server.
+
+example.com

@@ -39,6 +39,7 @@ versions.txt
 # === Агентские файлы (скиллы/планы) — не для публичного репо ===
 .agents/
 .zcode/
+.zcodeignore
 
 # === Артефакты, не используемые CI/релизом (дистрибуция — GitHub Releases и Яндекс.Диск) ===
 zapret/
@@ -74,11 +75,21 @@ Thumbs.db
 # === Архив припаркованных фич и старых сборок (локально, не для репо) ===
 archive/
 
-# === Сборочные бинарники в корне (дубли build/bin и dist/) ===
-zpui.exe
-ZPUI.exe
-domains.txt
+# === Релизные артефакты в корне ТРЕКАЮТСЯ: release.yml пакует релиз из корня
+# === репо (ZPUI.exe, ZPUI-x86.exe, ZPUI-Setup-*.exe, versions.json, domains.txt,
+# === skip-resources-system.txt). Обновляются release.bat [3/7] перед тегом.
+ZPUI-Update-*.exe
 logs/
+
+# === Генераты goversioninfo (побочные, все архитектуры) ===
+resource_windows_*.syso
+versioninfo.json
+
+# === Локальные dev-инструменты и стенды (не для публичного репо) ===
+web/dev*.html
+web/check-bindings.mjs
+upload-update.bat
+CHANGELOG-DEV.md
 
 # === Вынесенные проекты (30.09.2026 живут отдельными репозиториями рядом) ===
 # server/ -> ../ZPUI-Server, mockups/ -> ../ZPUI-Mockups

@@ -23,25 +23,27 @@ jobs:
       - name: Verify release files exist
         id: check
         run: |
-          if [ -f "ZPUI.exe" ] && [ -f "versions.json" ]; then
-            echo "exists=true" >> $GITHUB_OUTPUT
-          else
-            echo "exists=false" >> $GITHUB_OUTPUT
+          if [ ! -f "ZPUI.exe" ] || [ ! -f "versions.json" ]; then
+            echo "::error::Release artifacts missing in repo root (ZPUI.exe and/or versions.json). Run release.bat on Windows, commit the refreshed artifacts, then tag."
+            exit 1
           fi
 
       - name: Package portable version
-        if: steps.check.outputs.exists == 'true'
         run: |
           V="${{ steps.version.outputs.VERSION }}"
-          mkdir -p release/portable
-          cp ZPUI.exe release/portable/
-          cp versions.json release/portable/
-          [ -f domains.txt ] && cp domains.txt release/portable/
-          [ -f skip-resources.txt ] && cp skip-resources.txt release/portable/
+          # Портатив двухбитный: x64/ZPUI.exe и x86/ZPUI-x86.exe, каждая папка
+          # самодостаточна (versions.json + файлы списков рядом с exe).
+          mkdir -p release/portable/x64 release/portable/x86
+          cp ZPUI.exe release/portable/x64/
+          cp ZPUI-x86.exe release/portable/x86/ZPUI.exe || echo "ZPUI-x86.exe missing - x86 portable skipped"
+          for d in x64 x86; do
+            cp versions.json release/portable/$d/
+            [ -f domains.txt ] && cp domains.txt release/portable/$d/
+            [ -f skip-resources-system.txt ] && cp skip-resources-system.txt release/portable/$d/
+          done
           cd release/portable && zip -r "../ZPUI-${V}-portable.zip" .
 
       - name: Generate release notes from CHANGELOG.md
-        if: steps.check.outputs.exists == 'true'
         id: notes
         shell: bash
         run: |
@@ -53,10 +55,9 @@ jobs:
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
-        if: steps.check.outputs.exists == 'true'
         with:
           name: ZPUI v${{ steps.version.outputs.VERSION }}
           body_path: release/notes.md
           files: |
-            ZPUI-Setup-${{ steps.version.outputs.VERSION }}-win32.exe
+            ZPUI-Setup-${{ steps.version.outputs.VERSION }}.exe
             release/ZPUI-${{ steps.version.outputs.VERSION }}-portable.zip
