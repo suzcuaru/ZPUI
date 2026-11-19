@@ -1,0 +1,307 @@
+/* ── Dashboard v2 ──────────────────────── */
+.dash-grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; flex:1; min-height:0; }
+.dash-card-fill { flex:1; }
+.dash-circ-pair { display:flex; gap:8px; justify-content:center; padding:4px 0; }
+.circ-sub { font-size:9.5px; color:var(--text-tertiary); }
+.dash-fail-compact { display:flex; flex-direction:column; gap:3px; margin-top:4px; }
+.dash-fail-item {
+  display:flex; align-items:center; gap:5px; padding:3px 6px;
+  border-radius:4px; background:var(--danger-bg); font-size:10px;
+}
+.dash-fail-dot { width:5px; height:5px; border-radius:50%; flex-shrink:0; background:var(--danger); }
+.dash-fail-name { flex:1; color:var(--danger); font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.dash-fail-tag { font-size:9.5px; color:var(--text-tertiary); }
+.dash-fail-more { font-size:9px; color:var(--text-tertiary); padding:2px 6px; }
+
+.dash-status-grid { display:flex; flex-direction:column; gap:4px; }
+.dash-status-item {
+  display:flex; align-items:center; gap:6px; padding:5px 8px;
+  border-radius:var(--radius-sm); background:var(--bg-inset);
+  transition:background 150ms;
+}
+.dash-status-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; background:var(--text-tertiary); }
+.dash-status-item.on .dash-status-dot { background:var(--success); }
+.dash-status-name { flex:1; font-size:11px; font-weight:500; color:var(--text-primary); }
+.dash-status-val { font-size:10px; color:var(--text-tertiary); font-family:var(--font-mono); }
+.dash-status-item.on .dash-status-val { color:var(--success); }
+
+.dash-mini-stats { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+.stat-card {
+  display:flex; align-items:center; gap:6px; padding:6px 8px;
+  border-radius:var(--radius-sm); background:var(--bg-inset);
+}
+.stat-card-icon { width:24px; height:24px; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
+.stat-card-icon svg { width:16px; height:16px; }
+.stat-card-body { display:flex; flex-direction:column; gap:0; min-width:0; }
+.stat-card-value { font-size:12px; font-weight:700; font-family:var(--font-mono); }
+.stat-card-label { font-size:9px; color:var(--text-tertiary); }
+/* ── Dashboard v3 (redesign) ─────────────── */
+.db-row { display:grid; gap:8px; margin-bottom:8px; }
+.db-row-4 { grid-template-columns:1fr 1fr 1fr 1fr; }
+.db-row-3 { grid-template-columns:1.2fr 1fr 0.8fr; }
+.db-card {
+  background:var(--bg-card); border:none;
+  border-radius:var(--radius-md); padding:10px 12px;
+  display:flex; flex-direction:column; gap:8px; position:relative;
+}
+.db-card-fill { flex:1; }
+.db-card-title { font-size:11px; font-weight:var(--fw-heading); color:var(--text-primary); text-transform:uppercase; letter-spacing:0.03em; }
+
+.db-compact-status { display:flex; gap:6px; flex-wrap:wrap; padding:4px 0; }
+.db-pill {
+  display:flex; align-items:center; gap:5px; padding:4px 8px;
+  border-radius:20px; background:var(--bg-inset); font-size:10.5px;
+}
+.db-pill-dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
+.db-pill-label { color:var(--text-tertiary); font-weight:500; }
+.db-pill-value { color:var(--text-primary); font-weight:700; font-family:var(--font-mono); font-size:10px; }
+
+.db-page { display:flex; flex-direction:column; flex:1; min-height:0; gap:8px; }
+
+.db-resource-row { display:flex; align-items:center; gap:8px; padding:4px 0; }
+.db-res-head { display:flex; align-items:center; justify-content:space-between; }
+.db-res-meta { display:flex; align-items:center; gap:8px; }
+.db-res-time { font-size:10px; color:var(--text-tertiary); font-family:var(--font-mono); }
+.db-res-status { font-size:10px; color:var(--text-tertiary); font-weight:500; }
+.db-res-status.checking { color:var(--accent); }
+/* === Availability panel (redesigned) === */
+.avail-panel { padding:12px 14px; display:flex; flex-direction:column; gap:8px; }
+.avail-head {
+  display:flex; align-items:center; justify-content:space-between; gap:8px;
+}
+.avail-title-group { display:flex; align-items:center; gap:10px; min-width:0; }
+
+.avail-status {
+  display:inline-flex; align-items:center; gap:6px;
+  font-size:10.5px; font-weight:600;
+  padding:3px 9px; border-radius:20px;
+  border:var(--border-w) solid transparent; background:var(--bg-inset);
+  color:var(--text-secondary); white-space:nowrap;
+}
+.avail-status.busy { color:var(--accent); border-color:var(--accent); background:var(--accent-soft); }
+.avail-status.idle { color:var(--text-secondary); }
+.avail-status-time { color:var(--text-primary); font-weight:700; }
+
+.avail-pulse {
+  width:7px; height:7px; border-radius:50%; background:var(--accent);
+  animation:pulse 1.2s ease-in-out infinite; flex-shrink:0;
+}
+.avail-live-dot {
+  width:7px; height:7px; border-radius:50%; background:var(--success);
+  box-shadow:0 0 0 0 var(--success); flex-shrink:0;
+  animation:livePulse 2.4s ease-out infinite;
+}
+@keyframes livePulse {
+  0% { box-shadow:0 0 0 0 color-mix(in srgb, var(--success) 50%, transparent); }
+  70% { box-shadow:0 0 0 5px color-mix(in srgb, var(--success) 0%, transparent); }
+  100% { box-shadow:0 0 0 0 color-mix(in srgb, var(--success) 0%, transparent); }
+}
+@keyframes pulse {
+  0%,100% { opacity:0.3; transform:scale(0.8); }
+  50% { opacity:1; transform:scale(1.2); }
+}
+
+.avail-recheck {
+  width:30px; height:30px; border-radius:9px; flex-shrink:0;
+  border:var(--border-w) solid var(--border); background:var(--bg-card);
+  color:var(--text-secondary); cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  transition:all 200ms ease; padding:0;
+}
+.avail-recheck:hover:not(.busy) {
+  background:var(--accent-soft); color:var(--accent);
+  border-color:var(--accent); box-shadow:var(--shadow-md);
+}
+.avail-recheck:active:not(.busy) { transform:scale(0.96); }
+.avail-recheck.busy { opacity:0.6; cursor:default; border-color:var(--accent); color:var(--accent); }
+.avail-recheck.busy .avail-recheck-icon { animation:spin 900ms linear infinite; }
+
+/* Chart */
+.avail-chart-wrap { width:100%; }
+/* Скелетон до первого ответа /api/resource-status (фидбек 04.11: контент
+   появляется рывками) — высота = высоте SVG графика, замена без прыжка. */
+.avail-chart-skeleton { height:176px; display:flex; align-items:center; padding:0; }
+.avail-chart-skeleton .skeleton-line { flex:1; height:64%; margin:0; }
+.avail-fail-skeleton { display:flex; flex-direction:column; gap:2px; padding:4px 0; }
+.avail-chart { width:100%; position:relative; }
+.avail-chart-svg { display:block; width:100%; overflow:visible; }
+.avail-axis-text {
+  font-family:var(--font-mono); font-size:8.5px;
+  fill:var(--text-tertiary);
+}
+.avail-chart-empty {
+  width:100%; height:132px; display:flex; align-items:center; justify-content:center;
+  font-size:11px; color:var(--text-tertiary);
+}
+
+.avail-tooltip {
+  position:absolute; top:-2px; transform:translateX(-50%);
+  background:var(--bg-section); border:var(--border-w) solid var(--border);
+  border-radius:8px; padding:5px 9px; box-shadow:var(--shadow-md);
+  display:flex; flex-direction:column; gap:2px;
+  pointer-events:none; z-index:5; white-space:nowrap;
+}
+.avail-tooltip-time { font-size:9px; color:var(--text-tertiary); }
+.avail-tooltip-row {
+  font-size:10.5px; color:var(--text-primary);
+  display:inline-flex; align-items:center; gap:5px;
+}
+.avail-tooltip-dot { width:7px; height:7px; border-radius:50%; display:inline-block; }
+.avail-tooltip-net { font-size:9.5px; color:var(--text-secondary); margin-top:1px; }
+.avail-tooltip-strat {
+  font-size:10px; font-weight:600; color:var(--warning);
+  display:inline-flex; align-items:center; gap:4px;
+  border-bottom:var(--border-w) solid var(--warning); padding-bottom:2px; margin-bottom:2px;
+}
+.avail-tooltip-strat-dot {
+  width:6px; height:6px; border-radius:50%; background:var(--warning); display:inline-block;
+}
+
+/* Traffic chart (monitor) */
+.tchart-wrap { width:100%; position:relative; }
+.tchart-tooltip {
+  position:absolute; top:-6px; transform:translateX(-50%);
+  background:var(--bg-section); border:var(--border-w) solid var(--border);
+  border-radius:8px; padding:4px 8px; box-shadow:var(--shadow-md);
+  pointer-events:none; z-index:5; white-space:nowrap;
+  /* Несколько серий (трафик: загрузка + отдача) — каждая в своей строке. */
+  display:flex; flex-direction:column; gap:2px;
+}
+
+/* Legend + current stats */
+.avail-legend {
+  display:flex; gap:10px; flex-wrap:wrap;
+  padding-top:2px;
+}
+.avail-chip {
+  display:flex; align-items:center; gap:7px; flex:1; min-width:0;
+  padding:6px 10px; border-radius:var(--radius-md);
+  background:var(--bg-inset);
+}
+/* Кликабельная панель-легенда: курсор + ховер как у кнопки */
+.avail-chip-click {
+  border:0; font-family:var(--font); cursor:pointer; text-align:left;
+  transition:background var(--dur-fast) ease;
+}
+.avail-chip-click:hover { background:var(--bg-hover); }
+
+/* Модалка панели ресурсов: крупная, список с прокруткой */
+.rp-modal { width:560px; max-width:92vw; }
+.rp-checked { margin-left:auto; font-size:10.5px; color:var(--text-tertiary); }
+.rp-body { max-height:420px; overflow-y:auto; }
+.rp-list { display:flex; flex-direction:column; gap:2px; }
+.rp-head { display:grid; grid-template-columns:8px 1fr 64px 76px; align-items:center; gap:8px; padding:2px 8px 6px; border-bottom:var(--border-w) solid var(--border-light); margin-bottom:4px; }
+.rp-h-dot { width:8px; flex-shrink:0; }
+.rp-h-name { flex:1; font-size:10px; text-transform:uppercase; letter-spacing:0.04em; color:var(--text-tertiary); font-weight:600; }
+.rp-h-uptime { font-size:10px; text-transform:uppercase; letter-spacing:0.04em; color:var(--text-tertiary); font-weight:600; text-align:right; white-space:nowrap; }
+.rp-h-latency { font-size:10px; text-transform:uppercase; letter-spacing:0.04em; color:var(--text-tertiary); font-weight:600; text-align:right; white-space:nowrap; }
+.rp-latency { text-align:right; font-size:11px; color:var(--text-tertiary); }
+.rp-loading, .rp-empty { padding:24px 0; text-align:center; color:var(--text-tertiary); font-size:12px; }
+.rp-row {
+  /* Та же сетка, что у шапки (8px 1fr 64px 76px): ресурс/аптайм/отклик
+     в своих колонках, значения выровнены по заголовкам. */
+  display:grid; grid-template-columns:8px 1fr 64px 76px; align-items:center; gap:8px; padding:6px 8px;
+  border-radius:var(--radius-sm);
+}
+.rp-row:hover { background:var(--bg-hover); }
+.rp-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.rp-dot.ok { background:var(--success); }
+.rp-dot.bad { background:var(--danger); }
+.rp-name-wrap { display:flex; flex-direction:column; gap:1px; flex:1; min-width:0; }
+.rp-name { font-size:12px; color:var(--text-primary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.rp-info { font-size:10px; color:var(--text-tertiary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.rp-uptime { font-size:11px; color:var(--text-secondary); text-align:right; white-space:nowrap; }
+.rp-uptime.ok { color:var(--success); }
+.rp-uptime.bad { color:var(--danger); }
+.avail-chip-dot { width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+.avail-chip-label {
+  font-size:10px; color:var(--text-secondary); text-transform:uppercase;
+  letter-spacing:0.03em; font-weight:600;
+}
+.avail-chip-val {
+  font-size:15px; font-weight:800; margin-left:auto;
+  font-variant-numeric:tabular-nums; line-height:1;
+}
+.avail-chip-count { font-size:10.5px; color:var(--text-tertiary); }
+
+.avail-fail-panel { flex:1; min-height:0; display:flex; flex-direction:column; gap:6px; }
+.avail-fail-head { flex-shrink:0; }
+.avail-fail-scroll { flex:1; min-height:0; overflow-y:auto; }
+.avail-fail-empty {
+  flex:1; min-height:56px; display:flex; align-items:center; justify-content:center;
+  font-size:11px; color:var(--text-tertiary); font-weight:500;
+}
+.avail-fail-grid {
+  display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:5px;
+}
+.avail-fail-tag {
+  font-size:10px; padding:3px 8px; border-radius:6px;
+  background:var(--danger-bg); color:var(--danger); font-weight:600;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-align:center;
+}
+
+.db-sys-grid { display:grid; grid-template-columns:1fr 1fr; gap:4px; padding:2px 0; }
+.db-sys-item { display:flex; flex-direction:column; gap:0; padding:4px 6px; border-radius:var(--radius-sm); background:var(--bg-inset); }
+.db-sys-val { font-size:13px; font-weight:700; font-family:var(--font-mono); color:var(--text-primary); }
+.db-sys-label { font-size:8.5px; color:var(--text-tertiary); text-transform:uppercase; letter-spacing:0.02em; }
+
+.db-traffic-item { display:flex; align-items:center; gap:5px; }
+.db-traffic-arrow { font-size:14px; font-weight:700; }
+.db-traffic-arrow.down { color:var(--accent); }
+.db-traffic-arrow.up { color:var(--success); }
+.db-traffic-val { font-size:13px; font-weight:700; font-family:var(--font-mono); color:var(--text-primary); }
+.db-total-dl { font-size:9.5px; color:var(--text-tertiary); font-family:var(--font-mono); }
+
+.db-zapret-info { display:flex; flex-direction:column; gap:3px; }
+.db-zapret-row { display:flex; align-items:center; justify-content:space-between; }
+.db-zapret-row .info-label { font-size:10.5px; color:var(--text-tertiary); }
+.db-zapret-row .info-value { font-size:10.5px; }
+
+.db-fails-list { display:flex; flex-direction:column; gap:3px; padding:2px 0; }
+.db-fail-line {
+  font-size:10px; padding:3px 8px; border-radius:4px;
+  background:var(--danger-bg); color:var(--danger); font-weight:500;
+}
+.db-fail-line.more { background:transparent; color:var(--text-tertiary); font-weight:400; }
+
+.db-actions { display:flex; gap:4px; flex-wrap:wrap; padding:2px 0; }
+
+.btn-compact {
+  position:absolute; top:8px; right:8px; width:24px; height:24px;
+  display:flex; align-items:center; justify-content:center;
+  border-radius:var(--radius-sm); padding:0;
+}
+.btn-compact:hover { background:var(--bg-hover); }
+
+/* ── Monitor v2 ────────────────────────── */
+/* Четыре графика (Загрузка/Отдача/Интернетметр ×2) — всегда одной строкой. */
+.mon-grid { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:8px; flex-shrink:0; }
+.mon-chart-cell { gap:4px; min-width:0; }
+/* Обёртка страницы Мониторинга: заполняет вкладку целиком — панели (включая
+   устройства) тянутся до низа, а оверлей паузы центрируется по видимой области */
+.mon-page { display:flex; flex-direction:column; gap:8px; flex:1; min-height:0; height:100%; }
+
+.mon-devices { display:flex; flex-direction:column; gap:3px; flex:1; min-height:0; overflow-y:auto; }
+.mon-devices-section { flex:1; min-height:0; display:flex; flex-direction:column; gap:6px; }
+.mon-device {
+  display:flex; align-items:center; gap:8px; padding:5px 10px;
+  border-radius:var(--radius-sm); background:var(--bg-card);
+}
+.mon-device-dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; background:var(--success); }
+.mon-device-name { font-size:11px; font-weight:500; color:var(--text-primary); flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.mon-device-ip { font-size:9px; color:var(--text-tertiary); font-family:var(--font-mono); }
+.mon-device-conns { font-size:10px; font-weight:600; color:var(--accent); }
+.mon-device-conns-badge { font-size:10px; color:var(--text-tertiary); margin-left:6px; font-weight:400; }
+
+/* ── No-scroll layout fixes ────────────── */
+.main-area { overflow:hidden; overflow-x:hidden; }
+.set-grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.form-input-sm { height:26px; font-size:11px; }
+.btn-flex { flex:1; }
+.link-btn {
+  background:none; border:none; color:var(--accent);
+  font-size:inherit; font-family:var(--font); cursor:pointer;
+  text-decoration:underline; padding:0;
+}
+.link-btn:hover { color:var(--accent-hover); }
+.xbox-dns-row { display:flex; gap:8px; }

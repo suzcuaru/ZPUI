@@ -1,0 +1,14 @@
+# list-exclude-system.txt — системный список исключений доменов (ZPUI).
+# Системный список, обновляется с сервера: домены, которые обход не должен обрабатывать.
+# Пользовательские исключения — в list-exclude-user.txt.
+gov.ru
+nalog.ru
+gosuslugi.ru
+sberbank.ru
+sbrf.ru
+vtb.ru
+tinkoff.ru
+alfabank.ru
+gazprombank.ru
+mkb.ru
+raif.ru

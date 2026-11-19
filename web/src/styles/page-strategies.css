@@ -1,0 +1,98 @@
+/* ── Page title row ─────────────────────── */
+.page-title-row {
+  display:flex; align-items:baseline; gap:8px; flex-shrink:0;
+}
+.page-title-meta {
+  font-size:11px; color:var(--text-tertiary); font-weight:500;
+}
+
+/* ── Strategy grid ───────────────── */
+/* Ровно 4 колонки: карточки крупнее, длинные имена — под ellipsis. */
+.strat-grid {
+  display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:8px;
+  align-content:start;
+  overflow-y:auto; padding-right:2px;
+}
+/* Скелетон карточек до первого ответа /api/zapret/strategies (фидбек 04.11):
+   сетка и высота карточки те же — замена на контент без прыжка раскладки. */
+.strat-card-skel {
+  min-height:40px; border-radius:var(--radius-md);
+  display:flex; align-items:center; padding:0 12px;
+  background:var(--bg-card);
+}
+.strat-card-skel .skeleton-line { margin:0; }
+.strat-card {
+  display:flex; align-items:center; gap:8px; padding:11px 12px;
+  min-height:40px;
+  border-radius:var(--radius-md); border:var(--border-w) solid transparent;
+  cursor:pointer; transition:all 150ms; background:var(--bg-card);
+  position:relative;
+}
+/* Hover-подсветка — только у НЕвыбранной карточки: рамка выбранной
+   (толстая, акцентная) не должна «пропадать» под hover при ПКМ/наведении. */
+.strat-card:not(.active):hover { border-color:var(--accent); background:var(--accent-soft); }
+.strat-card.active { border-color:var(--accent); border-width:var(--border-w-strong); padding:10px 11px; background:var(--accent-soft); }
+.strat-card.locked { opacity:0.45; pointer-events:none; cursor:default; }
+.strat-card.testing { opacity:0.7; pointer-events:none; }
+
+/* Контекстное меню стратегии (правый клик) */
+.strat-ctx-menu {
+  position:fixed; z-index:10000;
+  background:var(--bg-card); border:var(--border-w) solid var(--border); border-radius:var(--radius-sm);
+  box-shadow:var(--shadow-lg); padding:4px; min-width:180px;
+  transform-origin:top left;
+  animation:ctxIn 200ms var(--ease-soft);
+}
+.strat-ctx-menu.is-closing { animation:ctxOut 140ms var(--ease-standard) forwards; }
+.strat-ctx-item {
+  display:flex; align-items:center; gap:8px; width:100%;
+  padding:7px 10px; border:none; border-radius:3px;
+  background:none; color:var(--text-primary); font-size:11.5px; font-weight:500;
+  cursor:pointer; text-align:left; transition:background 120ms ease;
+}
+.strat-ctx-item:hover { background:var(--bg-hover); }
+.strat-ctx-item:disabled { opacity:0.4; cursor:not-allowed; }
+.strat-lock-hint {
+  font-size:11px; color:var(--text-tertiary);
+  padding:6px 10px; margin-bottom:8px;
+  background:var(--bg-section); border-radius:6px;
+}
+
+.strat-card-name { flex:1; font-size:12px; font-weight:500; color:var(--text-primary); text-transform:uppercase; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.strat-card-badge { font-size:12px; color:var(--success); font-weight:700; }
+.strat-empty { color:var(--text-tertiary); font-size:11px; padding:16px; text-align:center; grid-column:1/-1; }
+
+.strat-card-stats {
+  font-size:10px; font-weight:600; color:var(--text-tertiary);
+  font-family:var(--font-mono); flex-shrink:0;
+}
+
+.strat-card.result-good .strat-card-stats { color:var(--success); }
+.strat-card.result-mid .strat-card-stats { color:var(--warning); }
+.strat-card.result-bad { opacity:0.6; }
+.strat-card.result-bad .strat-card-stats { color:var(--danger); }
+
+.strat-card.testing-now {
+  border-color:var(--accent);
+  overflow:visible;
+}
+.strat-card.testing-now::after {
+  content:''; position:absolute; inset:-2px;
+  border-radius:inherit;
+  border:2px solid transparent;
+  border-top-color:var(--accent);
+  border-right-color:var(--accent);
+  animation:spin 800ms linear infinite;
+}
+
+.strat-test-bar {
+  display:flex; flex-direction:column; gap:4px;
+  padding:6px 10px; margin-bottom:6px;
+  background:var(--bg-inset); border-radius:var(--radius-sm);
+}
+.strat-test-info { display:flex; align-items:center; gap:6px; }
+.strat-test-spin { display:flex; align-items:center; }
+.strat-test-label { font-size:11px; font-weight:500; color:var(--text-primary); flex:1; }
+.strat-test-count { font-size:11px; font-weight:600; color:var(--accent); font-family:var(--font-mono); }
+.strat-test-progress { height:3px; background:var(--border); border-radius:2px; overflow:hidden; }
+.strat-test-progress-fill { height:100%; background:var(--accent); transition:width 300ms ease; }

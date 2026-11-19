@@ -1,0 +1,174 @@
+/* ── Documentation page ─────────────────── */
+.docs-page { display:flex; flex-direction:column; gap:8px; height:100%; min-height:0; }
+.docs-shell {
+  flex:1; min-height:0;
+  display:flex; gap:8px;
+}
+.docs-rail {
+  width:154px; flex-shrink:0; padding:6px 4px;
+  overflow-y:auto;
+  background:var(--bg-card); border-radius:var(--radius-lg); box-shadow:var(--shadow-sm);
+  display:flex; flex-direction:column; gap:2px;
+}
+.docs-rail-item {
+  display:flex; align-items:center; gap:8px;
+  padding:6px 8px; border-radius:var(--radius-md);
+  background:none; border:none; cursor:pointer;
+  font-family:var(--font); font-size:12.5px; color:var(--text-secondary);
+  text-align:left; transition:background .12s ease, color .12s ease;
+}
+.docs-rail-item svg { flex-shrink:0; color:var(--text-tertiary); transition:color .12s ease; }
+.docs-rail-item:hover { background:var(--bg-inset); color:var(--text-primary); }
+.docs-rail-item:hover svg { color:var(--text-secondary); }
+.docs-rail-item.active { background:var(--accent-soft); color:var(--accent); font-weight:600; }
+.docs-rail-item.active svg { color:var(--accent); }
+/* Заголовок пункта — одна строка всегда: активный (жирный) не «прыгает» высотой */
+.docs-rail-item span {
+  min-width:0; flex:1;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.docs-content {
+  flex:1; min-width:0; overflow-y:auto;
+  padding:16px 20px 20px;
+  background:var(--bg-card); border-radius:var(--radius-lg); box-shadow:var(--shadow-sm);
+  animation:docIn .28s ease;
+}
+@keyframes docIn { from { opacity:0; transform:translateY(7px); } to { opacity:1; transform:none; } }
+.docs-content-head { display:flex; align-items:center; gap:11px; margin-bottom:14px; }
+.docs-content-icon {
+  display:flex; align-items:center; justify-content:center;
+  width:32px; height:32px; border-radius:var(--radius-md);
+  background:var(--accent-soft); color:var(--accent); flex-shrink:0;
+}
+.docs-content-title { font-size:15px; font-weight:var(--fw-heading); color:var(--text-primary); margin:0; }
+.docs-lead { font-size:13px; line-height:1.65; color:var(--text-secondary); margin:0 0 14px; }
+.docs-callout {
+  display:flex; align-items:flex-start; gap:9px;
+  padding:10px 12px; margin:9px 0; border-radius:var(--radius-md);
+  font-size:12.5px; line-height:1.55; color:var(--text-secondary);
+  border-left:var(--border-w-strong) solid var(--border); background:var(--bg-inset);
+}
+.docs-callout-icon { flex-shrink:0; margin-top:1px; display:flex; }
+.docs-callout.important { border-left-color:var(--accent); background:var(--accent-soft); color:var(--text-primary); }
+.docs-callout.important .docs-callout-icon { color:var(--accent); }
+.docs-callout.warn { border-left-color:var(--warning); background:var(--warning-bg); }
+.docs-callout.warn .docs-callout-icon { color:var(--warning); }
+.docs-callout.info .docs-callout-icon { color:var(--text-tertiary); }
+.docs-list { list-style:none; padding:0; margin:9px 0; display:flex; flex-direction:column; gap:7px; }
+.docs-list li { display:flex; align-items:flex-start; gap:8px; font-size:12.5px; line-height:1.5; color:var(--text-secondary); }
+.docs-list li svg { flex-shrink:0; color:var(--accent); margin-top:2px; }
+
+.docs-steps { list-style:none; padding:0; margin:9px 0; display:flex; flex-direction:column; gap:8px; counter-reset:step; }
+.docs-steps li { display:flex; align-items:flex-start; gap:9px; font-size:12.5px; line-height:1.5; color:var(--text-secondary); }
+.docs-step-num {
+  flex-shrink:0; width:20px; height:20px; border-radius:50%;
+  background:var(--accent-soft); color:var(--accent);
+  font-size:10px; font-weight:700; display:flex; align-items:center; justify-content:center;
+  margin-top:1px;
+}
+
+.docs-rail-divider { height:1px; background:var(--border); margin:8px 4px 4px; }
+.docs-rail-label {
+  font-size:9.5px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em;
+  color:var(--text-tertiary); padding:2px 10px 4px;
+}
+.docs-rail-link { text-decoration:none; color:var(--text-secondary); }
+.docs-rail-link:hover { color:var(--accent); }
+.docs-rail-link:hover svg { color:var(--accent); }
+.docs-h3 { font-size:13px; font-weight:600; color:var(--text-primary); margin:14px 0 4px; }
+
+/* Опции раздела: название — что делает (перечисление контролов вкладки) */
+.docs-opts { margin:9px 0; display:flex; flex-direction:column; }
+.docs-opt {
+  display:flex; align-items:flex-start; gap:12px;
+  padding:7px 0; border-bottom:1px solid var(--border-light);
+  font-size:12.5px; line-height:1.5;
+}
+.docs-opt:last-child { border-bottom:none; padding-bottom:0; }
+.docs-opt-k { flex-shrink:0; width:178px; font-weight:600; color:var(--text-primary); }
+.docs-opt-v { color:var(--text-secondary); min-width:0; }
+/* === Zapret service bar (start/stop/reinstall/diagnostics) === */
+/* Обёртка вкладки Запрет: страница возвращает несколько блоков — собираем
+   их в контейнер stagger (та же раскладка, что давал gap у .main-area) */
+.zp-page { display:flex; flex-direction:column; gap:8px; flex:1; min-height:0; }
+.zp-service-status { display:flex; align-items:center; gap:8px; min-width:0; }
+.zp-status-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.zp-status-dot.on { background:var(--success); box-shadow:0 0 6px color-mix(in srgb, var(--success) 50%, transparent); }
+.zp-status-dot.off { background:var(--text-tertiary); }
+.zp-status-text { font-size:13.5px; font-weight:700; color:var(--text-primary); }
+.zp-operator { margin-left:8px; opacity:0.7; font-size:0.85em; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.zp-version { font-size:11px; color:var(--text-tertiary); font-family:var(--font-mono); padding:2px 6px; background:var(--bg-card); border-radius:4px; }
+.zp-service-actions { display:flex; gap:8px; align-items:center; }
+.zp-service-actions .btn { display:inline-flex; align-items:center; gap:6px; font-size:12.5px; height:30px; padding:0 14px; }
+.zp-service-actions .btn svg { width:15px; height:15px; }
+
+/* === Filter sections with info/description === */
+.flt-section-info {
+  padding:10px 12px; background:var(--bg-card);
+  border-radius:8px;
+}
+.flt-section-head { display:flex; align-items:center; gap:6px; }
+.flt-info-icon { color:var(--text-tertiary); }
+.flt-section-desc {
+  font-size:10px; color:var(--text-tertiary); margin:4px 0 8px; line-height:1.4;
+}
+.flt-status-hint {
+  font-size:9.5px; color:var(--text-tertiary); display:block; margin-top:2px;
+}
+/* === Filters panel — compact single-row bar ===
+   Постоянная полоса внизу вкладки Запрет (обе подвкладки). Уплотнена под
+   одну строку в минимальном окне (фидбек 04.11): зазоры и пилюли уже,
+   статистика ipset прижата к правому краю. */
+.zp-filter-bar {
+  display: flex; align-items: center; gap: 5px;
+  padding: 5px 10px; margin-top: 8px; flex-shrink: 0;
+  background: var(--bg-section); border-radius: 8px;
+  flex-wrap: wrap;
+}
+.zp-filter-bar-label {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 10px; font-weight: 600; color: var(--text-secondary);
+  white-space: nowrap; cursor: help;
+}
+.zp-filter-bar-label svg { color: var(--accent); flex-shrink: 0; }
+.zp-filter-bar-pills { display: flex; gap: 2px; flex-shrink: 0; }
+/* Пилюли с иконкой (Порты, Оптимизация пинга): flex-зазор между иконкой и текстом */
+.zp-filter-bar-pills .flt2-pill { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; }
+.zp-filter-bar-pills .flt2-pill svg { flex-shrink: 0; }
+.zp-filter-bar-sep { width: 1px; height: 16px; background: var(--border); flex-shrink: 0; margin: 0 3px; }
+
+/* Tab body — strategies scrollable, lists fill available */
+.zp-tab-body {
+  flex:1; min-height:0; display:flex; flex-direction:column;
+  overflow:hidden;
+}
+.zp-tab-body .strat-grid {
+  flex:1; overflow-y:auto; padding:0;
+  align-content:start;
+}
+.zp-tab-body .lists-2col {
+  flex:1; min-height:0;
+}
+
+.flt2-pill {
+  font-size:10px; font-weight:600; padding:3px 10px; border-radius:6px;
+  border:var(--border-w) solid var(--border); background:var(--bg-section);
+  color:var(--text-secondary); cursor:pointer; transition:border-color 120ms, background 120ms, color 120ms;
+  white-space:nowrap; min-width:38px; text-align:center;
+}
+.flt2-pill:hover { border-color:var(--text-tertiary); color:var(--text-primary); }
+.flt2-pill.active {
+  border-color:var(--accent); background:var(--accent-soft);
+  color:var(--accent);
+}
+
+/* Wide buttons in service bar (for proper tooltip width) */
+.zp-btn-wide { min-width:90px; display:inline-flex; align-items:center; gap:5px; justify-content:center; }
+
+/* Start/Stop toggle button — stable width, clean hover */
+.zp-toggle-btn { min-width:118px; justify-content:center; }
+.zp-toggle-btn.busy { min-width:118px; opacity:0.85; }
+.zp-toggle-btn .spinning { animation:spin 700ms linear infinite; }
+
+/* Settings: row with multiple action buttons */
+.set-row-actions { display:flex; gap:6px; flex-wrap:wrap; }

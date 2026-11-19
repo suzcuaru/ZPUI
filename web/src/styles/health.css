@@ -1,0 +1,335 @@
+/* ── Health Check ─────────────────────── */
+.health-panel { display:flex; flex-direction:column; gap:12px; }
+.health-overall {
+  display:flex; align-items:center; gap:8px; padding:10px 12px;
+  border-radius:var(--radius-md); background:var(--bg-card);
+}
+.health-overall-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.health-overall-text { font-size:12px; font-weight:600; flex:1; }
+.health-time { font-size:10px; color:var(--text-tertiary); font-family:var(--font-mono); }
+
+.health-warnings { display:flex; flex-direction:column; gap:4px; }
+.health-warn-row {
+  font-size:11px; color:var(--warning); padding:6px 10px;
+  border-radius:var(--radius-sm); background:var(--warning-bg);
+}
+
+.health-section { }
+.health-section-title {
+  font-size:10px; font-weight:600; color:var(--text-tertiary);
+  text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;
+}
+.health-comp-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+.health-comp-card {
+  display:flex; align-items:center; gap:8px; padding:8px 10px;
+  border-radius:var(--radius-sm); border:var(--border-w) solid transparent; background:var(--bg-card);
+}
+.health-comp-card.running { border-color:var(--success); }
+.health-comp-card.stopped { border-color:var(--text-tertiary); }
+.health-comp-card.missing, .health-comp-card.broken { border-color:var(--danger); background:var(--danger-bg); }
+.health-comp-card.degraded { border-color:var(--warning); background:var(--warning-bg); }
+
+.health-comp-dot {
+  width:6px; height:6px; border-radius:50%; flex-shrink:0;
+  background:var(--text-tertiary);
+}
+.health-comp-card.running .health-comp-dot { background:var(--success); }
+.health-comp-card.missing .health-comp-dot, .health-comp-card.broken .health-comp-dot { background:var(--danger); }
+.health-comp-card.degraded .health-comp-dot { background:var(--warning); }
+
+.health-comp-info { flex:1; display:flex; flex-direction:column; gap:1px; min-width:0; }
+.health-comp-name { font-size:11px; font-weight:600; }
+.health-comp-ver { font-size:9px; color:var(--text-tertiary); }
+.health-comp-detail { font-size:9px; color:var(--danger); }
+.health-comp-status { font-size:10px; color:var(--text-secondary); }
+
+.health-sat-row { display:flex; flex-wrap:wrap; gap:6px; }
+.health-sat-pill {
+  display:flex; align-items:center; gap:5px; padding:4px 10px;
+  border-radius:var(--radius-sm); border:var(--border-w) solid transparent; background:var(--bg-card);
+  font-size:10px;
+}
+.health-sat-pill.ok { border-color:var(--success); }
+.health-sat-pill.missing { border-color:var(--danger); background:var(--danger-bg); }
+.health-sat-dot {
+  width:5px; height:5px; border-radius:50%;
+  background:var(--success);
+}
+.health-sat-pill.missing .health-sat-dot { background:var(--danger); }
+.health-sat-name { font-family:var(--font-mono); color:var(--text-secondary); }
+
+/* Карточки проблем центра здоровья: предупреждение + разбор + действие */
+.health-problems { display:flex; flex-direction:column; gap:6px; }
+.health-problem {
+  display:flex; gap:9px; padding:9px 11px;
+  border-radius:var(--radius-md);
+  border:var(--border-w) solid var(--warning);
+  background:var(--warning-bg);
+}
+.health-problem.critical { border-color:var(--danger); background:var(--danger-bg); }
+.health-problem-icon {
+  flex:none; display:flex; align-items:center; justify-content:center;
+  width:24px; height:24px; border-radius:var(--radius-sm);
+  background:var(--bg-card); color:var(--warning);
+}
+.health-problem.critical .health-problem-icon { color:var(--danger); }
+.health-problem-body { flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; }
+.health-problem-title { font-size:11.5px; font-weight:600; color:var(--text-primary); }
+.health-problem-desc { font-size:10.5px; color:var(--text-secondary); line-height:1.45; }
+.health-problem-btn { margin-top:5px; align-self:flex-start; }
+.health-problem-ok {
+  margin-top:5px; display:flex; align-items:center; gap:5px;
+  font-size:10.5px; font-weight:500; color:var(--success);
+}
+
+/* ══════════════════════════════════════════════════
+   Startup Screen
+   ══════════════════════════════════════════════════ */
+
+.startup-overlay {
+  position:fixed; inset:0; z-index:9999;
+  display:flex; align-items:center; justify-content:center;
+  background:var(--bg-page);
+  width:100vw; height:100vh;
+  overflow:hidden;
+}
+/* Затемнение по краям экрана (решение владельца 14.11 — «затемнение побольше») */
+.startup-overlay::after {
+  content:''; position:absolute; inset:0; z-index:1; pointer-events:none;
+  background:radial-gradient(ellipse at center, transparent 35%, rgba(0,0,0,0.6) 100%);
+}
+.startup-card, .startup-card-slim { position:relative; z-index:2; }
+
+.startup-card {
+  width:86%; max-width:640px;
+  display:flex; flex-direction:column; align-items:center;
+}
+
+/* Заголовок + приписка — вплотную к рейке этапов */
+.startup-top {
+  display:flex; flex-direction:column; align-items:center; gap:6px;
+  margin-bottom:22px;
+}
+.startup-title {
+  font-size:42px; font-weight:800; color:var(--text-primary);
+  letter-spacing:0.04em; line-height:1;
+}
+.startup-tagline {
+  font-size:12.5px; color:var(--text-tertiary);
+}
+
+/* ── Рейка этапов: Подготовка → Проверка → Установка → Автоподбор ── */
+.startup-rail {
+  width:100%;
+  display:flex; align-items:center; justify-content:center;
+  gap:10px;
+  margin-bottom:26px;
+}
+.startup-stage {
+  display:flex; align-items:center; gap:7px;
+  flex:none;
+}
+.startup-stage-dot {
+  width:20px; height:20px; border-radius:50%;
+  display:inline-flex; align-items:center; justify-content:center;
+  font-size:11px; font-weight:700;
+  border:2px solid var(--border);
+  color:transparent;
+  transition:all 0.3s ease;
+}
+.startup-stage-label {
+  font-size:12px; font-weight:600; color:var(--text-tertiary);
+  white-space:nowrap;
+  transition:color 0.3s ease;
+}
+.startup-stage-line {
+  width:34px; height:2px; border-radius:1px;
+  background:var(--border);
+  flex-shrink:0;
+}
+/* Сегмент линии между этапами в рейке автоподбора: заполняется зелёным
+   с плавным переходом, когда этап позади (продвижение по шагам ~800 мс) */
+.asm-seg { transition:background 400ms ease, opacity 400ms ease; }
+.asm-seg.filled { background:var(--success); opacity:0.55; }
+.startup-stage.is-done .startup-stage-dot {
+  background:var(--success); border-color:var(--success); color:#fff;
+}
+.startup-stage.is-done .startup-stage-label { color:var(--text-secondary); }
+.startup-stage.is-done .startup-stage-line { background:var(--success); opacity:0.5; }
+.startup-stage.is-active .startup-stage-dot {
+  border-color:var(--accent); color:var(--accent);
+  animation:stagePulse 1.6s ease-in-out infinite;
+}
+.startup-stage.is-active .startup-stage-label { color:var(--accent); }
+@keyframes stagePulse {
+  0%, 100% { box-shadow:0 0 0 0 rgba(255,255,255,0); }
+  50% { box-shadow:0 0 0 4px var(--accent-bg, rgba(43,103,212,.15)); }
+}
+@media (max-width: 700px) {
+  .startup-stage-label { display:none; }
+  .startup-stage-line { width:16px; }
+}
+
+/* ── Прогресс: единый pb (ui/ProgressBar) с косыми полосами; startup-bar —
+   только размерная надстройка (10px) поверх стандартного трека ── */
+.startup-brow {
+  width:100%; display:flex; align-items:center; gap:14px;
+}
+.startup-bar { flex:1; min-width:0; }
+.startup-bar .pb-track { height:10px; border-radius:5px; }
+.startup-pct {
+  flex:none; min-width:52px;
+  font-size:20px; font-weight:700; color:var(--text-primary);
+  text-align:right;
+}
+
+/* ── Информационная карточка: номер / название / ETA / пропуск ── */
+.startup-cardrow {
+  width:100%; margin-top:20px;
+  background:var(--card);
+  border:var(--border-w) solid var(--border);
+  border-radius:12px;
+  padding:13px 16px;
+  display:flex; align-items:center; gap:14px;
+  min-height:64px;
+}
+.startup-row-num {
+  font-family:var(--font-mono); font-weight:700; font-size:19px;
+  color:var(--accent); white-space:nowrap;
+}
+.startup-row-info {
+  flex:1; min-width:0;
+  display:flex; flex-direction:column; gap:2px;
+}
+.startup-row-nm {
+  font-size:13px; font-weight:600; color:var(--text-secondary);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.startup-row-eta {
+  font-size:12px; color:var(--text-tertiary);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.startup-skip-btn {
+  flex:none;
+  font-size:12.5px !important;
+  padding:5px 14px !important;
+}
+.startup-skip-btn.hidden { visibility:hidden; }
+.startup-provider {
+  display:flex; align-items:center; gap:6px;
+  margin-top:8px; padding:0 4px;
+  font-size:11px; color:var(--text-tertiary);
+}
+.startup-provider svg { color:var(--text-tertiary); flex-shrink:0; }
+.startup-provider strong { color:var(--text-secondary); font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+.startup-modal-overlay {
+  position:fixed; inset:0; z-index:10000;
+  display:flex; align-items:center; justify-content:center;
+  background:rgba(0,0,0,0.45);
+}
+
+.startup-modal {
+  width:520px; padding:24px 32px; border-radius:var(--radius-lg);
+  background:var(--bg-card); border:var(--border-w) solid var(--border);
+  box-shadow:var(--shadow-lg);
+  display:flex; flex-direction:column; gap:14px;
+  font-size:16px; line-height:1.6; color:var(--text-primary);
+}
+.startup-modal strong { display:block; font-size:17px; }
+.startup-modal p { margin:0; color:var(--text-secondary); font-size:14px; }
+.startup-modal-actions { display:flex; gap:10px; margin-top:6px; }
+.startup-modal-list { display:flex; flex-direction:column; gap:4px; max-height:150px; overflow-y:auto; text-align:left; }
+.startup-modal-list-item { display:flex; flex-direction:column; gap:1px; padding:5px 8px; border-radius:var(--radius-sm); background:var(--bg-inset); }
+.startup-modal-list-label { font-size:11px; font-weight:var(--fw-heading); color:var(--text-primary); }
+.startup-modal-list-detail { font-size:10.5px; color:var(--text-secondary); }
+.startup-modal-note { font-size:11px; line-height:1.45; color:var(--text-tertiary); }
+.startup-modal-error strong { color:var(--danger); }
+.startup-modal-err-text {
+  font-size:12px; color:var(--text-primary);
+  white-space:pre-wrap; word-break:break-word;
+  max-height:140px; overflow-y:auto;
+}
+.startup-modal-log {
+  margin-top:6px; width:100%; text-align:left;
+}
+.startup-modal-log summary {
+  cursor:pointer; font-size:10px; color:var(--text-secondary);
+  margin-bottom:4px;
+}
+.startup-modal-log pre {
+  margin:0; padding:6px 8px; max-height:120px; overflow:auto;
+  background:var(--bg-inset); border:var(--border-w) solid var(--border);
+  border-radius:var(--radius-sm); font-size:9.5px; color:var(--text-secondary);
+  white-space:pre-wrap; word-break:break-word;
+}
+
+.startup-warn {
+  width:100%; padding:10px 12px; border-radius:var(--radius-sm);
+  background:var(--warning-bg); border:var(--border-w) solid var(--warning);
+  font-size:10.5px; color:var(--text-primary); line-height:1.5;
+}
+
+.startup-warn strong { color:var(--warning); }
+
+/* ══════════════════════════════════════════════════
+   Mods Page
+   ══════════════════════════════════════════════════ */
+
+/* ══════════════════════════════════════════════════
+   Sidebar scrollable
+   ══════════════════════════════════════════════════ */
+
+.sidebar-nav { overflow:visible; }
+
+/* ── Худой стартовый экран: крупный логотип с подсветкой + бар ──
+   Решение владельца 14.11: подписей «что происходит» нет; заголовок крупный
+   с динамической синей подсветкой, бар толстый с затухающими краями; под
+   баром — центрированное вращающееся сообщение со слайдом снизу вверх. */
+.startup-card-slim { gap:0; }
+.startup-card-slim .startup-title {
+  margin-bottom:48px; text-align:center;
+  font-size:96px; font-weight:800; letter-spacing:0.08em; line-height:1;
+  position:relative; isolation:isolate;
+}
+/* Динамическая синяя подсветка за названием */
+.startup-card-slim .startup-title::before {
+  content:''; position:absolute; z-index:-1;
+  left:50%; top:50%;
+  width:820px; height:340px; transform:translate(-50%,-50%);
+  background:radial-gradient(closest-side, rgba(43,103,212,0.48), rgba(43,103,212,0.12) 62%, transparent 78%);
+  filter:blur(38px);
+  animation:titleGlow 5s ease-in-out infinite alternate;
+  pointer-events:none;
+}
+@keyframes titleGlow {
+  0%   { opacity:0.5; transform:translate(-50%,-50%) scale(0.92); }
+  50%  { opacity:0.95; transform:translate(-50%,-50%) scale(1.07); }
+  100% { opacity:0.6; transform:translate(-50%,-50%) scale(0.98); }
+}
+.startup-card-slim .startup-bar .pb-track { height:16px; border-radius:8px; }
+/* Затухающие края бара */
+.startup-card-slim .startup-bar .pb-track {
+  -webkit-mask-image:linear-gradient(90deg, transparent 0, rgba(0,0,0,0.45) 18px, #000 64px, #000 calc(100% - 64px), rgba(0,0,0,0.45) calc(100% - 18px), transparent 100%);
+  mask-image:linear-gradient(90deg, transparent 0, rgba(0,0,0,0.45) 18px, #000 64px, #000 calc(100% - 64px), rgba(0,0,0,0.45) calc(100% - 18px), transparent 100%);
+}
+.startup-card-slim .startup-pct { font-size:26px; min-width:74px; }
+.startup-status {
+  position:relative;
+  margin-top:28px; width:100%;
+  display:flex; align-items:center; justify-content:center;
+  min-height:28px;
+}
+.startup-status-msg {
+  max-width:100%;
+  font-size:16px; color:var(--text-secondary); text-align:center;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  animation:statusSlideUp 450ms var(--ease-out);
+}
+@keyframes statusSlideUp {
+  from { opacity:0; transform:translateY(70%); }
+  to   { opacity:1; transform:translateY(0); }
+}
+.startup-card-slim .startup-skip-btn {
+  position:absolute; right:0; top:50%; transform:translateY(-50%);
+}

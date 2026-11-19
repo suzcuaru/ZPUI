@@ -1,0 +1,3 @@
+zpui=2.1.1
+service=1.0.0
+server=https://zpui-life.ru

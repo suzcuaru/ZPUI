@@ -43,6 +43,18 @@ jobs:
           done
           cd release/portable && zip -r "../ZPUI-${V}-portable.zip" .
 
+      # Клиент сверяет SHA-256 установщика при источнике «GitHub»
+      # (формат строк совместим с ParseChecksums: <hash>  <file> (<size> bytes)).
+      - name: Generate checksums.sha256
+        run: |
+          V="${{ steps.version.outputs.VERSION }}"
+          : > release/checksums.sha256
+          for f in "ZPUI-Setup-${V}.exe" "ZPUI-${V}-portable.zip"; do
+            h=$(sha256sum "$f" | awk '{print $1}')
+            s=$(stat -c%s "$f")
+            echo "$h  $f ($s bytes)" >> release/checksums.sha256
+          done
+
       - name: Generate release notes from CHANGELOG.md
         id: notes
         shell: bash
@@ -61,3 +73,4 @@ jobs:
           files: |
             ZPUI-Setup-${{ steps.version.outputs.VERSION }}.exe
             release/ZPUI-${{ steps.version.outputs.VERSION }}-portable.zip
+            release/checksums.sha256

@@ -1,0 +1,311 @@
+/* ── Окно скрыто (трей/close-to-tray/--hidden): body.win-hidden ──
+   Ставится winVisible.js по событию window:hidden. WebView2 не тормозит
+   отрисовку у спрятанного окна сам — паузим ВСЕ CSS-анимации (пульсы,
+   shimmer, спиннеры — ничего видимого всё равно нет), а тики usePolling/
+   useNow глушат хуки через isInteractive(). Иначе невидимый дашборд
+   продолжал жечь GPU после закрытия окна (фидбек 04.11). */
+body.win-hidden *, body.win-hidden *::before, body.win-hidden *::after {
+  animation-play-state: paused !important;
+}
+
+/* ── Экономный режим, уровень 3 «максимальная экономия» (body.power-save) ──
+   Глушит анимации ТОЧЕЧНО: декоративные бесконечные (пульсы, shimmer) и
+   конечные UI-анимации (кроссфейд вкладок, модалки, тосты, drawer,
+   подсказки, вспышки). Никакого blanket-правила «всем *» — спиннеры загрузки
+   (infinite, функциональные) продолжают крутиться. Ловушка opacity:0 не
+   срабатывает: у всех перечисленных элементов базовый стиль = конечный кадр
+   (fill-mode backwards).
+   Те же правила разделяет body.render-lite (программный рендер WebView2,
+   детект — web/src/renderTier.js): на таких машинах дорог не только blur,
+   но и любые лишние кадры (спека 2026-11-03-render-responsiveness, R7). */
+:is(body.power-save, body.render-lite) .shimmer,
+:is(body.power-save, body.render-lite) .skeleton-pulse,
+:is(body.power-save, body.render-lite) .skeleton-line,
+:is(body.power-save, body.render-lite) .offline-icon svg,
+:is(body.power-save, body.render-lite) .avail-pulse,
+:is(body.power-save, body.render-lite) .avail-live-dot,
+:is(body.power-save, body.render-lite) .spinner svg,
+:is(body.power-save, body.render-lite) .spinner-arc,
+:is(body.power-save, body.render-lite) .diag2-skeleton,
+:is(body.power-save, body.render-lite) .zw-logo,
+:is(body.power-save, body.render-lite) .modal-overlay,
+:is(body.power-save, body.render-lite) .modal,
+:is(body.power-save, body.render-lite) .toast,
+:is(body.power-save, body.render-lite) .toast-exit,
+:is(body.power-save, body.render-lite) .offline-card,
+:is(body.power-save, body.render-lite) .zw-card,
+:is(body.power-save, body.render-lite) .docs-content,
+:is(body.power-save, body.render-lite) .zp-autoswitch-menu,
+:is(body.power-save, body.render-lite) .sidebar-nav-item.active::before,
+:is(body.power-save, body.render-lite) .act-flash-ok,
+:is(body.power-save, body.render-lite) .act-flash-err,
+:is(body.power-save, body.render-lite) .switch-track.act-flash-ok,
+:is(body.power-save, body.render-lite) .switch-track.act-flash-err  { animation: none !important; }
+:is(body.power-save, body.render-lite) .lg-overlay,
+:is(body.power-save, body.render-lite) .lg-drawer { animation: none !important; transition: none !important; }
+/* Кроссфейд вкладок: перепробованы кроссфейд (03.11 — мерцание) и fade-in
+   (04.11 — «картинка сначала пропадает, потом появляется», слишком медленный
+   отклик). Финал по фидбеку 04.11: переключение мгновенное, у .page-fade
+   анимации нет вовсе (base.css) — глушить больше нечего. */
+/* Предсуществующий баг: список селекторов .lg-overlay/.lg-drawer был оборван
+   на запятой и прилипал к правилу кнопки ниже — подавление анимаций drawer
+   в power-save не работало. Закрыто как найдено (см. спеку
+   2026-11-03-render-responsiveness, Итог). */
+
+/* ── render-lite: программный рендер (body.render-lite) ──
+   Живое размытие фона недоступно по цене — стекло заменяется плоской
+   полупрозрачной подложкой (фоны поверх остаются). Затрагивает ВСЕ
+   «стеклянные» поверхности, включая blur кастомных тем (--custom-modal-blur). */
+body.render-lite .modal-overlay {
+  backdrop-filter:none; -webkit-backdrop-filter:none;
+  animation:fadeIn 200ms var(--ease-soft) both;
+}
+body.render-lite .lg-overlay,
+body.render-lite .ag-card,
+body.render-lite .som-overlay,
+body.render-lite .fpc-overlay,
+body.render-lite .toast {
+  backdrop-filter:none; -webkit-backdrop-filter:none;
+}
+
+/* Индикатор экономного режима в сайдбаре */
+.sidebar-footer-btn.power-saving { color: var(--accent); }
+.sidebar-footer-btn.power-saving:hover { color: var(--accent); }
+
+/* Пауза экономного режима (deep): вкладка серая, поверх — карточка по центру */
+.pp-greyed { position:relative; }
+.pp-greyed > *:not(.pp-notice) { filter:grayscale(1); opacity:.35; pointer-events:none; }
+.pp-notice { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; z-index:20; }
+.pp-card {
+  display:flex; flex-direction:column; align-items:center; gap:8px; text-align:center;
+  padding:22px 28px; border-radius:var(--radius-md);
+  background:var(--bg-card); border:var(--border-w) solid var(--border-light);
+  box-shadow:0 8px 28px rgba(0,0,0,0.25); max-width:340px;
+}
+.pp-icon { color:var(--accent); }
+.pp-title { font-size:14px; font-weight:600; color:var(--text-primary); }
+.pp-desc { font-size:11.5px; color:var(--text-secondary); line-height:1.5; }
+
+/* ── Универсальный слайдер (input[type=range].slider-ui) ──
+   Трек 6px --bg-inset; заполненная часть до ползунка — --accent через
+   CSS-переменную --val (%), которую выставляет JSX (rangePct из utils.js);
+   thumb 16px белый с тенью, hover — масштаб 1.1, disabled — приглушён. */
+input[type="range"].slider-ui {
+  -webkit-appearance:none; appearance:none;
+  height:16px; margin:0; background:transparent;
+  cursor:pointer; outline:none;
+}
+input[type="range"].slider-ui::-webkit-slider-runnable-track {
+  height:6px; border-radius:3px;
+  background:linear-gradient(to right,
+    var(--accent) 0%, var(--accent) var(--val, 0%),
+    var(--bg-inset) var(--val, 0%), var(--bg-inset) 100%);
+}
+input[type="range"].slider-ui::-webkit-slider-thumb {
+  -webkit-appearance:none; appearance:none;
+  width:16px; height:16px; border-radius:50%;
+  background:#fff; border:var(--border-w) solid var(--border);
+  box-shadow:0 1px 3px rgba(0,0,0,0.25);
+  margin-top:-5px;
+  transition:transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
+}
+input[type="range"].slider-ui:hover::-webkit-slider-thumb { transform:scale(1.1); box-shadow:0 2px 6px rgba(0,0,0,0.3); }
+input[type="range"].slider-ui:active::-webkit-slider-thumb { transform:scale(1.05); }
+input[type="range"].slider-ui:focus-visible { outline:none; }
+input[type="range"].slider-ui:focus-visible::-webkit-slider-thumb { box-shadow:0 0 0 var(--border-w-strong) var(--accent), 0 1px 3px rgba(0,0,0,0.25); }
+input[type="range"].slider-ui::-moz-range-track {
+  height:6px; border-radius:3px; background:var(--bg-inset);
+}
+input[type="range"].slider-ui::-moz-range-progress {
+  height:6px; border-radius:3px; background:var(--accent);
+}
+input[type="range"].slider-ui::-moz-range-thumb {
+  width:16px; height:16px; border-radius:50%;
+  background:#fff; border:var(--border-w) solid var(--border);
+  box-shadow:0 1px 3px rgba(0,0,0,0.25);
+  transition:transform var(--dur-fast) var(--ease-out);
+}
+input[type="range"].slider-ui:hover::-moz-range-thumb { transform:scale(1.1); }
+input[type="range"].slider-ui:disabled { opacity:.45; cursor:default; }
+input[type="range"].slider-ui:disabled::-webkit-slider-thumb { transform:none; box-shadow:0 1px 2px rgba(0,0,0,0.15); }
+@media (prefers-reduced-motion: reduce) {
+  input[type="range"].slider-ui::-webkit-slider-thumb,
+  input[type="range"].slider-ui::-moz-range-thumb { transition:none; }
+}
+
+/* Слайдеры экономного режима (степень экономии, порог заряда) */
+.pw-slider-row { display:flex; align-items:center; gap:10px; padding:3px 0; }
+.pw-slider-row.disabled { opacity:.45; }
+.pw-slider-label { font-size:11px; color:var(--text-secondary); white-space:nowrap; }
+.pw-slider { flex:1; min-width:0; }
+.pw-slider-val { font-size:11px; font-weight:600; color:var(--accent); min-width:56px; text-align:right; white-space:nowrap; }
+
+/* Вкладка «О приложении» в справке: ряд ссылок-кнопок */
+.docs-link-row { display:flex; flex-wrap:wrap; gap:8px; }
+.docs-link-btn { background:var(--bg-inset); }
+.docs-link-btn:hover { border-color:var(--accent); color:var(--accent); }
+
+/* «Благодарности» в «О программе»: проект — описание — кнопка GitHub */
+.docs-credits { display:flex; flex-direction:column; gap:5px; }
+.docs-credit {
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  padding:6px 9px; border-radius:var(--radius-sm);
+  background:var(--bg-inset); border:var(--border-w) solid var(--border);
+}
+.docs-credit-txt { display:flex; flex-direction:column; gap:1px; min-width:0; }
+.docs-credit-name { font-size:11.5px; font-weight:600; color:var(--text-primary); }
+.docs-credit-desc { font-size:10px; color:var(--text-tertiary); }
+.docs-credit .docs-link-btn { flex-shrink:0; }
+
+/* YouTube DNS-баннер на дашборде */
+.yt-banner {
+  display:flex; align-items:center; gap:8px; padding:10px 14px;
+  border-radius:var(--radius-md); background:var(--warning-bg); color:var(--warning);
+  font-size:12.5px; line-height:1.4;
+}
+.yt-banner button { margin-left:auto; flex-shrink:0; }
+.yt-banner button:hover { border-color:var(--warning); color:var(--warning); }
+
+/* UpdateAvailableModal: крупная строка версий (моно) + «что нового» */
+.upd-modal-body { display:flex; flex-direction:column; gap:12px; }
+.upd-modal-versions {
+  display:flex; align-items:baseline; justify-content:center; gap:10px;
+  padding:16px 12px; background:var(--bg-inset); border-radius:var(--radius-md);
+}
+.upd-modal-comp { font-size:var(--fs-md); font-weight:600; color:var(--text-secondary); }
+.upd-modal-ver {
+  font-family:var(--font-mono); font-size:16px; font-weight:600;
+  color:var(--text-secondary); font-variant-numeric:tabular-nums;
+}
+.upd-modal-ver.new { color:var(--accent); font-size:19px; }
+.upd-modal-arrow { color:var(--accent); align-self:center; display:flex; }
+.upd-modal-arrow svg { display:block; }
+.upd-modal-text { font-size:var(--fs-md); line-height:1.5; color:var(--text-secondary); text-align:center; margin:0; }
+.upd-notes {
+  display:flex; flex-direction:column; gap:6px; padding:10px 12px;
+  background:var(--bg-inset); border-radius:var(--radius-md);
+  max-height:170px; overflow-y:auto;
+}
+.upd-notes-title { font-size:var(--fs-sm); font-weight:600; color:var(--text-primary); }
+.upd-notes-list { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:3px; }
+.upd-notes-list li {
+  font-size:var(--fs-sm); color:var(--text-secondary); line-height:1.45;
+  padding-left:12px; position:relative;
+}
+.upd-notes-list li::before { content:'•'; position:absolute; left:0; color:var(--accent); }
+.upd-notes-more {
+  display:inline-flex; align-items:center; gap:5px; align-self:flex-start;
+  font-size:var(--fs-sm); font-weight:600; color:var(--accent);
+  background:none; border:none; cursor:pointer; padding:0; font-family:var(--font);
+  transition:color var(--dur-fast) var(--ease-out);
+}
+.upd-notes-more:hover { text-decoration:underline; }
+.upd-notes-more svg { display:block; }
+
+/* UpdateProgressModal: крупный прогресс-бар 8px + моно-процент */
+.upd-flow-body { display:flex; flex-direction:column; align-items:center; gap:12px; padding:8px 2px 2px; width:100%; }
+.upd-flow-icon { color:var(--text-tertiary); }
+.upd-flow-icon.ok { color:var(--success); }
+.upd-flow-icon.err { color:var(--danger); }
+.upd-flow-bar {
+  width:100%; height:8px; border-radius:4px;
+  background:var(--bg-inset); overflow:hidden;
+}
+.upd-flow-fill {
+  height:100%; background:var(--accent); border-radius:4px;
+  transition:width 300ms var(--ease-out);
+}
+.upd-flow-pct {
+  font-family:var(--font-mono); font-size:18px; font-weight:600;
+  color:var(--text-primary); font-variant-numeric:tabular-nums; line-height:1;
+}
+.upd-flow-meta {
+  font-family:var(--font-mono); font-size:var(--fs-sm); color:var(--text-tertiary);
+  font-variant-numeric:tabular-nums;
+}
+.upd-flow-text { font-size:var(--fs-md); line-height:1.5; color:var(--text-secondary); text-align:center; margin:0; }
+.upd-flow-text.err { color:var(--danger); }
+.upd-flow-source { font-size:var(--fs-sm); color:var(--text-tertiary); }
+
+.set-static { font-size:11px; color:var(--text-secondary); padding:4px 10px; border-radius:var(--radius-sm); background:var(--bg-inset); }
+
+/* Zapret panel in settings */
+.zpset-section { display:flex; flex-direction:column; gap:7px; }
+
+.zpset-head {
+  display:flex; align-items:center; justify-content:space-between; gap:8px;
+  padding-bottom:8px; border-bottom:var(--border-w) solid var(--border);
+}
+.zpset-head-title {
+  font-size:11px; font-weight:700; letter-spacing:0.05em;
+  text-transform:uppercase; color:var(--text-secondary);
+}
+.zpset-pill {
+  display:inline-flex; align-items:center; gap:6px;
+  padding:3px 9px; border-radius:20px; font-size:11px; font-weight:600;
+  border:var(--border-w) solid transparent;
+}
+.zpset-pill.on {
+  color:var(--success); background:transparent; border-color:transparent;
+}
+.zpset-pill.off {
+  color:var(--danger); background:transparent; border-color:transparent;
+}
+.zpset-pill-dot { width:7px; height:7px; border-radius:50%; background:currentColor; flex-shrink:0; align-self:center; }
+.zpset-pill.on .zpset-pill-dot { box-shadow:0 0 6px color-mix(in srgb, var(--success) 60%, transparent); }
+.zpset-pill-ver {
+  font-family:var(--font-mono); font-size:10px; font-weight:500;
+  opacity:0.85; border-left:1px solid currentColor; padding-left:6px;
+}
+
+.zpset-svc-row {
+  display:flex; align-items:center; justify-content:space-between; gap:8px;
+  padding:8px 10px; border-radius:var(--radius-sm); background:var(--bg-inset); border:none;
+}
+.zpset-svc-label { display:flex; align-items:center; gap:6px; font-size:11px; color:var(--text-secondary); }
+.zpset-toggle-label { font-size:11px; color:var(--text-secondary); }
+.zpset-svc-actions { display:flex; gap:6px; flex-shrink:0; }
+
+.zpset-danger-zone {
+  display:flex; align-items:center; justify-content:space-between; gap:8px;
+  padding:10px 12px; border-radius:var(--radius-sm); background:var(--bg-inset);
+  border:var(--border-w) solid var(--danger);
+}
+.zpset-danger-info { display:flex; align-items:flex-start; gap:8px; }
+.zpset-danger-icon { color:var(--danger); flex-shrink:0; margin-top:1px; }
+.zpset-danger-title { display:block; font-size:11px; font-weight:600; color:var(--text-primary); }
+.zpset-danger-desc { display:block; font-size:10px; color:var(--text-secondary); }
+
+.zpset-install-prompt {
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  padding:8px 10px; border-radius:var(--radius-sm);
+  background:var(--accent-soft); border:var(--border-w) solid var(--accent);
+}
+.zpset-install-info { display:flex; align-items:flex-start; gap:8px; }
+.zpset-install-icon { color:var(--accent); flex-shrink:0; margin-top:1px; }
+.zpset-install-title { display:block; font-size:11px; font-weight:600; color:var(--text-primary); }
+.zpset-install-desc { display:block; font-size:10px; color:var(--text-secondary); }
+
+.lists-skip-section { margin-top:8px; }
+.zp-skip-desc, .zp-lists-hint { font-size:10px; color:var(--text-tertiary); margin-bottom:6px; }
+/* Тумблер авто-исключения мёртвых доменов над редактором skip-resources */
+.zp-skip-auto { display:flex; align-items:center; margin-bottom:8px; }
+.zp-skip-auto .switch-label { font-size:11px; color:var(--text-secondary); }
+
+/* ════════════════════════════════════════
+   PAGE: Monitoring — chart + stats
+   ════════════════════════════════════════ */
+.mon-chart-header { display:flex; justify-content:space-between; align-items:baseline; }
+.mon-chart-val { font-size:14px; font-weight:700; color:var(--text-primary); font-family:var(--font-mono); }
+/* Два значения в шапке объединённой панели трафика (↓ и ↑). */
+.mon-chart-val.mon-chart-vals { display:inline-flex; align-items:baseline; gap:10px; font-size:12.5px; }
+/* Интернетметр: два мини-графика (скорость/пинг) в одной панели. */
+.mon-meter-duo { display:flex; flex-direction:column; gap:4px; min-width:0; }
+.mon-meter-sub { min-width:0; }
+.mon-meter-sub-label { display:block; font-size:10px; font-weight:600; color:var(--text-tertiary); line-height:1.2; }
+/* Скелетоны первой загрузки Монитора (фидбек 04.11: контент появляется
+   рывками) — высота совпадает с графиком, под замену контент встаёт без
+   прыжка раскладки. */
+.mon-chart-skeleton { display:flex; align-items:center; padding:0; }
+.mon-chart-skeleton .skeleton-line { flex:1; height:64%; margin:0; }
+.mon-devices-skeleton { display:flex; flex-direction:column; gap:2px; padding:4px 0; }

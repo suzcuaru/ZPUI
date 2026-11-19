@@ -1,0 +1,266 @@
+/* ── PAGE: Proxy — компактная вёрстка без прокрутки (окно 960×640) ── */
+/* Прокси/Туннель — вёрстка как на DNS: герой с тумблером + сетка карточек
+   (.section). Прокруток на вкладках нет: контент обязан вмещаться целиком. */
+/* Страница скроллится сама: доп. настройки моста выше одного экрана,
+   а .main-area держит overflow:hidden — без этого хвост обрезается. */
+.proxy-page {
+  display:flex; flex-direction:column; gap:8px; flex:1; min-height:0; height:100%;
+  overflow-y:auto; scrollbar-gutter:stable;
+}
+.proxy-top-stats { display:flex; align-items:center; gap:10px; flex-shrink:0; }
+.pts { display:flex; align-items:baseline; gap:3px; }
+.pts-val { font-size:13px; font-weight:700; font-family:var(--font-mono); color:var(--text-primary); }
+.pts-label { font-size:9px; color:var(--text-tertiary); }
+
+/* Сетка карточек сервисных страниц, QR-карточка, служебные элементы */
+.svc-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; flex:none; }
+.proxy-page .svc-grid { grid-template-columns: 1fr 232px; }
+.svc-qr { width:max-content; margin:0 auto; }
+/* Белый QR-блок — прямой ребёнок сетки: растянут на всю высоту левой панели.
+   Канве размер задаёт CSS (inline-стиль библиотеки перебивается !important). */
+.svc-grid .tgp-qr-wrap { justify-self:center; align-self:stretch; width:100%; margin:0;
+  border:6px solid var(--bg-card); box-shadow:none; padding:4px; }
+.svc-grid .tgp-qr-wrap canvas { width:calc(100% - 8px) !important; height:auto !important; aspect-ratio:1/1; }
+.svc-chip {
+  margin-left:auto; font-size:10px; font-weight:600; padding:2px 8px; border-radius:10px;
+  background:var(--bg-inset); color:var(--text-tertiary); white-space:nowrap;
+}
+.svc-chip.ok { background:var(--success-bg); color:var(--success); }
+.seg-pills { display:flex; gap:6px; }
+.seg-pills .flt2-pill { padding:3px 12px; }
+.proxy-foot { display:flex; align-items:center; gap:10px; flex:none; }
+.proxy-foot .tgp-hint { flex:1; min-width:0; }
+.svc-two-col { display:grid; grid-template-columns:1fr 1fr; gap:6px 10px; }
+.proxy-page .section { padding:8px 12px; gap:5px; }
+.proxy-empty {
+  color:var(--text-tertiary); font-size:10.5px; padding:10px; text-align:center;
+  border:var(--border-w) dashed var(--border); border-radius:var(--radius-md);
+}
+
+/* «Дополнительные настройки» моста: сворачиваемый блок под TG-секцией */
+.tg-adv { gap:0; }
+.tg-adv-head {
+  display:flex; align-items:center; gap:6px; width:100%;
+  padding:0; border:0; background:none; cursor:pointer; text-align:left;
+  color:var(--text-tertiary); font-family:var(--font);
+  transition:color var(--dur-fast) var(--ease-out);
+}
+.tg-adv-head .section-title { transition:color var(--dur-fast) var(--ease-out); }
+.tg-adv-head:hover, .tg-adv-head:hover .section-title { color:var(--accent); }
+.tg-adv-head svg { flex:none; }
+.tg-adv-chev { display:inline-flex; margin-left:auto; transition:transform var(--dur-base) var(--ease-out); }
+.tg-adv-chev.open { transform:rotate(180deg); }
+.tg-adv-body { display:flex; flex-direction:column; gap:7px; padding-top:7px; animation:tgAdvIn var(--dur-base) var(--ease-out) both; }
+@keyframes tgAdvIn { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:none; } }
+@media (prefers-reduced-motion: reduce) {
+  .tg-adv-body { animation:none; }
+  .tg-adv-chev { transition:none; }
+}
+
+.pp-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px 10px; }
+.pp-grid-rows { grid-template-columns:1fr 1fr; align-items:center; }
+.pp-subtitle-with-icon {
+  display:flex; align-items:center; gap:4px;
+  font-size:10px; font-weight:600; color:var(--text-tertiary);
+  letter-spacing:0.5px; text-transform:uppercase;
+}
+.tgp-secret-label {
+  flex-shrink:0; font-size:9px; font-weight:600; color:var(--text-tertiary);
+  text-transform:uppercase; letter-spacing:0.4px;
+}
+.tgp-linked-pill {
+  flex-shrink:0; display:inline-flex; align-items:center; gap:4px;
+  font-size:9.5px; font-weight:600; white-space:nowrap;
+  padding:3px 8px; border-radius:8px;
+  color:var(--text-tertiary); background:var(--bg-inset);
+  transition:color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out);
+}
+.tgp-linked-pill.on { color:var(--accent); background:var(--accent-soft); }
+.tgp-linked-pill svg { flex:none; }
+.pd-tg-badge {
+  display:inline-flex; align-items:center; gap:2px; flex-shrink:0;
+  font-size:9px; font-weight:700; font-family:var(--font-mono);
+  color:var(--accent); background:var(--accent-soft);
+  padding:2px 6px; border-radius:7px;
+}
+.mon-device-tg {
+  margin-left:auto; flex-shrink:0; display:inline-flex; align-items:center; gap:3px;
+  font-size:10px; font-weight:600; font-family:var(--font-mono);
+  color:var(--accent); background:var(--accent-soft);
+  padding:1px 6px; border-radius:7px; white-space:nowrap;
+}
+/* Вторая статус-строка карточки «Прокси»: состояние Telegram-моста */
+.svc-card-tg { display:flex; align-items:center; gap:5px; color:var(--text-secondary); }
+.svc-card-tg-dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
+.svc-card-tg-dot.on { background:var(--success); box-shadow:0 0 6px color-mix(in srgb, var(--success) 50%, transparent); }
+.svc-card-tg-dot.off { background:var(--danger); }
+.pp-field { display:flex; flex-direction:column; gap:3px; min-width:0; }
+.pp-group-title {
+  font-size:9.5px; font-weight:600; letter-spacing:0.4px; text-transform:uppercase;
+  color:var(--text-tertiary); margin-top:5px; user-select:none;
+}
+.pp-input-num { max-width:76px; }
+.pp-label { font-size:10px; color:var(--text-tertiary); }
+.pp-input {
+  height:24px; padding:0 7px; border-radius:var(--radius-sm); width:100%;
+  border:var(--border-w) solid var(--border); background:var(--bg-inset); color:var(--text-primary);
+  font-family:var(--font); font-size:11.5px; outline:none;
+  transition:border-color var(--dur-fast) var(--ease-out);
+}
+.pp-input:focus { border-color:var(--accent); }
+.pp-input.input-error { border-color:var(--danger); }
+.pp-input-error { font-size:9.5px; color:var(--danger); }
+.pp-row { display:flex; align-items:center; justify-content:space-between; gap:8px; min-height:22px; }
+.pp-row-text { display:flex; flex-direction:column; gap:1px; min-width:0; }
+.pp-row-title { font-size:11.5px; color:var(--text-primary); }
+.pp-row-desc { font-size:9.5px; color:var(--text-tertiary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+/* Telegram MTProto — компактные элементы */
+.tgp-link-box {
+  display:flex; align-items:center; gap:6px; padding:4px 8px;
+  border-radius:var(--radius-sm); background:var(--bg-inset);
+}
+.tgp-link {
+  flex:1; min-width:0; font-family:var(--font-mono); font-size:10px;
+  color:var(--text-secondary); overflow:hidden; text-overflow:ellipsis;
+  white-space:nowrap; user-select:all; -webkit-user-select:all;
+}
+.tgp-link-actions { display:flex; align-items:center; gap:3px; flex-shrink:0; }
+.tgp-link-tag {
+  flex-shrink:0; font-size:8.5px; font-weight:600; letter-spacing:0.3px;
+  color:var(--accent); background:var(--accent-soft);
+  padding:1px 5px; border-radius:7px; white-space:nowrap;
+}
+.tgp-connect-btn { align-self:flex-start; height:28px; }
+.tgp-connect-btn:disabled { opacity:0.45; cursor:not-allowed; }
+.tgp-connect-row { display:flex; gap:6px; }
+.tgp-connect-row .tgp-connect-btn { flex:1; }
+
+/* QR телефона: белая подложка обязательна (контраст для сканера не зависит
+   от темы). Размер канвы задаётся в JSX (inline-стиль библиотеки сильнее CSS). */
+.tgp-qr-wrap {
+  padding:8px; background:#fff; border-radius:var(--radius-md);
+  display:flex; align-items:center; justify-content:center;
+  box-shadow:var(--shadow-sm);
+}
+.tgp-qr-empty {
+  width:196px; height:196px; margin:0 auto;
+  color:var(--text-tertiary); background:var(--bg-inset);
+  border:var(--border-w) dashed var(--border);
+}
+.tgp-lan {
+  display:flex; align-items:center; gap:6px; width:100%;
+  padding:6px 10px; border-radius:var(--radius-sm); font-size:11px;
+}
+.tgp-lan.ok { background:var(--success-bg); color:var(--success); }
+.tgp-lan.off { background:var(--warning-bg); color:var(--warning); }
+.tgp-lan span { flex:1; min-width:0; line-height:1.4; }
+.tgp-secret-row {
+  display:flex; align-items:center; gap:6px; padding:4px 8px;
+  border-radius:var(--radius-sm); background:var(--bg-inset);
+}
+.tgp-secret {
+  flex:1; min-width:0; font-family:var(--font-mono); font-size:10.5px;
+  color:var(--text-primary); overflow:hidden; text-overflow:ellipsis;
+  white-space:nowrap; user-select:all; -webkit-user-select:all;
+}
+.tgp-stats {
+  display:flex; flex-direction:column; gap:2px; padding:6px 8px; margin-top:auto;
+  border-radius:var(--radius-sm); background:var(--bg-inset);
+}
+.tgp-stats-line { font-size:10px; color:var(--text-secondary); font-family:var(--font-mono); }
+.tgp-hint {
+  font-size:9.5px; color:var(--text-tertiary); line-height:1.3;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+
+/* ════════════════════════════════════════
+   PAGE: Settings & Updates
+   ════════════════════════════════════════ */
+.set-row { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:4px 0; }
+.set-row-info { display:flex; flex-direction:column; gap:1px; }
+.set-row-title { font-size:12.5px; font-weight:500; color:var(--text-primary); }
+.set-row-desc { font-size:11px; color:var(--text-tertiary); }
+.set-theme-row { display:flex; gap:4px; }
+
+/* Служба ZPUI: компактная панель над ZAPRET в настройках */
+/* Панель службы ZPUI: фиксированная минимальная высота — скелет и наполненная
+   панель одного размера, вкладка настроек не прыгает, низ панели ZAPRET
+   выравнивается по низу правой колонки настроек. */
+.zsvc-panel { display:flex; flex-direction:column; gap:5px; min-height:116px; }
+.zsvc-head { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.zsvc-title { font-size:12px; font-weight:600; color:var(--text-primary); }
+.zsvc-meta { display:flex; flex-wrap:wrap; align-items:center; gap:4px 10px; font-size:11px; color:var(--text-tertiary); }
+.zsvc-crashes { color:var(--warning); }
+.zsvc-tiles { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+.zsvc-tile { display:flex; flex-direction:column; gap:1px; padding:4px 8px; border-radius:var(--radius-sm); background:var(--bg-inset); min-width:0; }
+.zsvc-tile-k { font-size:10.5px; text-transform:uppercase; letter-spacing:0.04em; color:var(--text-tertiary); font-weight:600; }
+.zsvc-tile-v { font-size:12.5px; color:var(--text-primary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-transform:none; }
+.zsvc-tile-v.ok { color:var(--success); }
+.zsvc-tile-v.bad { color:var(--danger); }
+.zsvc-tile-sub { font-size:10.5px; color:var(--text-tertiary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.set-interval-row { display:flex; gap:4px; }
+.set-lang-row { display:flex; gap:3px; align-items:center; }
+.set-section-icon { display:flex; align-items:center; gap:6px; color:var(--text-secondary); }
+.set-section-icon .section-title { font-size:13px; }
+
+.upd-grid { display:flex; flex-direction:column; gap:6px; }
+.upd-card {
+  display:flex; align-items:center; gap:10px; padding:12px 14px;
+  border-radius:var(--radius-md); border:none;
+  background:var(--bg-inset);
+}
+.upd-icon { width:32px; height:32px; border-radius:var(--radius-sm); background:var(--accent-soft); color:var(--accent); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.upd-icon svg { width:16px; height:16px; stroke:currentColor; fill:none; stroke-width:1.5; }
+.upd-info { flex:1; display:flex; flex-direction:column; gap:1px; min-width:0; }
+.upd-name { font-size:13px; font-weight:600; color:var(--text-primary); }
+.upd-ver-row { display:flex; align-items:center; gap:6px; }
+.upd-ver { font-size:10px; color:var(--text-tertiary); font-family:var(--font-mono); }
+.upd-ver-new { font-size:10px; color:var(--warning); font-weight:600; font-family:var(--font-mono); }
+.upd-ver-link {
+  font-size:10px; color:var(--accent); font-weight:600; font-family:var(--font-mono);
+  background:none; border:none; cursor:pointer; padding:0; text-decoration:none;
+}
+.upd-ver-link:hover { text-decoration:underline; }
+.upd-avail-dot {
+  width:7px; height:7px; border-radius:50%; flex-shrink:0; display:inline-block;
+}
+.upd-avail-dot.on { background:var(--success); box-shadow:0 0 4px color-mix(in srgb, var(--success) 50%, transparent); }
+.upd-avail-dot.off { background:var(--danger); }
+.upd-status { font-size:11px; font-weight:500; padding:3px 10px; border-radius:6px; }
+.upd-status.latest { background:var(--success-bg); color:var(--success); }
+.upd-status.newer { background:var(--accent-soft); color:var(--accent); }
+.upd-status.available { background:var(--warning-bg); color:var(--warning); }
+.upd-status.checking { background:var(--accent-soft); color:var(--accent); }
+.upd-status.error { background:var(--danger-bg); color:var(--danger); }
+.upd-btn-check { gap:4px; flex-shrink:0; }
+.upd-btn-check:hover { border-color:var(--accent); color:var(--accent); }
+.upd-dl { display:flex; align-items:center; gap:8px; margin-top:6px; width:100%; }
+.upd-dl-bar { flex:1; height:6px; border-radius:6px; background:var(--bg-inset); overflow:hidden; }
+.upd-dl-bar > span { display:block; height:100%; background:var(--accent); border-radius:6px; transition:width 200ms ease; }
+.upd-dl-pct { font-size:10px; font-family:var(--font-mono); color:var(--text-tertiary); min-width:30px; text-align:right; }
+.upd-dl-err { font-size:10px; color:var(--danger); margin-top:4px; }
+.upd-simple-row { display:flex; align-items:center; gap:8px; }
+.upd-cur-ver { font-size:12px; font-family:var(--font-mono); color:var(--accent); font-weight:600; }
+.upd-new-ver { font-size:12px; font-family:var(--font-mono); color:var(--warning); font-weight:600; }
+.upd-ver-btn { padding:0; border:none; background:none; cursor:pointer; font-family:var(--font-mono); font-size:12px; font-weight:600; }
+.upd-ver-btn:hover { text-decoration:underline; }
+.upd-best-ver { font-size:10.5px; font-family:var(--font-mono); color:var(--text-tertiary); font-weight:500; cursor:help; }
+.upd-actions { display:flex; align-items:center; gap:6px; flex-shrink:0; }
+/* Экономный режим: отключаем ТОЛЬКО бесконечные декоративные анимации
+   (пульсы, shimmer, skeleton) — именно они жгли GPU вхолостую. Одноразовый
+   входной fade страницы (pageIn) не трогаем: пауза замораживала анимации
+   на первом кадре (opacity:0) и страницы выглядели пустыми. Спиннеры
+   продолжают работать. */
+
+/* Источник обновлений (селектор в шапке секции «Обновления», рядом с
+   muted-подписью: триггер — просто текст со стрелкой, без пилюли-рамки). */
+.upd-source-row { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+.upd-source-label { font-size:var(--fs-sm); color:var(--text-secondary); flex-shrink:0; }
+.upd-source-select { flex:1; min-width:0; }
+.upd-source-select .ui-select-btn {
+  height:auto; background:transparent; border:none; padding:2px 4px;
+  color:var(--text-secondary); font-size:var(--fs-sm); border-radius:var(--radius-sm);
+}
+.upd-source-select .ui-select-btn:hover,
+.upd-source-select .ui-select-btn.open { background:transparent; border:none; color:var(--text-primary); }

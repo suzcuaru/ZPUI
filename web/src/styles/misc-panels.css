@@ -1,0 +1,240 @@
+/* ── Настройки → «Данные и диагностика» (канал ZPUI Sync) ──
+   Каркас — секции настроек (.section/.set-row); собственные классы только
+   для пилюли статуса, каталога секций и журнала просьб сервера. */
+.syncd-page { display:flex; flex-direction:column; gap:10px; flex:1; min-height:0; overflow-y:auto; overflow-x:hidden; }
+.syncd-pill {
+  display:inline-flex; align-items:center; gap:6px;
+  padding:3px 9px; border-radius:20px; font-size:11px; font-weight:600;
+  color:var(--text-tertiary);
+}
+.syncd-pill.on { color:var(--success); }
+.syncd-pill-dot { width:7px; height:7px; border-radius:50%; background:currentColor; flex-shrink:0; }
+.syncd-pill.on .syncd-pill-dot { box-shadow:0 0 6px color-mix(in srgb, var(--success) 60%, transparent); }
+.syncd-val { font-size:12px; color:var(--text-secondary); text-align:right; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.syncd-val.err { color:var(--danger); }
+.syncd-saving { display:inline-flex; align-items:center; gap:6px; font-size:11px; color:var(--text-tertiary); }
+.syncd-hint {
+  padding:7px 10px; border-radius:var(--radius-sm);
+  background:var(--bg-inset); color:var(--text-secondary); font-size:11.5px;
+}
+.syncd-catalog-desc { font-size:11px; color:var(--text-tertiary); margin:-4px 0 4px; }
+.syncd-list { display:flex; flex-direction:column; }
+.syncd-list.muted { opacity:0.55; }
+.syncd-sec {
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  padding:7px 0;
+  transition:opacity var(--dur-fast) var(--ease-out);
+}
+.syncd-sec + .syncd-sec { border-top:var(--border-w) solid var(--border-light); }
+.syncd-sec.off { opacity:0.55; }
+.syncd-sec-info { display:flex; flex-direction:column; gap:2px; min-width:0; }
+.syncd-sec-name { font-size:13px; font-weight:500; color:var(--text-primary); }
+.syncd-sec-meta { font-size:11px; color:var(--text-tertiary); display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+.syncd-badge {
+  font-size:9.5px; font-weight:600; padding:1px 6px; border-radius:6px;
+  background:var(--accent-soft); color:var(--accent); flex-shrink:0;
+}
+.syncd-sec-ctl { display:flex; align-items:center; gap:10px; flex-shrink:0; }
+.syncd-mult { display:flex; gap:3px; }
+.syncd-mult .btn { min-width:32px; padding:0 6px; }
+.syncd-skel { display:flex; flex-direction:column; gap:10px; padding:6px 0; }
+.syncd-skel-row { display:flex; justify-content:space-between; gap:12px; }
+.syncd-empty { font-size:12px; color:var(--text-tertiary); padding:4px 0; }
+.syncd-reqs { display:flex; flex-direction:column; }
+.syncd-req { display:flex; align-items:baseline; gap:10px; padding:5px 0; }
+.syncd-req + .syncd-req { border-top:var(--border-w) solid var(--border-light); }
+.syncd-req-time { font-size:11px; color:var(--text-tertiary); flex-shrink:0; min-width:64px; }
+.syncd-req-text { font-size:12px; color:var(--text-secondary); min-width:0; }
+
+/* Строка «Сервер рекомендует» в карточке версии ZAPRET */
+.upd-rec-ver { font-size:10.5px; color:var(--text-tertiary); }
+
+/* ── Сообщить о проблеме (FeedbackModal) ── */
+.fb-meta { display:flex; flex-direction:column; gap:2px; font-size:11.5px; color:var(--text-tertiary); margin-bottom:10px; }
+.fb-msg { height:96px; min-height:96px; resize:none; overflow-y:auto; line-height:1.45; }
+
+/* Выбор темы обращения: кастомная выпадающая панель (паттерн CatSelect) */
+.fb-topic-dd { position:relative; }
+.fb-topic-btn {
+  display:flex; align-items:center; justify-content:space-between; gap:8px;
+  cursor:pointer; text-align:left;
+}
+.fb-topic-btn.placeholder { color:var(--text-tertiary); }
+.fb-topic-chev { flex:none; transition:transform .15s; }
+.fb-topic-chev.up { transform:rotate(180deg); }
+.fb-topic-pop {
+  /* выше modal-overlay (500): панель рендерится порталом в body и должна
+     перекрывать модалку, а не прятаться под ней */
+  z-index: 600;
+  max-height: 220px; overflow:auto;
+  background:var(--bg-elev, #1b1d24); border:var(--border-w) solid var(--border);
+  border-radius:var(--radius-md); box-shadow:0 14px 34px rgba(0, 0, 0, .45); padding:4px;
+}
+.fb-topic-item {
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  width:100%; padding:6px 10px; border:none; border-radius:8px;
+  background:transparent; color:var(--text-secondary);
+  font-size:12px; cursor:pointer; text-align:left;
+}
+.fb-topic-item:hover { background:var(--hover, rgba(255, 255, 255, .06)); color:var(--text-primary); }
+.fb-topic-item.on { color:var(--accent); font-weight:600; }
+.docs-fb-btn { margin-left:auto; flex-shrink:0; }
+.asm2-list-toggle {
+  display:flex; align-items:center; gap:7px; width:100%; margin-top:4px;
+  padding:7px 10px; border:0; border-radius:var(--radius-md); background:var(--bg-inset);
+  font-family:var(--font); font-size:11.5px; color:var(--text-secondary); cursor:pointer; text-align:left;
+  transition:background var(--dur-fast) ease;
+}
+.asm2-list-toggle:hover { background:var(--bg-hover); color:var(--text-primary); }
+.asm2-list-chev { transition:transform var(--dur-fast) ease; flex-shrink:0; }
+.asm2-list-chev.open { transform:rotate(180deg); }
+.asm2-list-best { margin-left:auto; font-size:10.5px; color:var(--text-tertiary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+/* ── ZAPRET: вертикальный список действий службы ── */
+.zpset-actions {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-inset);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.zpset-action {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 11px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--font);
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  transition: background 120ms ease, color 120ms ease;
+}
+.zpset-action + .zpset-action {
+  border-top: var(--border-w) solid var(--border-light);
+}
+.zpset-action:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+.zpset-action:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.zpset-action.danger {
+  color: var(--danger);
+}
+.zpset-action.danger:hover {
+  background: var(--danger-bg);
+}
+.zpset-action.accent {
+  color: var(--accent);
+}
+.zpset-action span {
+  flex: 1;
+}
+
+/* ── Сайдбар: предупреждение о переполненном кеше + кнопка «Кеш» ── */
+.sidebar-footer-btn.cache-warn { color: var(--warning); }
+.sidebar-footer-btn.cache-warn:hover { color: var(--warning); background: var(--warning-bg); }
+.cache-warn-icon { animation: cacheWarnPulse 2s ease-in-out infinite; }
+@keyframes cacheWarnPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.55; } }
+
+/* ── Модалка «Кеш»: фиксированный размер, внутренний скролл ── */
+.cache-modal-body { height: 300px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+
+/* ── ui/Select: кастомный выпадающий список (нативный select выбивался из
+   стиля приложения: системный фон/шрифт, белый в тёмной теме) ── */
+.ui-select { position: relative; display: inline-block; }
+.ui-select-btn {
+  display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 11px;
+  border: var(--border-w) solid var(--border); border-radius: 999px;
+  background: transparent; color: var(--text-secondary);
+  font-family: var(--font); font-size: 11.5px; font-weight: 600; cursor: pointer;
+  transition: border-color .15s, color .15s;
+}
+.ui-select-btn:hover, .ui-select-btn.open { border-color: var(--accent); color: var(--text-primary); }
+.ui-select-chev { transition: transform .15s; flex: none; }
+.ui-select-chev.up { transform: rotate(180deg); }
+.ui-select-pop {
+  /* Поверх модалок (overlay 500): попап открывается из модалки и порталируется
+     в .stand-win, поэтому слой должен перекрывать оверлей. Без рамки
+     (решение владельца 14.11): только фон и тень, текст сам по себе. */
+  position: absolute; z-index: 600;
+  min-width: 176px; max-height: 264px; overflow: auto;
+  background: var(--bg-elev, #1b1d24);
+  border-radius: 12px; box-shadow: 0 14px 34px rgba(0, 0, 0, .45); padding: 4px;
+}
+.ui-select-item {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  width: 100%; padding: 6px 10px; border: none; border-radius: 8px;
+  background: transparent; color: var(--text-secondary);
+  font-family: var(--font); font-size: 12px; cursor: pointer; text-align: left;
+}
+.ui-select-item:hover { background: var(--hover, rgba(255, 255, 255, .06)); color: var(--text-primary); }
+.ui-select-item.on { color: var(--accent); font-weight: 600; }
+
+/* ── Модалка MCP (сайдбар): сервер управления ИИ-агентами ──
+   Каркас — те же .section-title/.set-row; свои — карточки агентов и JSON-панель. */
+.mcp-body { display: flex; flex-direction: column; gap: 14px; }
+.mcp-section { display: flex; flex-direction: column; gap: 4px; }
+.mcp-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.mcp-help { display: inline-flex; color: var(--text-tertiary); cursor: help; }
+.mcp-help:hover { color: var(--text-secondary); }
+.mcp-agents { display: flex; flex-direction: column; gap: 6px; }
+.mcp-agent {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 7px 10px;
+  background: var(--bg-inset); border: var(--border-w) solid var(--border);
+  border-radius: var(--radius-md);
+}
+.mcp-agent-icon { display: inline-flex; color: var(--text-tertiary); flex-shrink: 0; }
+.mcp-agent-name { color: var(--text-primary); font-weight: 600; }
+.mcp-agent-addr { color: var(--text-secondary); font-size: 11.5px; }
+.mcp-agent-last { margin-left: auto; color: var(--text-tertiary); font-size: 11px; }
+.mcp-agents-empty {
+  padding: 7px 10px; border-radius: var(--radius-sm);
+  background: var(--bg-inset); color: var(--text-tertiary); font-size: 11.5px;
+}
+.mcp-error {
+  padding: 7px 10px; border-radius: var(--radius-sm);
+  background: var(--danger-bg); color: var(--danger); font-size: 11.5px;
+}
+.mcp-skill-path { overflow-wrap: anywhere; }
+.mcp-json {
+  margin: 0; padding: 10px 12px; max-height: 170px; overflow: auto;
+  background: var(--bg-inset); border: var(--border-w) solid var(--border);
+  border-radius: var(--radius-md); font-size: var(--fs-sm); line-height: 1.45;
+  white-space: pre; user-select: all;
+}
+
+/* ── EngineFailModal — запрет не запустился ── */
+.efail-body { display:flex; flex-direction:column; gap:12px; }
+.efail-text { margin:0; font-size:var(--fs-md); line-height:1.55; color:var(--text-secondary); }
+.efail-hvci {
+  display:flex; align-items:flex-start; gap:9px;
+  padding:11px 13px; border-radius:var(--radius-md);
+  background:rgba(255,180,60,0.1); color:var(--warning, #ffb43c);
+  font-size:var(--fs-sm); line-height:1.5;
+}
+.efail-hvci svg { flex:none; margin-top:2px; }
+.efail-error {
+  margin:0; padding:9px 11px; border-radius:var(--radius-sm);
+  background:var(--bg-inset); color:var(--danger);
+  font-size:11px; white-space:pre-wrap; word-break:break-word;
+  max-height:110px; overflow:auto;
+}
+.efail-note { margin:0; font-size:11.5px; line-height:1.5; color:var(--text-tertiary); }
+
+/* Щит запрета в сайдбаре: движок не запустился — красный пульс */
+.sidebar-nav-item.svc-fail { color:var(--danger); }
+.sidebar-nav-item.svc-fail svg {
+  color:var(--danger);
+  animation:shieldFailPulse 1.3s ease-in-out infinite;
+}
+@keyframes shieldFailPulse {
+  0%, 100% { opacity:1; transform:scale(1); }
+  50% { opacity:0.45; transform:scale(1.12); }
+}

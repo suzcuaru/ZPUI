@@ -1,69 +1,70 @@
-# === Исходный код (не заливаем в бинарный репо) ===
-internal/
-cmd/
-third_party/
+# === Публичный репозиторий ZPUI: исходный код публикуется с 19.11.2026 ===
+# (до этой даты репо был бинарным: только доки + релизные артефакты).
+# Исходники: main.go, internal/, cmd/, installer/, web/src/, web/*.json,
+# Документы/, AGENTS.md, .agents/skills/zpui-mcp (скилл из поставки).
+
+# === Сборка и зависимости ===
 build/
-installer/
-web/src/
+.buildlock/
+third_party/
+dist/
+backups/
 web/node_modules/
 web/dist/
 web/wailsjs/
-web/package*.json
+resource_windows_*.syso
+versioninfo.json
+coverage
+coverage.txt
 # из web/public трекаем только скриншоты документации (использует README)
 web/public/*
 !web/public/docs/
-web/vite.config.js
-web/vitest.setup.js
-web/index.html
-web/README.md
-web/IMPLEMENTATION_SUMMARY.md
-web/build.bat
-web/dev.bat
-web/dev-mock.js
-web/db.js
-fonts/
-assets/
-Документы/
-AGENTS.md
-backup.bat
-build.bat
-main.go
-go.mod
-go.sum
-wails.json
-config.example.json
-config.json
-versions.txt
-*.go
+# дев-стенды UI (локальные) — check-bindings.mjs публикуется: его зовёт build.bat
+web/dev*.html
 
-# === Агентские файлы (скиллы/планы) — не для публичного репо ===
-.agents/
+# === Локальные данные и секреты — НИКОГДА не публиковать ===
+config.json
+logs/
+*.log
+*.db
+upload-update.bat
+CHANGELOG-DEV.md
+Документы/Доступ-сервер-ZPUI-Live.md
+Документы/Задачи/Админ-CRM-Next.md
+Документы/Задачи/Админ-CRM-2.md
+Документы/Задачи/ZPUI-3.0-подписка-и-инфраструктура.md
+Документы/Задачи/Инфраструктура-инвентарь-и-два-API.md
+Документы/Задачи/Сайт-zpui-life.md
+Документы/Задачи/Архитектура-целевая-модель.md
+Документы/Задачи/Мульти-нод-архитектура.md
+pkginst-clean.py
+
+# === Агентский harness (локальный) — публикуется только скилл из поставки ===
+.agents/*
+!.agents/skills
+.agents/skills/*
+!.agents/skills/zpui-mcp
 .zcode/
 .zcodeignore
 
-# === Артефакты, не используемые CI/релизом (дистрибуция — GitHub Releases и Яндекс.Диск) ===
+# === Прочие артефакты ===
+package-lock.json
+*.md5
+*.zip
+*.backup
 zapret/
 /components/
 report.exe
 checksums.sha256
 telegram_links.txt
+ZPUI-Update-*.exe
+updater.exe
+archive/
 
-# === Служебные заглушки и штампы сборки ===
-package-lock.json
-*.md5
-
-# === Страховка от случайного залива ===
-*.zip
-*.backup
-*.log
-*.db
-
-# === Промежуточная папка сборки ===
-dist/
-
-# === Артефакты тестов ===
-coverage
-coverage.txt
+# === Вынесенные проекты (30.09.2026 живут отдельными репозиториями рядом) ===
+# server/ -> ../ZPUI-Server, mockups/ -> ../ZPUI-Mockups
+server/
+mockups/
 
 # === IDE / OS ===
 .vscode/
@@ -71,29 +72,3 @@ coverage.txt
 *.swp
 .DS_Store
 Thumbs.db
-
-# === Архив припаркованных фич и старых сборок (локально, не для репо) ===
-archive/
-
-# === Релизные артефакты в корне ТРЕКАЮТСЯ: release.yml пакует релиз из корня
-# === репо (ZPUI.exe, ZPUI-x86.exe, ZPUI-Setup-*.exe, versions.json, domains.txt,
-# === skip-resources-system.txt). Обновляются release.bat [3/7] перед тегом.
-ZPUI-Update-*.exe
-logs/
-
-# === Генераты goversioninfo (побочные, все архитектуры) ===
-resource_windows_*.syso
-versioninfo.json
-
-# === Локальные dev-инструменты и стенды (не для публичного репо) ===
-web/dev*.html
-web/check-bindings.mjs
-upload-update.bat
-CHANGELOG-DEV.md
-
-# === Вынесенные проекты (30.09.2026 живут отдельными репозиториями рядом) ===
-# server/ -> ../ZPUI-Server, mockups/ -> ../ZPUI-Mockups
-server/
-mockups/
-backups/
-updater.exe

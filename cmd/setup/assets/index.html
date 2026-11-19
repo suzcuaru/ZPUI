@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Установка ZPUI</title>
+<style>
+/* Дизайн-система ZPUI (Документы/Дизайн-заметки.md §5, тёмная тема) */
+:root{
+  --bg-page:#141418; --bg-card:#20202a; --bg-inset:#16161e;
+  --bg-hover:rgba(255,255,255,0.06); --bg-active:rgba(107,163,255,0.10);
+  --border:#2e2e38; --border-light:#262630;
+  --text-primary:#e5e5ed; --text-secondary:#9ea3b3; --text-tertiary:#8a8fa0;
+  --accent:#6ba3ff; --accent-hover:#82b3ff;
+  --accent-soft:rgba(107,163,255,0.12); --accent-text:#fff;
+  --grad-accent:linear-gradient(135deg,var(--accent),#9b6df2);
+  --success:#34d058; --success-bg:rgba(52,208,88,0.12);
+  --danger:#f55e5e; --danger-bg:rgba(245,94,94,0.10);
+  --radius-sm:6px; --radius-md:10px; --radius-lg:14px;
+  --font:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+  --font-mono:'JetBrains Mono','Cascadia Code','Consolas',monospace;
+  --ease-out:cubic-bezier(0.16,1,0.3,1);
+  --dur-fast:120ms; --dur-base:180ms;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:680px;height:520px;overflow:hidden}
+body{font-family:var(--font);font-size:13.5px;line-height:1.5;background:var(--bg-page);color:var(--text-primary);user-select:none;cursor:default}
+
+.win{display:flex;flex-direction:column;width:100%;height:100%;position:relative;overflow:hidden;background:var(--bg-page)}
+
+/* ── Тайтлбар как в приложении (34px, лого-градиент, тонкие глифы) ── */
+.tbar{flex:none;height:34px;display:flex;align-items:center;gap:10px;padding:0 0 0 14px;background:var(--bg-page);position:relative;z-index:2}
+.tbar-logo{font-size:17px;font-weight:800;letter-spacing:1px;line-height:34px;background:var(--grad-accent);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent}
+.tbar-ver{font-family:var(--font-mono);font-size:11px;color:var(--text-tertiary)}
+.tbar-sp{flex:1}
+.tbar-cap{width:46px;height:34px;display:flex;align-items:center;justify-content:center;border:none;border-radius:var(--radius-sm);background:transparent;color:var(--text-secondary);cursor:pointer;transition:background var(--dur-fast) ease,color var(--dur-fast) ease}
+.tbar-cap:hover{background:var(--bg-hover);color:var(--text-primary)}
+.tbar-cap:active{background:var(--bg-active)}
+.tbar-cap.close:hover{color:var(--danger)}
+.tbar-cap svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+
+/* ── Фирменный фон окон: пятна + сетка + вотермарк (Дизайн-заметки §3) ── */
+.bgfx{position:absolute;inset:34px 0 0 0;z-index:0;pointer-events:none;background:
+  radial-gradient(600px 400px at 15% 20%, rgba(91,140,255,.14), transparent 60%),
+  radial-gradient(700px 500px at 85% 80%, rgba(155,109,242,.12), transparent 60%)}
+.bgfx::after{content:"";position:absolute;inset:0;
+  background-image:linear-gradient(var(--border-light) 1px,transparent 1px),linear-gradient(90deg,var(--border-light) 1px,transparent 1px);
+  background-size:32px 32px;opacity:.25}
+.watermark{position:absolute;left:0;right:0;bottom:-32px;z-index:0;display:flex;justify-content:center;
+  font-size:170px;font-weight:800;letter-spacing:.05em;color:var(--text-primary);opacity:.025;pointer-events:none;user-select:none}
+
+.content{flex:1;min-height:0;display:flex;flex-direction:column;position:relative;z-index:1;padding:20px 44px 16px}
+
+/* ── Рейка этапов — как на стартовом экране приложения ── */
+.stages{flex:none;display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:18px}
+.stage{display:flex;align-items:center;gap:7px;flex:none}
+.stage .dot{width:20px;height:20px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:700;border:2px solid var(--border);color:transparent;background:transparent;transition:all .3s ease}
+.stage .lb{font-size:12.5px;font-weight:600;color:var(--text-tertiary);white-space:nowrap;transition:color .3s ease}
+.stage .line{width:30px;height:2px;border-radius:1px;background:var(--border);transition:background .3s ease}
+.stage.is-done .dot{background:var(--success);border-color:var(--success);color:#fff}
+.stage.is-done .lb{color:var(--text-secondary)}
+.stage.is-done .line{background:var(--success);opacity:.5}
+.stage.is-active .dot{border-color:var(--accent);color:var(--accent)}
+.stage.is-active .lb{color:var(--accent)}
+@keyframes stagePulse{0%,100%{box-shadow:0 0 0 0 rgba(107,163,255,0)}50%{box-shadow:0 0 0 4px var(--accent-soft)}}
+.stage.is-active .dot{animation:stagePulse 1.6s ease-in-out infinite}
+
+.pages{flex:1;min-height:0;position:relative}
+.page{position:absolute;inset:0;display:none;flex-direction:column}
+.page.on{display:flex;animation:pageIn var(--dur-base) var(--ease-out)}
+@keyframes pageIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+.h{font-size:17px;font-weight:600;letter-spacing:-0.2px;color:var(--text-primary)}
+.hs{font-size:13px;color:var(--text-secondary);margin-top:4px}
+.caps{font-size:10.5px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:var(--text-tertiary)}
+.mono{font-family:var(--font-mono)}
+
+/* Панель/карточка */
+.panel{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg)}
+.inset{background:var(--bg-inset);border-radius:var(--radius-md)}
+
+/* Кнопки — прямоугольники 30px, радиус 6 */
+.btn{min-width:104px;height:34px;padding:0 18px;border-radius:var(--radius-sm);
+  border:1px solid var(--border);background:var(--bg-card);color:var(--text-primary);
+  font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer;
+  display:inline-flex;align-items:center;justify-content:center;
+  transition:all var(--dur-fast) var(--ease-out)}
+.btn:hover{background:var(--bg-hover);border-color:var(--text-tertiary)}
+.btn:active{transform:scale(0.96)}
+.btn:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.btn.pri{background:var(--accent-soft);border-color:transparent;color:var(--accent);font-weight:600}
+.btn.pri:hover{background:var(--accent);color:var(--accent-text);transform:translateY(-1px);box-shadow:0 2px 8px var(--accent-soft)}
+.btn.pri:active{transform:scale(0.96)}
+.btn.done{background:var(--success-bg);border-color:transparent;color:var(--success);font-weight:600}
+.btn.done:hover{background:var(--success);border-color:var(--success);color:#fff;transform:translateY(-1px);box-shadow:0 2px 8px var(--success-bg)}
+.btn.done:active{transform:scale(0.96)}
+.btn[disabled]{opacity:.5;cursor:default;pointer-events:none}
+
+/* Чекбокс — квадратный со скруглением (язык тумблера ZPUI) */
+.chk{display:flex;gap:10px;align-items:center;font-size:12.5px;color:var(--text-primary);cursor:pointer}
+.cbx{width:18px;height:18px;border-radius:5px;border:1px solid var(--border);background:var(--bg-inset);
+  display:inline-flex;align-items:center;justify-content:center;flex:none;cursor:pointer;
+  transition:all var(--dur-fast) var(--ease-out)}
+.cbx:hover{border-color:var(--text-tertiary)}
+.cbx.on{background:var(--accent);border-color:var(--accent)}
+.cbx.on::after{content:"";width:5px;height:9px;border-left:2px solid #fff;border-bottom:2px solid #fff;transform:rotate(-45deg)}
+
+/* Бейдж версии */
+.badge{display:inline-flex;align-items:center;padding:3px 12px;border-radius:8px;
+  background:var(--accent-soft);color:var(--accent);font-family:var(--font-mono);font-size:12px;font-weight:600}
+
+/* Скроллбар 4px */
+.scroll::-webkit-scrollbar{width:4px}
+.scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+
+/* ── Приветствие ── */
+.pg-welcome{align-items:center;justify-content:center;text-align:center;padding-bottom:6px}
+.wm-title{font-size:40px;font-weight:800;letter-spacing:.04em;line-height:1;color:var(--text-primary)}
+.wm-tag{font-size:13.5px;color:var(--text-tertiary);margin-top:7px}
+.wm-feats{display:flex;gap:10px;margin-top:24px;width:100%}
+.wm-feat{flex:1;background:var(--bg-inset);border-radius:var(--radius-md);padding:12px 10px;
+  display:flex;flex-direction:column;align-items:center;gap:7px}
+.wm-feat svg{width:18px;height:18px;stroke:var(--accent);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.wm-feat .ft{font-size:13px;font-weight:600;color:var(--text-primary)}
+.wm-feat .fd{font-size:11.5px;color:var(--text-tertiary);line-height:1.4}
+.wm-sys{margin-top:22px}
+
+/* ── Лицензия ── */
+.lic{flex:1;min-height:0;margin-top:12px;padding:12px 14px;font-size:12px;line-height:1.6;
+  color:var(--text-secondary);white-space:pre-wrap;overflow-y:auto;user-select:text}
+.pg-license .chk{margin-top:12px}
+
+/* ── Режим и компоненты (карточки выбора) ── */
+.cards{margin-top:16px;display:flex;flex-direction:column;gap:10px}
+.card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-md);
+  padding:12px 14px;display:flex;gap:12px;align-items:center;cursor:pointer;
+  transition:all var(--dur-fast) var(--ease-out)}
+.card:hover{border-color:var(--text-tertiary)}
+.card.sel{border-color:var(--accent);background:var(--accent-soft);box-shadow:0 0 0 1px var(--accent) inset}
+.card .rd{flex:none;width:16px;height:16px;border-radius:50%;border:1.5px solid var(--text-tertiary);background:var(--bg-inset);transition:all var(--dur-fast) var(--ease-out)}
+.card.sel .rd{border-color:var(--accent);border-width:5px;background:var(--bg-page)}
+.card .ct{font-size:13.5px;font-weight:600;color:var(--text-primary);line-height:1.3}
+.card .cd{font-size:12.5px;color:var(--text-secondary);line-height:1.45;margin-top:2px}
+.card .ci{flex:none;margin-left:auto;color:var(--text-tertiary)}
+.card .ci svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;display:block}
+.card.sel .ci{color:var(--accent)}
+
+/* ── Установка ── */
+.prow{display:flex;align-items:baseline;justify-content:space-between;margin-top:2px}
+.pct{font-family:var(--font-mono);font-size:12px;font-weight:700;color:var(--accent)}
+.prog{height:8px;border-radius:4px;background:var(--bg-inset);border:1px solid var(--border-light);overflow:hidden;margin:10px 0 12px}
+.prog i{display:block;height:100%;width:0;border-radius:4px;background:var(--accent);transition:width .35s var(--ease-out)}
+.prog.run i{background-image:linear-gradient(90deg,transparent,var(--accent-hover),transparent);background-size:200% 100%;animation:shine 1.2s linear infinite}
+@keyframes shine{to{background-position:-200% 0}}
+.log{flex:1;min-height:0;padding:10px 14px;font-family:var(--font-mono);font-size:11.5px;line-height:1.95;overflow:hidden}
+.log .lab{display:inline-block;width:84px;font-weight:700}
+.log .now{color:var(--accent)} .log .ok{color:var(--success)} .log .wait{color:var(--text-tertiary)}
+.log .info{color:var(--text-secondary)} .log .err{color:var(--danger)}
+.note{font-size:12px;color:var(--text-tertiary);margin-top:10px}
+
+/* ── Финал ── */
+.pg-finish{align-items:center;justify-content:center;text-align:center;padding-bottom:4px}
+.fin-badge{width:52px;height:52px;border-radius:50%;background:var(--success-bg);border:1px solid rgba(52,208,88,.4);
+  display:flex;align-items:center;justify-content:center;margin-bottom:14px}
+.fin-badge svg{width:24px;height:24px;stroke:var(--success);fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.pg-finish .chk{margin-top:18px}
+.pg-finish .wn-btn{margin-top:14px;min-width:0;height:30px;padding:0 14px}
+
+/* «Что нового» — кнопка + модалка (как в обновляторе) */
+.btn.wn-btn{background:transparent;color:var(--text-secondary)}
+.btn.wn-btn:hover{background:transparent;border-color:var(--accent);color:var(--accent)}
+.overlay{position:absolute;inset:0;z-index:10;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.4)}
+.overlay.on{display:flex;animation:fadeIn var(--dur-fast) ease}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.modal{width:min(560px,calc(100% - 48px));max-height:calc(100% - 56px);display:flex;flex-direction:column;
+  background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);
+  box-shadow:0 8px 24px rgba(0,0,0,.3);animation:pageIn var(--dur-base) var(--ease-out)}
+.m-head{flex:none;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 12px 10px 16px;border-bottom:1px solid var(--border-light)}
+.m-title{font-size:14px;font-weight:600;color:var(--text-primary)}
+.m-cap{width:30px;height:30px;display:flex;align-items:center;justify-content:center;border:none;border-radius:var(--radius-sm);background:transparent;color:var(--text-secondary);cursor:pointer;transition:background var(--dur-fast) ease,color var(--dur-fast) ease}
+.m-cap:hover{background:var(--bg-hover);color:var(--text-primary)}
+.m-cap svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round}
+.m-body{flex:1;min-height:0;overflow-y:auto;padding:12px 16px;font-size:12px;line-height:1.6;color:var(--text-secondary);user-select:text}
+.m-body::-webkit-scrollbar{width:4px}
+.m-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.m-foot{flex:none;display:flex;justify-content:flex-end;padding:10px 14px 12px;border-top:1px solid var(--border-light)}
+.wn-sec{font-size:10px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:var(--text-tertiary);margin:9px 0 3px}
+.wn-sec:first-child{margin-top:0}
+.wn-it{display:flex;gap:7px;margin-top:3px}
+.wn-it i{flex:none;font-style:normal;color:var(--success)}
+
+/* ── Футер ── */
+.footer{flex:none;height:50px;display:flex;align-items:center;gap:8px;padding:0 16px;
+  background:var(--bg-page);border-top:1px solid var(--border-light);position:relative;z-index:2}
+.brand{margin-right:auto;font-size:11px;color:var(--text-tertiary)}
+
+@media (prefers-reduced-motion: reduce){*{animation:none !important;transition:none !important}}
+</style>
+</head>
+<body>
+<div class="win">
+  <div class="tbar" style="--wails-draggable: drag">
+    <span class="tbar-logo">ZPUI</span>
+    <span class="tbar-ver" id="ttver"></span>
+    <span class="tbar-sp"></span>
+    <button class="tbar-cap" id="btnMin" style="--wails-draggable: nodrag" aria-label="Свернуть"><svg viewBox="0 0 24 24"><path d="M5.5 12h13"/></svg></button>
+    <button class="tbar-cap close" id="btnClose" style="--wails-draggable: nodrag" aria-label="Закрыть"><svg viewBox="0 0 24 24"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg></button>
+  </div>
+
+  <div class="bgfx"></div>
+  <div class="watermark">ZPUI</div>
+
+  <div class="content">
+    <div class="stages" id="stages">
+      <div class="stage" data-st="0"><span class="dot">1</span><span class="lb">Приветствие</span></div><span class="line"></span>
+      <div class="stage" data-st="1"><span class="dot">2</span><span class="lb">Лицензия</span></div><span class="line"></span>
+      <div class="stage" data-st="2"><span class="dot">3</span><span class="lb">Настройка</span></div><span class="line"></span>
+      <div class="stage" data-st="3"><span class="dot">4</span><span class="lb">Установка</span></div><span class="line"></span>
+      <div class="stage" data-st="4"><span class="dot">5</span><span class="lb">Готово</span></div>
+    </div>
+
+    <div class="pages">
+      <section class="page pg-welcome on" id="pg-welcome">
+        <div class="wm-title">ZPUI</div>
+        <div class="wm-tag">Обход блокировок одним нажатием</div>
+        <span class="badge" id="pill" style="margin-top:12px">…</span>
+        <div class="wm-feats">
+          <div class="wm-feat">
+            <svg viewBox="0 0 24 24"><path d="M13 2L3 14h7l-1 8 11-12h-7l0-8z"/></svg>
+            <span class="ft">Запрет</span><span class="fd">Discord, YouTube<br>и другие ресурсы</span>
+          </div>
+          <div class="wm-feat">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14.5 14.5 0 0 1 4 9 14.5 14.5 0 0 1-4 9 14.5 14.5 0 0 1-4-9 14.5 14.5 0 0 1 4-9z"/></svg>
+            <span class="ft">Туннель</span><span class="fd">и Telegram-прокси<br>в комплекте</span>
+          </div>
+          <div class="wm-feat">
+            <svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/><path d="M15 4v4M8 10v4M16 16v4"/></svg>
+            <span class="ft">Автоподбор</span><span class="fd">стратегий под<br>вашего оператора</span>
+          </div>
+        </div>
+        <span class="caps wm-sys">Windows 10/11 · x86 · x64 · Бесплатно</span>
+      </section>
+
+      <section class="page pg-license" id="pg-license">
+        <div class="h">Лицензионное соглашение</div>
+        <div class="hs">Прочитайте условия перед установкой</div>
+        <div class="lic inset scroll" id="licText">Загрузка…</div>
+        <div class="chk" id="rowLic" role="checkbox" aria-checked="false" tabindex="0"><span class="cbx" id="cbxLic"></span><span>Я прочитал(а) и принимаю условия лицензионного соглашения</span></div>
+      </section>
+
+      <section class="page" id="pg-mode">
+        <div class="h">Режим установки</div>
+        <div class="hs" id="modeSub">Найдена установленная версия</div>
+        <div class="cards">
+          <div class="card sel" id="modeUpdate" role="radio" aria-checked="true">
+            <span class="rd"></span>
+            <div><div class="ct">Обновить</div><div class="cd">Файлы приложения заменяются — настройки, база, логи и движок остаются на месте.</div></div>
+          </div>
+          <div class="card" id="modeClean" role="radio" aria-checked="false">
+            <span class="rd"></span>
+            <div><div class="ct">Чистая установка</div><div class="cd">Полное удаление ZPUI и всех данных — файлов, настроек, логов, ярлыков — затем установка с нуля.</div></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="page" id="pg-components">
+        <div class="h">Компоненты</div>
+        <div class="hs">Что создать вместе с приложением</div>
+        <div class="cards">
+          <div class="card sel" id="optDesktop" role="checkbox" aria-checked="true">
+            <span class="cbx on" id="cbxDesktop"></span>
+            <div><div class="ct">Ярлык на рабочем столе</div><div class="cd">Быстрый запуск с рабочего стола Windows.</div></div>
+            <span class="ci"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg></span>
+          </div>
+          <div class="card sel" id="optStartMenu" role="checkbox" aria-checked="true">
+            <span class="cbx on" id="cbxStartMenu"></span>
+            <div><div class="ct">Ярлык в меню «Пуск»</div><div class="cd">Папка ZPUI в списке программ — как у обычных приложений.</div></div>
+            <span class="ci"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></span>
+          </div>
+        </div>
+        <span class="caps" style="margin-top:auto;padding-bottom:8px">Ярлыки можно изменить позже — переустановка не требуется</span>
+      </section>
+
+      <section class="page" id="pg-install">
+        <div class="prow"><div class="h">Ход установки</div><span class="pct" id="pct">0%</span></div>
+        <div class="prog run" id="bar"><i></i></div>
+        <div class="log inset" id="log"></div>
+        <p class="note" id="note">Обычно занимает меньше минуты.</p>
+      </section>
+
+      <section class="page pg-finish" id="pg-finish">
+        <div class="fin-badge"><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></div>
+        <div class="h">ZPUI установлен</div>
+        <div class="hs">Все компоненты на месте — можно запускать. Управление появится в трее.</div>
+        <div class="chk" id="rowRun" role="checkbox" aria-checked="true" tabindex="0"><span class="cbx on" id="cbxRun"></span><span>Запустить ZPUI</span></div>
+        <button class="btn wn-btn" id="btnWn">Что нового</button>
+      </section>
+    </div>
+  </div>
+
+  <div class="overlay" id="wnModal">
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="m-head">
+        <span class="m-title">Что нового</span>
+        <button class="m-cap" id="wnClose" aria-label="Закрыть"><svg viewBox="0 0 24 24"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg></button>
+      </div>
+      <div class="m-body" id="wnBody">Загрузка…</div>
+      <div class="m-foot"><button class="btn done" id="wnOk">Понятно</button></div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <span class="brand" id="brand">ZPUI · zpui-life.ru</span>
+    <button class="btn" id="btnBack" style="display:none">Назад</button>
+    <button class="btn" id="btnCancel">Отмена</button>
+    <button class="btn pri" id="btnNext">Далее</button>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+
+let info = {new:'', old:'', hasOld:false, license:''};
+let page = 'welcome';
+let licOk = false;
+let mode = 'update';
+let desktopOn = true, startMenuOn = true;
+let started = false, finished = false;
+let runOn = true;
+let t0 = 0;
+
+const STAGE_OF = {welcome:0, license:1, mode:2, components:2, install:3, finish:4};
+function stage(n) {
+  document.querySelectorAll('#stages .stage').forEach(s => {
+    const i = +s.dataset.st;
+    s.classList.toggle('is-done', i < n);
+    s.classList.toggle('is-active', i === n);
+    if (i < n) s.querySelector('.dot').textContent = '✓';
+    else s.querySelector('.dot').textContent = i + 1;
+  });
+}
+function show(id) {
+  page = id;
+  document.querySelectorAll('.page').forEach(p => p.classList.toggle('on', p.id === 'pg-' + id));
+  stage(STAGE_OF[id] || 0);
+  $('btnBack').style.display = (id === 'license' || id === 'mode' || id === 'components') ? 'inline-flex' : 'none';
+  $('btnNext').style.display = 'inline-flex';
+  $('btnCancel').style.display = 'inline-flex';
+  if (id === 'install') { $('btnNext').style.display = 'none'; $('btnCancel').setAttribute('disabled',''); }
+  if (id === 'finish') {
+    $('btnCancel').style.display = 'none';
+    $('btnNext').textContent = 'Готово';
+    $('btnNext').classList.remove('pri');
+    $('btnNext').classList.add('done');
+  } else {
+    $('btnNext').textContent = 'Далее';
+    $('btnNext').classList.add('pri');
+    $('btnNext').classList.remove('done');
+  }
+  $('btnNext').removeAttribute('disabled');
+  if (id === 'license' && !licOk) $('btnNext').setAttribute('disabled','');
+}
+function setCbx(el, on) { el.classList.toggle('on', on); }
+function addLine(kind, label, text) {
+  const log = $('log');
+  const d = document.createElement('div');
+  d.innerHTML = label
+    ? '<span class="lab ' + kind + '">' + label + '</span><span class="info">' + text + '</span>'
+    : '<span class="' + kind + '">' + text + '</span>';
+  log.appendChild(d);
+  while (log.children.length > 9) log.removeChild(log.firstChild);
+}
+function nextFrom(id) {
+  if (id === 'welcome') return 'license';
+  if (id === 'license') return info.hasOld ? 'mode' : 'components';
+  return null;
+}
+function startInstall(runMode) {
+  show('install');
+  t0 = Date.now();
+  window.go.main.App.Start(runMode, desktopOn, startMenuOn);
+}
+function doneShow(data) {
+  finished = true;
+  if (data && data.ok) {
+    $('pct').textContent = '100%';
+    $('bar').firstElementChild.style.width = '100%';
+    $('bar').classList.remove('run');
+    document.querySelectorAll('#log .lab.now').forEach(el => { el.className = 'lab ok'; el.textContent = 'Выполнено'; });
+    document.querySelectorAll('#log .now:not(.lab)').forEach(el => { el.className = 'info'; });
+    show('finish');
+  } else {
+    const err = (data && data.err) || 'неизвестная ошибка';
+    addLine('err', 'Ошибка', err);
+    addLine('wait', 'Ожидание', 'Установка прервана');
+    $('note').textContent = 'Установка не завершена.';
+    $('btnNext').style.display = 'inline-flex';
+    $('btnNext').textContent = 'Закрыть';
+    $('btnNext').classList.remove('pri');
+  }
+}
+
+window.go.main.App.Info().then(i => {
+  info = i;
+  $('ttver').textContent = 'v' + info.new;
+  $('pill').textContent = info.hasOld ? (info.old + ' → ' + info.new) : ('версия ' + info.new);
+  $('modeSub').textContent = 'Найдена установленная версия ' + info.old;
+  $('brand').textContent = 'ZPUI ' + info.new + ' · zpui-life.ru';
+  $('licText').textContent = info.license;
+  renderChangelog(info.changelog || 'Список изменений недоступен.');
+});
+stage(0);
+
+// Markdown CHANGELOG → лёгкое форматирование (как в обновляторе):
+// ## версия (только первая), ### секция, - пункт; «VPN» → «туннель».
+function renderChangelog(md) {
+  const body = $('wnBody');
+  body.innerHTML = '';
+  const lines = String(md).replace(/vpn/gi, 'туннель').split(/\r?\n/);
+  let firstVer = true;
+  for (let raw of lines) {
+    const line = raw.trim();
+    if (!line || line === '# CHANGELOG') continue;
+    if (line.startsWith('## ')) {
+      if (!firstVer) break;
+      firstVer = false;
+      continue;
+    }
+    if (line.startsWith('### ')) {
+      const s = document.createElement('div');
+      s.className = 'wn-sec';
+      s.textContent = line.slice(4).trim();
+      body.appendChild(s);
+      continue;
+    }
+    if (line.startsWith('- ')) {
+      const it = document.createElement('div');
+      it.className = 'wn-it';
+      it.innerHTML = '<i>•</i><span></span>';
+      it.querySelector('span').textContent = line.slice(2).trim();
+      body.appendChild(it);
+      continue;
+    }
+    const p = document.createElement('div');
+    p.textContent = line;
+    body.appendChild(p);
+  }
+}
+const wnModal = $('wnModal');
+function wnOpen() { wnModal.classList.add('on'); requestAnimationFrame(() => { $('wnBody').scrollTop = 0; }); }
+function wnHide() { wnModal.classList.remove('on'); }
+$('btnWn').onclick = wnOpen;
+$('wnClose').onclick = wnHide;
+$('wnOk').onclick = wnHide;
+wnModal.onclick = e => { if (e.target === wnModal) wnHide(); };
+document.addEventListener('keydown', e => { if (e.key === 'Escape') wnHide(); });
+
+window.runtime.EventsOn('pkg:step', data => {
+  if (page !== 'install') show('install');
+  if (!data) return;
+  if (data.value != null && data.value >= 0) {
+    const p = Math.round(data.value * 100);
+    $('pct').textContent = p + '%';
+    $('bar').firstElementChild.style.width = p + '%';
+  }
+  if (data.phase) {
+    document.querySelectorAll('#log .lab.now').forEach(el => { el.className = 'lab ok'; el.textContent = 'Выполнено'; });
+    document.querySelectorAll('#log .now:not(.lab)').forEach(el => { el.className = 'info'; });
+    addLine('now', 'Сейчас', data.phase);
+  }
+  if (data.detail) addLine('info', '', '&nbsp;&nbsp;' + data.detail);
+});
+
+window.runtime.EventsOn('pkg:done', data => {
+  const elapsed = Date.now() - t0;
+  const fire = () => doneShow(data);
+  if (elapsed < 1800) { setTimeout(fire, 1800 - elapsed); return; }
+  fire();
+});
+
+$('btnNext').onclick = () => {
+  if (page === 'welcome') { show(nextFrom(page)); return; }
+  if (page === 'license') {
+    if (!licOk) return;
+    show(nextFrom(page));
+    return;
+  }
+  if (page === 'mode') {
+    if (mode === 'update') startInstall('update');
+    else show('components');
+    return;
+  }
+  if (page === 'components') { startInstall(info.hasOld ? mode : 'fresh'); return; }
+  if (page === 'install') { if (finished) window.go.main.App.Close(); return; }
+  if (page === 'finish') { window.go.main.App.Finish(runOn); return; }
+};
+$('btnBack').onclick = () => {
+  if (page === 'license') show('welcome');
+  if (page === 'mode') show('license');
+  if (page === 'components') show(info.hasOld ? 'mode' : 'license');
+};
+$('btnCancel').onclick = () => window.go.main.App.Close();
+$('btnClose').onclick = () => window.go.main.App.Close();
+$('btnMin').onclick = () => window.go.main.App.Minimize();
+
+function bindChk(rowId, cbxId, get, set) {
+  const row = $(rowId);
+  const toggle = () => { set(!get()); setCbx($(cbxId), get()); row.setAttribute('aria-checked', get()); };
+  row.onclick = toggle;
+  row.onkeydown = e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); toggle(); } };
+}
+bindChk('rowLic', 'cbxLic', () => licOk, v => {
+  licOk = v;
+  if (page === 'license') { if (licOk) $('btnNext').removeAttribute('disabled'); else $('btnNext').setAttribute('disabled',''); }
+});
+bindChk('rowRun', 'cbxRun', () => runOn, v => { runOn = v; });
+
+$('modeUpdate').onclick = () => {
+  mode = 'update';
+  $('modeUpdate').classList.add('sel'); $('modeUpdate').setAttribute('aria-checked','true');
+  $('modeClean').classList.remove('sel'); $('modeClean').setAttribute('aria-checked','false');
+};
+$('modeClean').onclick = () => {
+  mode = 'clean';
+  $('modeClean').classList.add('sel'); $('modeClean').setAttribute('aria-checked','true');
+  $('modeUpdate').classList.remove('sel'); $('modeUpdate').setAttribute('aria-checked','false');
+};
+$('optDesktop').onclick = () => {
+  desktopOn = !desktopOn;
+  $('optDesktop').classList.toggle('sel', desktopOn);
+  $('optDesktop').setAttribute('aria-checked', desktopOn);
+  setCbx($('cbxDesktop'), desktopOn);
+};
+$('optStartMenu').onclick = () => {
+  startMenuOn = !startMenuOn;
+  $('optStartMenu').classList.toggle('sel', startMenuOn);
+  $('optStartMenu').setAttribute('aria-checked', startMenuOn);
+  setCbx($('cbxStartMenu'), startMenuOn);
+};
+</script>
+</body>
+</html>

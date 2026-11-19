@@ -1,0 +1,2356 @@
+{
+  "errors": {
+    "unknown": "Something went wrong. Please try again.",
+    "withCode": "Error (code: {code}). See the log for details"
+  },
+  "common": {
+    "cancel": "Cancel",
+    "cancelled": "Cancelled",
+    "close": "Close",
+    "unlimited": "No expiry",
+    "save": "Save",
+    "saving": "Saving...",
+    "check": "Check",
+    "checking": "Checking...",
+    "load": "Load",
+    "download": "Download",
+    "copy": "Copy",
+    "on": "On",
+    "off": "Off",
+    "copied": "Copied",
+    "restart": "Restart",
+    "error": "Error",
+    "loading": "Loading...",
+    "enable": "Enable",
+    "ms": "ms",
+    "completed": "Completed",
+    "confirm": "Confirm",
+    "restartBtn": "Restart the app",
+    "restarting": "Restarting…",
+    "delete": "Delete",
+    "edit": "Edit",
+    "refresh": "Refresh",
+    "listsRefreshed": "Lists updated",
+    "retry": "Retry"
+  },
+  "nav": {
+    "dashboard": "Home",
+    "zapret": "ZAPRET",
+    "proxy": "Proxy",
+    "xboxdns": "DNS",
+    "monitor": "Monitor",
+    "settings": "Settings",
+    "network": "DNS"
+  },
+  "plans": {
+    "until": "Active until {date}"
+  },
+  "sidebar": {
+    "autoSelectDisabledTip": "Start Zapret to use auto-select",
+    "healthLabel": "Warnings",
+    "autoSelectLabel": "Auto-select",
+    "cacheLabel": "Cache",
+    "cacheOverflowTip": "Discord cache is full ({mb} MB) — click to clear",
+    "checkerLabel": "Check",
+    "logsLabel": "Logs",
+    "helpLabel": "Help",
+    "powerSavingTip": "Power saving mode is active",
+    "bannerOpen": "Open",
+    "bannerTip": "Announcement"
+  },
+  "status": {
+    "running": "Running",
+    "stopped": "Stopped",
+    "missing": "Missing",
+    "ok": "Working",
+    "upToDate": "Up to date",
+    "healthy": "All components OK",
+    "degraded": "Warnings detected",
+    "critical": "Critical issues",
+    "getDataFailed": "Failed to get data"
+  },
+  "header": {
+    "zapret": "ZAPRET",
+    "zapretStarted": "Zapret started",
+    "zapretStopped": "Zapret stopped"
+  },
+  "docs": {
+    "versionLoading": "…",
+    "links": {
+      "site": "Website zpui-life.ru",
+      "channel": "Telegram channel",
+      "group": "Support group",
+      "releases": "Releases",
+      "issues": "Report an issue"
+    },
+    "groups": {
+      "start": "Getting started",
+      "tabs": "App tabs",
+      "more": "More"
+    },
+    "sections": {
+      "quickstart": {
+        "title": "Quick start",
+        "blocks": [
+          {
+            "lead": "ZPUI unblocks Discord, YouTube and other resources with a single switch. The app does almost everything by itself: picks a working strategy for your ISP, watches availability and recovers after failures. This section is the short version — every tab is described in detail in the sections on the left."
+          },
+          {
+            "h": "Getting started"
+          },
+          {
+            "steps": [
+              "Launch ZPUI — the bypass engine already ships with the installer, nothing extra to download.",
+              "Right after the startup screen the smart selection window opens: the app tests strategies and picks a working one for your provider. Just wait — it takes a few minutes.",
+              "Turn the Zapret toggle on. The indicator turns green once the bypass is up.",
+              "Done: Discord and YouTube work."
+            ]
+          },
+          {
+            "h": "How it all fits together — in a nutshell"
+          },
+          {
+            "list": [
+              "Home — bypass status, resource availability and problems at a glance.",
+              "Zapret — the core module: strategies, domain lists, game mode.",
+              "Proxy — the Telegram bridge and a SOCKS5 proxy for your phone and other devices.",
+              "DNS — changing DNS servers: helps with YouTube and needed for sharing the bypass.",
+              "Monitor — speeds, ping and devices connected to your proxies.",
+              "Settings — theme, language, autostart, updates, power saving."
+            ]
+          },
+          {
+            "h": "Setting up the bypass — basic scenario"
+          },
+          {
+            "steps": [
+              "Turn Zapret on.",
+              "The lightning in the sidebar opens the selection window: “Smart select” (the default) tests the best strategies for your operator, “Game select” — for online games, “Full sweep” — every strategy one by one. The best one is applied automatically.",
+              "A strategy is saved for your operator: when you switch providers or networks, the app applies the strategy saved for that operator — or starts a background selection if there is none yet.",
+              "If a strategy stops working over time (ISPs change equipment) — run the selection again. AutoSwitch on the Zapret tab does this for you automatically."
+            ]
+          },
+          {
+            "callout": "warn",
+            "text": "Sites open but YouTube videos do not: your ISP spoofs video server addresses. Turn on the toggle on the DNS tab — one click fixes it."
+          },
+          {
+            "callout": "important",
+            "text": "Something not working? Check “Troubleshooting” — it also explains how to reach support."
+          }
+        ]
+      },
+      "dashboard": {
+        "title": "Home",
+        "blocks": [
+          {
+            "lead": "The main screen: the state of every service and the overall bypass quality at a glance. Everything on it is clickable and updates live."
+          },
+          {
+            "h": "Service cards"
+          },
+          {
+            "rows": [
+              {
+                "k": "Zapret",
+                "v": "Whether the bypass is running and which strategy is active. Click opens the Zapret tab."
+              },
+              {
+                "k": "Proxy",
+                "v": "Telegram bridge state and its port. Click opens the Proxy tab."
+              },
+              {
+                "k": "DNS",
+                "v": "Whether custom DNS is on and how many sources are active. Click opens the DNS tab."
+              }
+            ]
+          },
+          {
+            "h": "Resource availability"
+          },
+          {
+            "rows": [
+              {
+                "k": "Percentages",
+                "v": "How many resources from the standard and your custom list are reachable. Green — 80%+, yellow — so-so, red — problems."
+              },
+              {
+                "k": "2-hour chart",
+                "v": "How availability changed. Hover for exact percentages, speed and ping at the moment of the check; orange dashes are strategy switches."
+              },
+              {
+                "k": "Refresh button",
+                "v": "Runs a resource check right away, without waiting for the schedule."
+              },
+              {
+                "k": "Countdown",
+                "v": "Time until the next automatic check (the interval is set in Settings)."
+              }
+            ]
+          },
+          {
+            "h": "Problem resources"
+          },
+          {
+            "rows": [
+              {
+                "k": "The list",
+                "v": "Resources that failed the last check. Click one to see the reason and two actions."
+              },
+              {
+                "k": "Add to exclusions",
+                "v": "The resource stops counting towards availability — handy if the site is down on its own."
+              },
+              {
+                "k": "Check",
+                "v": "Opens the detailed layer-by-layer resource check (the magnifier in the sidebar)."
+              }
+            ]
+          }
+        ]
+      },
+      "zapret": {
+        "title": "Zapret",
+        "blocks": [
+          {
+            "lead": "The core module. Zapret modifies network packets so that the ISP equipment lets traffic to blocked sites through. One toggle turns it on — the rest is automated."
+          },
+          {
+            "callout": "info",
+            "text": "The Zapret engine is an independent program. In service mode (Settings → ZAPRET) it keeps running even with the app closed and starts together with Windows. That is why “Close app” in the tray does not stop it — the full “Quit” with a confirmation does."
+          },
+          {
+            "h": "Top bar"
+          },
+          {
+            "rows": [
+              {
+                "k": "Indicator",
+                "v": "Status dot, engine version and your ISP — the network is detected automatically."
+              },
+              {
+                "k": "Zapret toggle",
+                "v": "Turns the bypass on and off. Starting is asynchronous: the spinner spins until the engine is up."
+              },
+              {
+                "k": "Diagnostics",
+                "v": "Environment check: conflicts, VPN, file integrity. Helps find the cause of problems."
+              },
+              {
+                "k": "AutoSwitch",
+                "v": "If availability drops below the threshold, the app switches the strategy by itself. The gear next to it sets the threshold (50–80%)."
+              }
+            ]
+          },
+          {
+            "h": "Strategies (sub-tab)"
+          },
+          {
+            "rows": [
+              {
+                "k": "Strategy set",
+                "v": "More than twenty ready-made strategies are built in, plus one universal of our own — the app creates and updates it by itself."
+              },
+              {
+                "k": "Strategy card",
+                "v": "Click to apply (Zapret must be on). You can switch strategies as often as you like."
+              },
+              {
+                "k": "Letter on the card (S…D)",
+                "v": "Tier — the score from the latest checks: S — excellent, D — dead. Hover for availability, key resources, speed — and the “weakest link”: what the strategy lacked compared to a direct connection."
+              },
+              {
+                "k": "Gamepad",
+                "v": "The strategy’s game score — how well it suits online games (ping, platforms)."
+              },
+              {
+                "k": "⋯ in the sub-tab row",
+                "v": "Display filter: show only strong tiers, only tested ones, or all. The current strategy is always visible."
+              },
+              {
+                "k": "Right-click a card",
+                "v": "A quick-test menu: check one strategy — regular or game-style — and refresh its tier without a full sweep. Works even when the cards are locked."
+              }
+            ]
+          },
+          {
+            "h": "Lists (sub-tab)"
+          },
+          {
+            "rows": [
+              {
+                "k": "User lists",
+                "v": "Domains that Zapret processes by your rules. One domain per line."
+              },
+              {
+                "k": "Check exclusions",
+                "v": "Resources that should not count towards availability checks (for example, a site that is down on its own)."
+              },
+              {
+                "k": "System lists",
+                "v": "Updated automatically from the server, read-only."
+              }
+            ]
+          },
+          {
+            "h": "Filters (bottom panel)"
+          },
+          {
+            "rows": [
+              {
+                "k": "Game filter",
+                "v": "Separate handling of game traffic: all, TCP only, UDP only, or off. If the current strategy is not a game one, the app offers game strategies or a forced override. Applies to the running engine immediately, no reinstall."
+              },
+              {
+                "k": "ipset filter",
+                "v": "Process all traffic or only IPs from the list: loaded / none / any. Next to it — the address count and the list update date. Changes apply on the fly too."
+              }
+            ]
+          },
+          {
+            "callout": "warn",
+            "text": "Do not run a third-party Zapret alongside ZPUI — the conflict will kill your internet."
+          },
+          {
+            "callout": "info",
+            "text": "If the engine crashes, the app starts recovery by itself: a window with stages, and on failure — a restart and another try. Failure notifications are restrained: no more than once every 2 minutes."
+          }
+        ]
+      },
+      "proxy": {
+        "title": "Proxy",
+        "blocks": [
+          {
+            "lead": "Two independent services: the Telegram bridge (MTProto) — fast Telegram on this computer and your phone, and SOCKS5 — bypass for any device in your home network."
+          },
+          {
+            "h": "Telegram bridge"
+          },
+          {
+            "rows": [
+              {
+                "k": "Main toggle",
+                "v": "Starts the bridge. Next to it — the mtproto://host:port status and connection/traffic counters."
+              },
+              {
+                "k": "Connect in Telegram",
+                "v": "Opens Telegram and the proxy is added automatically — just tap Enable."
+              },
+              {
+                "k": "Link and QR code",
+                "v": "For your phone: scan the QR with the camera — Telegram adds the proxy without manual settings. The link can be copied."
+              },
+              {
+                "k": "LAN access",
+                "v": "Opens the bridge to other Wi-Fi devices (by default — this PC only). One click to enable."
+              },
+              {
+                "k": "secret",
+                "v": "The proxy key. “Refresh” generates a new one — old connections have to be added again."
+              },
+              {
+                "k": "Advanced settings",
+                "v": "Bridge port, Fake TLS domain (disguises traffic as regular HTTPS), Cloudflare fallback and CF worker domains."
+              }
+            ]
+          },
+          {
+            "h": "SOCKS5 for your home network"
+          },
+          {
+            "rows": [
+              {
+                "k": "SOCKS5 toggle",
+                "v": "Turns the proxy on. Enable a static IP on the DNS tab first for a stable address — otherwise you will get a warning."
+              },
+              {
+                "k": "socks5:// address",
+                "v": "Enter it in the Wi-Fi settings on your phone or TV: proxy → manual → this address and port. The button copies it."
+              },
+              {
+                "k": "Port",
+                "v": "1080 by default, changeable in the field. No username or password needed."
+              }
+            ]
+          },
+          {
+            "callout": "info",
+            "text": "The phone and the computer must be on the same network (one router). If the phone will not connect, check whether Windows Firewall blocks the port."
+          }
+        ]
+      },
+      "dns": {
+        "title": "DNS",
+        "blocks": [
+          {
+            "lead": "Replacing your computer’s DNS servers. DNS cannot beat DPI, but it fixes address spoofing (typical for YouTube) and is needed to share the bypass with other devices."
+          },
+          {
+            "h": "Controls"
+          },
+          {
+            "rows": [
+              {
+                "k": "Master toggle",
+                "v": "Applies the selected sources to the network adapter. The “Applied / Not applied” chip shows the actual system state."
+              },
+              {
+                "k": "Current DNS",
+                "v": "What is actually set in the system, labeled by source (addresses in the tooltip)."
+              },
+              {
+                "k": "Static IP",
+                "v": "Fixes the current IP and DNS so the computer’s network address does not change. Needed for SOCKS5 and the phone. On laptops it asks for confirmation; turning it off restores DHCP."
+              }
+            ]
+          },
+          {
+            "h": "Sources"
+          },
+          {
+            "rows": [
+              {
+                "k": "Built-in providers",
+                "v": "Xbox DNS and public resolvers. A source toggle also turns the master toggle on if needed."
+              },
+              {
+                "k": "Custom entries",
+                "v": "Your own DNS: name, primary and secondary addresses, DoH support. Edit and delete buttons are on the row."
+              },
+              {
+                "k": "Name color",
+                "v": "Green — the source’s servers respond, red — they do not (the toggle is locked). Dead sources are switched off automatically."
+              },
+              {
+                "k": "“Disabled” badge",
+                "v": "The source was temporarily turned off by the ZPUI server — for example, its provider is being blocked."
+              }
+            ]
+          },
+          {
+            "callout": "info",
+            "text": "After you turn DNS off, your ISP’s settings (DHCP) come back automatically — nothing to fix by hand."
+          }
+        ]
+      },
+      "monitor": {
+        "title": "Monitor",
+        "blocks": [
+          {
+            "lead": "Your network’s pulse: how much traffic flows, what the speed and ping are, and who is connected to your proxies."
+          },
+          {
+            "rows": [
+              {
+                "k": "Traffic",
+                "v": "Live download/upload chart + current speeds. History accumulates from app start."
+              },
+              {
+                "k": "Internet meter",
+                "v": "Speed (Mbps) and ping (ms). The measurement runs together with resource checks — on schedule."
+              },
+              {
+                "k": "Session totals",
+                "v": "Total traffic since the app started (resets on restart)."
+              },
+              {
+                "k": "Via proxy",
+                "v": "How much traffic went through the Telegram bridge: received and sent."
+              },
+              {
+                "k": "Devices",
+                "v": "Phones and other Telegram bridge clients: name, address, connection count. Bridge off — the list is empty."
+              }
+            ]
+          },
+          {
+            "callout": "info",
+            "text": "In medium and max power saving modes monitoring is paused — the tab goes grey with an explanation, and everything returns on its own."
+          }
+        ]
+      },
+      "settings": {
+        "title": "Settings",
+        "blocks": [
+          {
+            "lead": "Three sub-tabs: “General” — app behavior, “Data” — the sync channel and diagnostics, “Theme” — your own themes."
+          },
+          {
+            "h": "General"
+          },
+          {
+            "rows": [
+              {
+                "k": "Theme",
+                "v": "System, light, dark or custom (theme gallery). Also switchable from the title bar button."
+              },
+              {
+                "k": "Language",
+                "v": "Russian or English."
+              },
+              {
+                "k": "Interface sounds",
+                "v": "Soft clicks and signals: a toggle and volume. Muted at max power saving."
+              },
+              {
+                "k": "Autostart",
+                "v": "ZPUI starts with Windows — with administrator rights, the engine needs them (a UAC prompt appears at sign-in)."
+              },
+              {
+                "k": "Start minimized",
+                "v": "On autostart the window stays hidden — the app lives in the tray."
+              },
+              {
+                "k": "Close to tray",
+                "v": "Closing the window hides the app instead of exiting. Full exit — “Quit” in the tray menu."
+              },
+              {
+                "k": "Update check",
+                "v": "Look for new ZPUI and Zapret versions at startup. No background checks."
+              },
+              {
+                "k": "Auto-start TG proxy",
+                "v": "The Telegram bridge starts together with the app."
+              },
+              {
+                "k": "Power saving",
+                "v": "For laptops: a toggle, the level (low / medium / max) and the condition — always, on battery, or below a 10–50% charge threshold."
+              },
+              {
+                "k": "Check interval",
+                "v": "How often resource availability is measured: 5, 10, 15 or 30 minutes."
+              }
+            ]
+          },
+          {
+            "h": "Updates and service (right column)"
+          },
+          {
+            "rows": [
+              {
+                "k": "ZPUI / ZAPRET cards",
+                "v": "Current and available versions; click a version for “what’s new”. “Download” → progress → “Install”. A ZPUI update restarts the app via a silent installer."
+              },
+              {
+                "k": "Server recommendation",
+                "v": "If the server recommends a specific Zapret version, it is labeled on the card."
+              },
+              {
+                "k": "Service / Process",
+                "v": "The engine’s running mode. The service is more reliable: the bypass survives window trouble. Install, remove and reinstall buttons."
+              },
+              {
+                "k": "Full reinstall",
+                "v": "Downloads Zapret from scratch. A drastic fix for corrupted files — your settings are kept."
+              }
+            ]
+          },
+          {
+            "h": "How to remove the Zapret engine"
+          },
+          {
+            "rows": [
+              {
+                "k": "Just turn it off",
+                "v": "Settings → the ZAPRET section → “Remove service”: the engine stops and no longer starts with the system. The files remain — “Full reinstall” brings it back."
+              },
+              {
+                "k": "Remove together with the app",
+                "v": "Windows Settings → Apps → ZPUI → “Uninstall”. The uninstaller stops ZPUI and the engine by itself, removing the zapret service and its files; your data (settings, lists) can be kept with a checkbox."
+              }
+            ]
+          },
+          {
+            "h": "Data"
+          },
+          {
+            "rows": [
+              {
+                "k": "ZPUI Sync channel",
+                "v": "Exchange with the server after signing in: exclusion lists, DNS providers, recommendations. Status, last response and errors live here too."
+              },
+              {
+                "k": "Section catalog",
+                "v": "What exactly is sent and how often. Each section can be slowed down (×2, ×5) or turned off."
+              },
+              {
+                "k": "Request log",
+                "v": "What and when the server requested — the exchange is fully transparent."
+              },
+              {
+                "k": "Snapshot",
+                "v": "Exports all app data to a JSON file (Downloads folder) — attach it to a support request."
+              }
+            ]
+          },
+          {
+            "h": "Theme"
+          },
+          {
+            "rows": [
+              {
+                "k": "Theme gallery",
+                "v": "Saved themes: apply, edit, export to ZIP, delete."
+              },
+              {
+                "k": "Create your own",
+                "v": "Editor: colors, background, sounds. Themes apply with a live preview."
+              },
+              {
+                "k": "Import",
+                "v": "A theme file (ZIP or JSON) is added to the gallery in one click."
+              }
+            ]
+          },
+          {
+            "callout": "info",
+            "text": "Windows notifications (errors, service failures, updates, availability drops) are always on — there is no separate switch."
+          }
+        ]
+      },
+      "troubleshoot": {
+        "title": "Troubleshooting",
+        "blocks": [
+          {
+            "lead": "The most common problems and how to solve them — from simple to advanced."
+          },
+          {
+            "h": "The internet is completely down"
+          },
+          {
+            "callout": "warn",
+            "text": "Turn Zapret off — network settings come back automatically. If that did not help, reboot the computer."
+          },
+          {
+            "h": "Discord / YouTube are still blocked"
+          },
+          {
+            "steps": [
+              "Make sure Zapret is on (green dot on the Zapret tab).",
+              "Run the selection: Auto-select in the sidebar → “Smart select”.",
+              "Open “Diagnostics” on the Zapret tab — it shows conflicts and environment problems.",
+              "Flush the DNS cache: Win+R → cmd → ipconfig /flushdns."
+            ]
+          },
+          {
+            "h": "Sites open but YouTube videos do not"
+          },
+          {
+            "callout": "warn",
+            "text": "Your ISP spoofs video server addresses — Zapret cannot bypass that, a clean resolver is needed. Open the DNS tab: Xbox DNS or any other source will do."
+          },
+          {
+            "h": "The proxy does not work on my phone"
+          },
+          {
+            "list": [
+              "The phone and the computer must be on the same Wi-Fi network (one router).",
+              "For SOCKS5, check whether the firewall blocks the port (1080 by default).",
+              "For Telegram, use the QR code — it enables LAN access by itself."
+            ]
+          },
+          {
+            "h": "The update will not install"
+          },
+          {
+            "list": [
+              "An error code like UPD-EXXX points to the stage: download, unpacking, integrity.",
+              "Copy the code and the error text into the support group — we will help."
+            ]
+          },
+          {
+            "h": "The app will not start"
+          },
+          {
+            "callout": "important",
+            "text": "Check logs\\boot.log in the app folder (or %TEMP%\\zpui-boot.log) — the startup error is described there. The in-app journal is the sheet icon in the sidebar."
+          }
+        ]
+      },
+      "features": {
+        "title": "Hidden features",
+        "blocks": [
+          {
+            "lead": "Functions you will not find on the tabs: control via the tray, right-click and the sidebar."
+          },
+          {
+            "h": "Tray (notification area near the clock)"
+          },
+          {
+            "rows": [
+              {
+                "k": "Click the icon",
+                "v": "Show or hide the window — the quickest way to minimize and restore the app."
+              },
+              {
+                "k": "Proxy",
+                "v": "A status line that toggles on click — without opening the window."
+              },
+              {
+                "k": "Zapret: …",
+                "v": "A status line: whether the bypass is running and which strategy is selected."
+              },
+              {
+                "k": "Update — download",
+                "v": "Appears only when a new ZPUI or Zapret version is available."
+              },
+              {
+                "k": "Restart",
+                "v": "App restart."
+              },
+              {
+                "k": "Close app",
+                "v": "The app closes while the Zapret engine (service mode) keeps running."
+              },
+              {
+                "k": "Quit",
+                "v": "Full exit: asks for confirmation and turns the Zapret engine off."
+              },
+              {
+                "k": "Tooltip",
+                "v": "Hover the icon: version, strategy and availability percentage."
+              }
+            ]
+          },
+          {
+            "h": "Right-click"
+          },
+          {
+            "rows": [
+              {
+                "k": "On a strategy card",
+                "v": "A quick single-strategy test — regular or game-style. Works even when the cards are locked during other operations."
+              }
+            ]
+          },
+          {
+            "h": "Sidebar tools (bottom)"
+          },
+          {
+            "rows": [
+              {
+                "k": "Lightning",
+                "v": "A selection window with a progress bar: percentages and how many strategies are left. Modes: “Smart select” (the default — the best for your operator), “Game select” (game resources) and “Full sweep” (every strategy, the most thorough)."
+              },
+              {
+                "k": "Magnifier",
+                "v": "Check any resource layer by layer: DNS → TCP → TLS → HTTP. “Deep research” finds blocked subdomains and CDNs and adds them to the bypass list."
+              },
+              {
+                "k": "Shield",
+                "v": "Appears when the system check found problems: components and modules with explanations."
+              },
+              {
+                "k": "Battery",
+                "v": "Shown while power saving is active; a click opens its settings."
+              },
+              {
+                "k": "Sheet",
+                "v": "The app journal: filters by module and level, search, export, clearing."
+              }
+            ]
+          },
+          {
+            "h": "Title bar"
+          },
+          {
+            "rows": [
+              {
+                "k": "Sun/moon button",
+                "v": "Theme cycle: system → light → dark."
+              },
+              {
+                "k": "Version chip",
+                "v": "Appears when an update is available — click to see what is new."
+              },
+              {
+                "k": "Profile icon",
+                "v": "Color = state: green — signed in, orange — server unreachable, red — not signed in."
+              }
+            ]
+          },
+          {
+            "h": "Automation (runs by itself)"
+          },
+          {
+            "list": [
+              "Zapret self-recovery: the engine died — a staged window appears; on failure the app restarts and tries again.",
+              "AutoSwitch: availability below the threshold for two checks in a row — the strategy changes by itself.",
+              "Operator binding: the provider or network changed — the app applies the strategy saved for it or starts a background selection.",
+              "Auto-DNS: after the selection the app checks YouTube and turns DNS on if the ISP spoofs addresses.",
+              "Dead DNS sources are switched off automatically.",
+              "Windows notifications: errors, service failures, updates, availability drops — engine crashes at most once every 2 minutes."
+            ]
+          },
+          {
+            "h": "For support requests"
+          },
+          {
+            "list": [
+              "Data snapshot: Settings → Data → “Save to file”.",
+              "Journal: the sheet icon in the sidebar (export is there too).",
+              "Startup log: logs\\boot.log in the app folder or %TEMP%\\zpui-boot.log."
+            ]
+          }
+        ]
+      },
+      "about": {
+        "title": "About",
+        "credits": {
+          "zapret": "The DPI bypass engine — the heart of ZPUI. Author: bol-van",
+          "zdy": "The zapret distribution with ready-made strategies and game ports. Author: Flowseal",
+          "tgws": "The Telegram bridge engine (ZPUI child module). Authors: Flowseal and contributors · MIT license"
+        },
+        "blocks": [
+          {
+            "lead": "ZPUI is a convenient app for bypassing blocks, built on a bypass engine. Free and ad-free; the diagnostic data channel can be turned off with a single toggle in Settings."
+          },
+          {
+            "h": "Useful links"
+          },
+          {
+            "links": true
+          },
+          {
+            "h": "Account and website"
+          },
+          {
+            "list": [
+              "Registration and the dashboard live at zpui-life.ru: plans, devices, the app connection code.",
+              "Sign-in inside the app — the profile icon in the title bar: login and password, confirmation codes arrive by email.",
+              "The “ZPUI Plus” subscription unlocks the cloud services: the sync channel, smart select, the tunnel. Without it, all local features work for free and without limits."
+            ]
+          },
+          {
+            "h": "Version"
+          },
+          {
+            "list": [
+              "ZPUI version {version} is installed"
+            ]
+          },
+          {
+            "h": "Author"
+          },
+          {
+            "list": [
+              "Creator and developer — SuzucaRU (github.com/suzcuaru).",
+              "Ideas, bugs and wishes — via the support group or GitHub Issues."
+            ]
+          },
+          {
+            "h": "Credits"
+          },
+          {
+            "credits": true
+          },
+          {
+            "list": [
+              "Thanks to the authors of these projects — ZPUI is built on their work. Drop them a star on GitHub!"
+            ]
+          },
+          {
+            "h": "License"
+          },
+          {
+            "lead": "ZPUI is proprietary software distributed under a closed license (the LICENSE file and the agreement during installation): free personal use, but distribution, modification and resale are prohibited. The copyright holder assumes no liability for the use of the program or its consequences."
+          }
+        ]
+      },
+      "mcp": {
+        "title": "MCP & AI agents",
+        "blocks": [
+          {
+            "lead": "MCP (Model Context Protocol) is a standard way to give an AI agent (ZCode, Claude Desktop, etc.) access to the app. The agent can read status, switch strategies, run auto-select, control DNS and proxy, and read logs — you decide whether to allow it."
+          },
+          {
+            "h": "How to connect an agent"
+          },
+          {
+            "steps": [
+              "Click the MCP button in the left sidebar and turn on the toggle in the “Server” section.",
+              "In the “Agent config” section press \"Copy\" — the ready-made JSON already contains the address, port and access key.",
+              "Paste the config into your agent's MCP settings (the MCP servers config file or the add-server dialog).",
+              "Done: the agent gets ZPUI tools, and connected agents are listed in the “Agents” section — name, address and last-seen time."
+            ]
+          },
+          {
+            "h": "What the agent can do"
+          },
+          {
+            "rows": [
+              {
+                "k": "Status",
+                "v": "Full state: bypass engine, SOCKS proxy, DNS, data channel."
+              },
+              {
+                "k": "Engine",
+                "v": "Start, stop and restart the bypass engine."
+              },
+              {
+                "k": "Strategies",
+                "v": "List strategies, switch by name, run auto-select (smart, full, game, startup)."
+              },
+              {
+                "k": "Analytics",
+                "v": "Resource availability history over a period."
+              },
+              {
+                "k": "Network",
+                "v": "Turn DNS replacement and the local SOCKS proxy on and off."
+              },
+              {
+                "k": "Logs",
+                "v": "Recent app events."
+              }
+            ]
+          },
+          {
+            "h": "Security"
+          },
+          {
+            "rows": [
+              {
+                "k": "This PC only",
+                "v": "The server listens on a local address — nothing can connect from the network or internet."
+              },
+              {
+                "k": "Access key",
+                "v": "Without the key no agent gets in. The key is shown in the “Access” section and can be copied on its own. \"Generate\" (with a confirmation) issues a new key: old configs stop working immediately."
+              },
+              {
+                "k": "Off by default",
+                "v": "Until the toggle in the MCP window is on, no agent can connect."
+              }
+            ]
+          },
+          {
+            "callout": "warn",
+            "text": "An agent gets real control over the app — connect only AI agents you trust. Dangerous actions (updates, uninstall, account, telemetry) are not exposed to agents."
+          }
+        ]
+      },
+      "engine": {
+        "title": "Bypass engine",
+        "blocks": [
+          {
+            "lead": "The app runs on a bypass engine: it subtly modifies network traffic so blocked sites open. Strategies, the service and auto-select work with it as before."
+          },
+          {
+            "h": "Install and update"
+          },
+          {
+            "rows": [
+              {
+                "k": "Everything on board",
+                "v": "The engine ships with the ZPUI installer — it is ready to work right after the app is installed. If files get corrupted, the app downloads and installs them again by itself."
+              },
+              {
+                "k": "Update",
+                "v": "The engine has its own update channel, separate from the app: Settings → ZAPRET → “Update”. Sources — the ZPUI server, a Yandex.Disk fallback and GitHub; the freshest version wins."
+              },
+              {
+                "k": "Generation switch",
+                "v": "When updating from older versions, the app detects the previous engine generation by itself, removes it and installs the current one — your settings, lists and strategies are kept."
+              }
+            ]
+          },
+          {
+            "callout": "important",
+            "text": "After the engine is installed or updated, the bypass restarts automatically — no action needed."
+          }
+        ]
+      }
+    }
+  },
+  "footer": {
+    "strategy": "Strategy:",
+    "server": "ZPUI Live",
+    "serverOk": "ZPUI Sync channel is online",
+    "serverErr": "ZPUI Sync channel is not responding",
+    "serverChecking": "Checking ZPUI Sync channel…",
+    "operator": "Operator",
+    "opDetecting": "Detecting…",
+    "netTip": "Speed and ping measured by the Internet meter — runs inside the resource check",
+    "serverOff": "ZPUI Sync channel is off"
+  },
+  "powerPaused": {
+    "monitorTitle": "Monitoring is disabled",
+    "desc": "Power saving mode has paused background services. They will resume automatically when the mode exits.",
+    "goSettings": "Open settings"
+  },
+  "dashboard": {
+    "tgOn": "Telegram Proxy: running · :{port}",
+    "tgOff": "Telegram Proxy: stopped",
+    "dnsCount": "Active DNS: {n}",
+    "resourceAvailability": "Resource availability",
+    "lastCheck": "checked",
+    "standard": "standard",
+    "custom": "custom",
+    "tooltipNet": "Internet meter: {speed} Mbps · {ping} ms",
+    "unavailableResources": "Unavailable resources",
+    "checking": "Checking…",
+    "checkingHint": "checking…",
+    "checkNow": "check now",
+    "nextCheck": "next check",
+    "lastCheckedAt": "checked",
+    "cache": "cache",
+    "justNow": "just now",
+    "secAgo": "{n} s ago",
+    "minAgo": "{n} min ago",
+    "hourAgo": "{n} h ago",
+    "secShort": "s",
+    "recheckFailed": "Failed to start the re-check",
+    "noChartData": "waiting for data…",
+    "noProblems": "No problems",
+    "addToSkip": "Add to skip",
+    "keyResources": "Key",
+    "panelLoadFailed": "Failed to load the resource list",
+    "panelEmpty": "No resources",
+    "colResource": "Resource",
+    "colUptimeTip": "Percentage of successful checks in 24 hours",
+    "colUptime": "Uptime",
+    "colLatency": "Latency",
+    "panelRefresh": "Refresh",
+    "checkResource": "Check",
+    "addedToSkip": "{host} added to skip list"
+  },
+  "zapret": {
+    "title": "Zapret",
+    "skippedTitle": "Working without Zapret",
+    "skippedDesc": "Zapret is disabled. DPI bypass is unavailable. Proxy and Xbox DNS work normally.",
+    "skippedStatus": "Skipped",
+    "reenable": "Enable Zapret",
+    "reenabled": "Zapret enabled. Restart the app to install.",
+    "strategies": "Strategies",
+    "filters": "Filters",
+    "lists": "Lists",
+    "strategyApplied": "Strategy applied",
+    "stratLockedOff": "Zapret is off — enable it to switch strategies",
+    "autoTestComplete": "Auto-test complete",
+    "noStrategies": "No strategies found",
+    "autoSelect": "Auto-select strategy",
+    "autoSelectComplete": "Auto-select complete",
+    "autoSelectFailed": "Auto-select failed",
+    "staleAutoSelectTitle": "Auto-select recommended",
+    "staleAutoSelectMsg": "It is recommended to run auto-select to find the best strategy.",
+    "staleAutoSelectLast": "Last auto-select:",
+    "staleAutoSelectNever": "Auto-select has not been run yet",
+    "staleAutoSelectDays": "days ago",
+    "staleAutoSelectRun": "Run auto-select",
+    "staleAutoSelectSkip": "Skip",
+    "noWorkingStrategies": "No working strategies",
+    "appliedStrategy": "Applied strategy",
+    "autoSelectKept": "Kept current strategy",
+    "testResults": "Test results",
+    "testStrategies": "Test strategies",
+    "testingStrategies": "Testing strategies",
+    "starting": "Starting...",
+    "bestStrategy": "Best strategy",
+    "resources": "resources",
+    "results": "Results",
+    "gameFilterUpdated": "Game Filter updated",
+    "ipsetUpdated": "IPSet updated",
+    "hostsUpdated": "Hosts updated",
+    "off": "Off",
+    "gameFilter": "Game Filter",
+    "ipsetFilter": "IPSet",
+    "ipsetStatus": "Status: ",
+    "ipsetModeLoaded": "Loaded",
+    "ipsetModeNone": "Off",
+    "ipsetModeAny": "All",
+    "status": "Status:",
+    "gameFilterTip": "Game filter — DPI bypass for game traffic (UDP/TCP ports above 1023). Works best on strategies with a gamepad badge (tested against game platforms); on others it is enabled forcefully after a confirmation",
+    "gameForcedToast": "Game mode enabled forcefully",
+    "gameForceBtn": "Enable anyway",
+    "ipsetTip": "Filter by IP addresses from the list. The list updates automatically: on startup and every 24 hours",
+    "ipsetToggleTip": "Toggle IPSet mode",
+    "autoStartZapret": "Zapret autostart",
+    "autoStartZapretDesc": "Start when app launches",
+    "autoUpdateCheck": "Auto-update check",
+    "autoUpdateCheckDesc": "Check for updates on startup",
+    "listSaved": "List saved",
+    "userLists": "Custom lists",
+    "editor": {
+      "ctxEdit": "Edit a copy",
+      "copyCreated": "Copy created: {name}",
+      "title": "Strategy: {name}",
+      "check": "Check",
+      "checkOk": "No errors — the strategy is valid",
+      "save": "Save",
+      "saved": "Strategy {name} saved",
+      "hint": "Copies survive app updates. Changes take effect on the next engine start: select the strategy in the list or restart the engine."
+    },
+    "selectList": "Select a list on the left",
+    "textareaPlaceholder": "Enter domains or IPs, one per line...",
+    "listsSyntaxHint": "\"^\" before a domain means the rule matches that exact host only, without subdomains. An entry without \"^\" covers the domain and all its subdomains.",
+    "skipResourcesTitle": "Autoselect exclusions (skip-resources)",
+    "autoSkipLabel": "Auto-hide dead domains",
+    "autoSkipTip": "Automatically add non-existent domains to this file (DNS does not resolve them in 3 checks in a row). Off by default — the file is filled manually only",
+    "skipResourcesDesc": "Sites in this list will be skipped during automatic strategy selection. One domain per line.",
+    "skipResourcesPlaceholder": "example.com\napi.example.com\n...",
+    "skipResSaved": "Exclusions list saved",
+    "skipSyncSent": "Sent to server: {time}",
+    "skipSyncPending": "Waiting to be sent…",
+    "skipSysTitle": "System skip-list",
+    "skipSysTip": "Updated from the server",
+    "skipSysSynced": "updated {date}",
+    "skipSysMetaTip": "System skip-list version and the last server sync time (synced at startup and once an hour; the date refreshes after a successful sync).",
+    "skipSysSyncError": "Last server sync failed: {error}",
+    "skipSysSyncErrorShort": "Server sync failed — see tooltip for details",
+    "systemLists": "System lists",
+    "diagnostics": "Diagnostics",
+    "systemChecks": "System checks",
+    "cachePanelNetwork": "Network cache",
+    "cachePanelDns": "DNS cache",
+    "cachePanelDiscord": "Discord cache",
+    "cacheModalTitle": "Cache cleanup",
+    "cacheClearBtn": "Clear",
+    "cacheClearing": "Cache clearing",
+    "cacheClearedOk": "Cache cleared",
+    "clearDiscord": "Clear Discord cache",
+    "clearDns": "Clear DNS cache",
+    "clearNetwork": "Clear network cache",
+    "clearAll": "Clear all",
+    "cacheCleared": "Cleared: {items}",
+    "nothingToClear": "Nothing to clear",
+    "clearSystemCache": "System",
+    "cacheNothing": "Nothing to clear",
+    "cacheClearingDiscord": "Clearing Discord cache...",
+    "cacheItem": {
+      "discord": "Discord cache",
+      "dns": "DNS cache",
+      "network": "network cache"
+    },
+    "runDiagnostics": "Run diagnostics",
+    "diagnosticsRunning": "Running checks...",
+    "diagnosticsDesc": "System check for conflicts and DPI bypass issues",
+    "reinstall": "Reinstall",
+    "reinstallConfirm": "Reinstall Zapret service? This will stop, remove and restart with current strategy.",
+    "reinstalled": "Zapret service reinstalled",
+    "reinstallTip": "Stop, remove service and start fresh. Helps if service is stuck or corrupted.",
+    "diagnosticsTip": "Check system, files and drivers state",
+    "diagProblems": "Detected problems",
+    "diagAllGood": "All good",
+    "diagHelpFallback": "No description available for this metric",
+    "diagHelp": {
+      "zpui_service": "The ZPUI service is a watchdog that monitors the app and restarts it after a crash. If it doesn't respond the app keeps working, but auto-recovery is unavailable."
+    },
+    "diagAllOk": "All checks passed",
+    "diagHasErrors": "Errors detected",
+    "diagHasWarnings": "Warnings found",
+    "gameFilterDescShort": "Filter for games and other UDP/TCP apps on ports above 1023. Without it, games may not work with Zapret.",
+    "gameFilterDescFull": "Enables DPI bypass for game traffic. By default Zapret only handles HTTPS/HTTP. Enable if your game or app uses non-standard ports. May slightly increase network load.",
+    "ipsetDescShort": "IP filter - allows Zapret to process traffic only for known blocked IPs (or all of them).",
+    "ipsetDescFull": "IPSet - list of IP addresses to filter. none = bypass applies to no IPs, loaded = only IPs from list, any = all IPs. Default loaded is optimal for most users.",
+    "ipsetStatusHint": "loaded = only listed IPs, none = no IPs, any = all IPs",
+    "filtersTitle": "Filters",
+    "filtersTip": "Advanced bypass settings: game filters and IPSet. Most users can leave defaults.",
+    "filterAll": "TCP+UDP",
+    "filterTcp": "TCP",
+    "filterUdp": "UDP",
+    "stratHideUntested": "Hide untested",
+    "stratHiddenCount": "{n} hidden",
+    "stratHiddenTip": "Strategies without test data. Toggle to show them; right-click a card to test one.",
+    "pctAvailable": "{pct}% available",
+    "noData": "No data",
+    "autoSwitch": "Auto-switch",
+    "autoSwitchThreshold": "Trigger threshold",
+    "autoSwitchBackup": "Backup tunnel",
+    "autoSwitchBackupDesc": "If auto-switch has gone through all available strategies and availability is still below the threshold, the tunnel is enabled. Works only while auto-switch is on.",
+    "autoSwitchInterval": "Check interval",
+    "autoSwitchEnabled": "Auto-switch strategy enabled",
+    "autoSwitchDisabled": "Auto-switch strategy disabled",
+    "operator": "Operator",
+    "operatorUnknown": "Unknown",
+    "autoSelectNeededTitle": "Auto-select required",
+    "autoSelectNeededMsg": "You need to run auto-select to ensure correct data.",
+    "autoSelectAgree": "Agree",
+    "autoSelectDecline": "Decline",
+    "operatorChanged": "Operator changed: {name}",
+    "strategySwitched": "Strategy switched: {strategy}",
+    "autoSelectForNewOp": "New operator — auto-select required",
+    "recoveringFiles": "Recovering zapret files...",
+    "recoveryComplete": "Zapret files recovered successfully",
+    "recoveryFailed": "Failed to recover zapret files: {error}",
+    "autoSelectIntro": "Auto-select will check resource availability and find the best bypass strategy. This takes a few minutes.",
+    "strategy": "Strategy",
+    "testSingleStrategy": "Test this strategy",
+    "testingStrategy": "Testing strategy…",
+    "testingStrategyStarted": "Testing strategy \"{strategy}\"…",
+    "strategyTested": "\"{strategy}\": {pct}% availability",
+    "singleTestTitle": "Strategy test",
+    "singleTestOf": "Strategy: {strategy}",
+    "singleTestRunning": "Switching and checking resources…",
+    "singleTestPassed": "Strategy works — {pct}% availability",
+    "singleTestFailed": "Weak strategy — {pct}% availability",
+    "singleTestDetail": "Resources passed: {ok} of {total}. Strategy data updated in the database.",
+    "sstScore": "score {score} · tier {grade}",
+    "ctxGameTest": "Test game mode",
+    "singleGameTestTitle": "Game mode test",
+    "singleGameNote": "The result is saved to the strategy game score — the card gamepad badge updates. Your strategy is restored automatically.",
+    "singleTestNote": "After the test, the app switches back to the previous strategy.",
+    "autoSelectModeSmart": "Smart select",
+    "autoSelectModeGame": "Game select",
+    "autoSelectModeGameDesc": "Top-5 strategies by current scores — game resources only, the best by game score is applied.",
+    "autoSelectModeFull": "Full sweep",
+    "autoSelectModeFullDesc": "Every strategy — from this PC and known to the server — is tested against all resources, the best one applies. The longest but most thorough option.",
+    "autoSelectModeSmartDesc": "Your operator's strategies scoring 70+ — from the server and this PC, plus 2 random extras. No count limits.",
+    "autoSelectSamples": "{n} samples",
+    "asmIntroTitle": "Find the best strategy",
+    "asmRecommended": "default",
+    "autoSelectPhase": {
+      "operator": "Detecting your provider…",
+      "server": "Fetching server data…",
+      "local": "Checking local data…",
+      "analyze": "Analyzing…",
+      "select": "Running selection…",
+      "testing": "Testing strategies…",
+      "game": "Game run…",
+      "apply": "Applying the best strategy…",
+      "startup-last": "Testing the previous strategy…"
+    },
+    "autoSelectPhaseShort": {
+      "operator": "Provider",
+      "server": "Server",
+      "local": "Local",
+      "analyze": "Analyze",
+      "select": "Select",
+      "testing": "Testing",
+      "game": "Game",
+      "apply": "Apply"
+    },
+    "autoSelectProvider": "Provider",
+    "autoSelectProviderDetecting": "Detecting…",
+    "autoSelectGameTitle": "Select strategies",
+    "autoSelectGameSelected": "Selected {n} of {total}",
+    "autoSelectGameAll": "Select all",
+    "autoSelectGameNone": "Clear all",
+    "autoSelectGameRun": "Run",
+    "autoSelectGameBack": "Back",
+    "autoSelectGameEmpty": "Strategy list is unavailable",
+    "scoreKeyTitle": "Key resources: Discord voice, YouTube video, Steam",
+    "gameScoreTitle": "Game score: ping and stability to game platforms",
+    "tipAvail": "Availability",
+    "tipKey": "Key resources",
+    "tipSpeed": "Speed & ping",
+    "tipWeakest": "Weakest link",
+    "tipGamePing": "Ping to platforms",
+    "tipGamePlatforms": "Game platforms",
+    "tipGamePorts": "Filter ports",
+    "tipGameGood": "Great for games — enable the game filter freely.",
+    "tipGameMid": "Playable: debatable for fast shooters, fine for the rest. Filter available.",
+    "tipGameBad": "Not recommended for games. The game filter needs 60+.",
+    "tipGameTitle": "Game score",
+    "tierTipTitle": "Tier {grade} · score {score}/100",
+    "tierTipAvail": "Availability {avail}%",
+    "tierTipKey": "key resources {key}%",
+    "tierTipSpeed": "Speed {speed} Mbps · ping {ping} ms",
+    "tierTipWeakest": "Weakest: {what}",
+    "tierNoData": "Not tested yet.\nRight-click to test now.",
+    "weakest": {
+      "availability": "general availability",
+      "key": "key resources",
+      "speed": "speed",
+      "ping": "ping"
+    },
+    "weakestShort": {
+      "availability": "availability",
+      "speed": "speed",
+      "ping": "ping",
+      "key": "key resources"
+    },
+    "gameRefusalTitle": "Strategy is not a game one",
+    "gameRefusalText": "Strategy “{strategy}” has no game score: game mode may work worse on it. Pick a strategy with the gamepad badge below or enable it forcefully.",
+    "gameRefusalList": "Strategies with game mode:",
+    "gameRefusalHint": "Click a strategy to switch to it and enable the game filter.",
+    "gameRefusalNone": "No tested game strategies yet — run Game select or auto selection with the “game mode” tick.",
+    "gamePortsBtn": "Ports",
+    "gamePortsTip": "Game filter port ranges. Game selection picks the best ports for a strategy and shows them on the gamepad badge",
+    "gameOptLabel": "Ping optimization",
+    "gameOptTip": "Windows tweaks for games: disables delayed TCP acknowledgments and Nagle's algorithm on all network adapters, removes system network throttling. Reduces latency in TCP games and when connecting to servers. Applies to current adapters — re-enable after changing networks. Game UDP traffic is not affected",
+    "gameOptOn": "Ping optimization enabled",
+    "gameOptOff": "Ping optimization disabled",
+    "gamePortsTitle": "Game filter ports",
+    "gamePortsHint": "Comma-separated ports and ranges, e.g. 1024-1934,1936-65535 (excludes RTMP). Empty — default 1024-65535. Applied on next engine start",
+    "gamePortsNoRtmp": "Exclude RTMP",
+    "gamePortsReset": "Reset",
+    "gamePortsStrategy": "Game selection chose ports for the current strategy: {ports}",
+    "portsSaved": "Game filter ports saved",
+    "portsInvalid": "Invalid port format: use numbers and comma-separated ranges",
+    "ipsetStatsTip": "ipset list: recognized entries, malformed lines and the last download date (automatic at startup and every 24 hours)",
+    "ipsetAgeDays": "d",
+    "ipsetUpdatedAt": "updated {date}",
+    "serverRes": "Server resources",
+    "serverResTip": "Version of the server resource set (block hostlists). Last sync: {date} — syncing runs at startup and once an hour",
+    "serverResTipNever": "Version of the server resource set (block hostlists). No syncs yet: syncing runs at startup and once an hour",
+    "sstApplying": "Applying strategy…",
+    "sstChecking": "Checking resources…",
+    "sstStepApply": "Apply",
+    "sstStepCheck": "Check",
+    "autoSelectStopped": "Auto-select stopped",
+    "autoSelectAlreadyRunning": "Auto-select is already running",
+    "asmlistShow": "Show strategies ({n})",
+    "asmlistHide": "Hide strategies",
+    "autoSelectAgain": "New run",
+    "stratHideMenu": "Strategy visibility",
+    "stratTierA": "Tier A",
+    "stratTierB": "Tier B",
+    "stratTierC": "Tier C",
+    "stratTierD": "Tier D",
+    "stratUntested": "Untested",
+    "excludeAdd": "Exclude",
+    "excludeAddPlaceholder": "example.com",
+    "excludeAddDesc": "The domain goes to your exclusions file (list-exclude-user.txt) — excluded domains are not routed through the tunnel. A \"^\" prefix limits the rule to the domain itself, without subdomains.",
+    "excludeAdded": "{domain} added to exclusions",
+    "excludeInvalid": "Enter a valid domain, e.g. example.com",
+    "asmStepPrep": "Prepare",
+    "asmStepPlan": "Plan",
+    "asmStepFilter": "Quick filter",
+    "asmStepFinal": "Full test",
+    "asmScenarioFull": "Scenario: no data yet — full sweep of all strategies (key filter → full test of the best)",
+    "asmScenarioServer": "Scenario: server strategies scoring 70+ + 2 new ones for exploration",
+    "asmScenarioMixed": "Scenario: strategies scoring 70+ from the server and this PC, plus 2 new ones for exploration",
+    "asmScenarioLocal": "Scenario: this PC's strategies scoring 70+ + 2 new ones for exploration",
+    "asmScenarioStartup": "Quick start: testing the operator's previous strategy",
+    "asmSrcServer": "server",
+    "asmSrcDevice": "my data",
+    "asmSrcExplore": "new",
+    "asmSrcAll": "all",
+    "asmSrcTip": {
+      "server": "Expected score {prior} — server statistics for your provider",
+      "device": "Expected score {prior} — your past checks",
+      "explore": "Exploration: rarely tested — the bandit gives it a chance",
+      "all": "Full sweep: no priority"
+    },
+    "asmFiltering": "filtering…",
+    "asmFilterPassed": "{ok}/{n} ✓",
+    "asmFilterDropped": "{ok}/{n}",
+    "asmGamePickHint": "Strategies that passed with a score above 70 are preselected. Tick or untick — the run uses the selected ones.",
+    "asmScore": "score {n}",
+    "asmNoData": "no data",
+    "asmFullTesting": "full test…",
+    "asmGradeTip": "{g} — from {n} points",
+    "asmCountFilter": "filter {done}/{total} · passed {survivors}",
+    "asmAlgoStats": "Algorithm: {probed} probed, {finalists} passed the ≥{threshold}% filter → full test",
+    "autoCfgBadge": "selection v{v}",
+    "autoCfgCustomTip": "Selection parameter set from the server (version {v})",
+    "autoCfgDefaultTip": "Built-in selection parameters (no server set received yet)",
+    "luaTab": "Lua",
+    "luaFunctionsTitle": "Lua functions",
+    "luaFunctionsHint": "Engine functions used by this strategy. See the Lua tab for details.",
+    "luaCheck": "Test with engine",
+    "luaCheckOk": "Engine accepted the strategy",
+    "luaCheckFail": "Engine rejected the strategy",
+    "luaCheckRun": "Checking...",
+    "lua": {
+      "intro1": "A strategy is the bypass engine command line. Profiles are separated by the --new token: profile filters (--filter-tcp/--filter-udp, --filter-l7, --payload, --hostlist/--ipset) select the traffic, and --lua-desync=function:param=value functions decide what to do with it.",
+      "intro2": "Interception is global: --wf-tcp-out/--wf-udp-out for ports, --wf-raw-part for precise WinDivert filter files (windivert.filter folder). Fake packets are attached as blobs: --blob=name:@file; libraries load via --lua-init=@file.",
+      "intro3": "You can build your own strategy from any bundled one: right-click a strategy card and pick “Edit a copy” — the editor validates the syntax before saving.",
+      "copyExample": "Copy example",
+      "manualHint": "Full engine manual:",
+      "manualLink": "zapret · docs/readme.md",
+      "fns": {
+        "fake": "Fake packets ahead of the real one: DPI inspects the fake, the server drops it. Params: blob, repeats, tcp_seq (seq overlap), tls_mod, ip_autottl, tcp_md5.",
+        "multisplit": "Splits the outgoing packet into segments at position pos; seqovl and seqovl_pattern add a fake-pattern overlap.",
+        "fakedsplit": "Split with a fake first part: DPI sees the fake, the server gets the real segments.",
+        "multidisorder": "Segments are sent out of order; only the server reassembles them correctly.",
+        "fakeddisorder": "Out-of-order segments plus a fake part.",
+        "hostfakesplit": "Split at the host marker (pos=host) with a fake sent ahead.",
+        "wssize": "Lowers the window scale for the whole connection so DPI cannot see the full picture; limit with --out-range.",
+        "wsize": "Changes the TCP window size.",
+        "synack": "Desync at the SYN/SYN-ACK stage.",
+        "synack_split": "Splits the first packet after the handshake.",
+        "pktmod": "Arbitrary packet modification (basic primitive).",
+        "http_domcase": "Mixed-case domain in the HTTP request.",
+        "http_hostcase": "Rewrites the case/value of the Host header.",
+        "http_methodeol": "Line break after the HTTP method — breaks signatures.",
+        "http_unixeol": "Replaces CRLF with LF in HTTP headers.",
+        "tls_client_hello_clone": "Clones the TLS ClientHello to fill the window.",
+        "syndata": "Data carried in the SYN packet.",
+        "rst": "Sends a TCP RST as the client.",
+        "drop": "Silently drops the packet.",
+        "send": "Sends arbitrary data.",
+        "tcpseg": "Manual TCP segmentation of arbitrary data.",
+        "oob": "Part of the data is sent as TCP Urgent (out-of-band).",
+        "udplen": "Increases the UDP packet length with padding.",
+        "dht_dn": "Modifies BitTorrent DHT packets."
+      },
+      "introShort": "A strategy is bypass engine arguments: profiles via --new, functions via --lua-desync, blobs via --blob. This tab holds Lua scripts: yours in lua-user, engine libraries in lua. Functions defined in scripts can be called from any strategy.",
+      "sectionMine": "My scripts",
+      "sectionLibs": "Engine libraries",
+      "create": "Create script",
+      "createPlaceholder": "script_name.lua",
+      "emptyMine": "No scripts yet — create the first one",
+      "editor": "Lua editor",
+      "select": "Pick a script on the left",
+      "hintUser": "Your own script. Wire it into a strategy: --lua-init=@\"%ROOT%lua-user\\<name>.lua\", call its functions via --lua-desync=name. Scripts survive app updates.",
+      "hintLib": "Bundled engine library. Edit carefully: engine updates overwrite the file; changes apply after an engine restart.",
+      "saved": "Script saved",
+      "created": "Script created: {name}",
+      "deleted": "Script deleted",
+      "delete": "Delete",
+      "deleteConfirm": "Sure?",
+      "ref": "Reference",
+      "refTitle": "Reference: how strategies work"
+    },
+    "fnsToggleHint": "A disabled function is not passed to the engine — applied after restart",
+    "editorTitle": "Editor:"
+  },
+  "proxy": {
+    "started": "Proxy started",
+    "stopped": "Stopped",
+    "sessionsSuffix": "sess",
+    "portInvalid": "Port: a number from 1 to 65535",
+    "advTitle": "Advanced settings"
+  },
+  "socks": {
+    "title": "SOCKS5 proxy (home network)",
+    "phoneTag": "for the phone",
+    "stateOn": "Running",
+    "statePower": "Disabled by power saving (level 3)",
+    "stateOff": "Stopped",
+    "port": "Port",
+    "staticApplied": "Static IP applied",
+    "staticRestored": "DHCP restored",
+    "hint": "In the phone's proxy settings enter this address (SOCKS5 type). The proxy runs while the app is running; maximum power saving turns it off.",
+    "staticRequired": "Enable a static IP on the DNS tab — devices can reach the proxy only via a permanent address",
+    "staticRef": "The PC's static IP is configured on the DNS tab",
+    "stateStarting": "Starting…",
+    "enabledToast": "SOCKS5 proxy enabled",
+    "disabledToast": "SOCKS5 proxy disabled"
+  },
+  "tgproxy": {
+    "title": "Telegram MTProto",
+    "eeTls": "ee · TLS",
+    "stopped": "Stopped",
+    "notInstalled": "Bridge component is not installed — reinstall the application",
+    "connecting": "Connecting...",
+    "connectBlock": "Connect",
+    "connectLinkDesc": "Add it in Telegram → Settings → Proxy (MTProto type)",
+    "copyLink": "Copy link",
+    "connectInTelegram": "Connect in Telegram",
+    "connectStarted": "Telegram opened — confirm adding the proxy",
+    "connectNeedRunning": "Enable the Telegram proxy to connect it in Telegram",
+    "regenerateSecret": "New secret",
+    "secretRegenerated": "New secret generated",
+    "port": "Port",
+    "stats": "Connections: {active} active / {total} total",
+    "traffic": "Traffic: ↓ {in} / ↑ {out}",
+    "fakeTls": "Fake TLS domain",
+    "fakeTlsDesc": "Disguise as HTTPS (ee link). Leave empty for normal mode",
+    "fallbackCF": "Cloudflare fallback",
+    "fallbackCFDesc": "Route WS around blocks via CF-proxied domains",
+    "cfWorkers": "Cloudflare Worker domains",
+    "cfWorkersDesc": "Comma-separated; tried first as a fallback channel",
+    "qrNeedRun": "Turn the bridge on — the phone QR will appear here",
+    "lanOn": "Local network access is enabled",
+    "lanOff": "Local network access is off — the phone will not be able to connect.",
+    "lanEnable": "Open access",
+    "lanEnabled": "Local network access enabled",
+    "advGroupFallback": "Fallback channels",
+    "advGroupConn": "Connection",
+    "advGroupDiag": "Diagnostics",
+    "h2Media": "H2 media via Cloudflare",
+    "h2MediaDesc": "HTTP/2 multiplexing for media over CF: faster video and large downloads under blocks",
+    "noSecure": "Fallback over port 80",
+    "noSecureDesc": "CF channels without TLS on :80 — when port 443 is throttled harder",
+    "cfUsers": "Custom CF domains",
+    "cfUsersDesc": "Comma-separated; your own Cloudflare-proxied domains for the fallback channel",
+    "poolSize": "Pool per DC",
+    "poolSizeDesc": "Ready WS connections per datacenter (1-64)",
+    "bufKb": "Socket buffer, KB",
+    "bufKbDesc": "Send/recv buffer size for connections (4-4096)",
+    "dcIp": "Datacenter IPs",
+    "dcIpDesc": "Comma-separated dc:ip list; empty — default DC2/DC4",
+    "dcIpInvalid": "Format: dc:ip, e.g. 2:149.154.167.220",
+    "proxyProtocol": "PROXY protocol v1",
+    "proxyProtocolDesc": "Accept PROXY v1 header — only when the bridge sits behind nginx/haproxy",
+    "forceTestDc": "Test DCs",
+    "forceTestDcDesc": "Route all traffic to Telegram test datacenters (for clients without test-DC autodetect)",
+    "verbose": "Verbose log",
+    "verboseDesc": "DEBUG logging of the bridge component"
+  },
+  "monitor": {
+    "trafficTitle": "Traffic",
+    "meterTitle": "Internet meter",
+    "meterSpeed": "Speed",
+    "meterPing": "Ping",
+    "totalDown": "Total ↓",
+    "totalUp": "Total ↑",
+    "viaProxy": "Via proxy",
+    "devices": "Devices",
+    "tgDevicesTitle": "Telegram proxy devices",
+    "tgProxyOff": "Telegram proxy is off. Enable it on the Proxy tab — connected devices will appear here.",
+    "noTgDevices": "No connected devices. Connect your phone via the link or QR on the Proxy tab.",
+    "activeConns": "active",
+    "mbps": "Mbps"
+  },
+  "settings": {
+    "appearance": "Appearance",
+    "appearanceSettings": "Appearance & Settings",
+    "theme": "Theme",
+    "systemTheme": "System",
+    "lightTheme": "Light",
+    "darkTheme": "Dark",
+    "themeCustom": "Custom",
+    "subtabs": "Settings sections",
+    "tabGeneral": "General",
+    "tabTheme": "Theme",
+    "language": "Language",
+    "sounds": "Sound",
+    "soundsDescPower": "Disabled by power saving (level 3)",
+    "soundsVolume": "Volume",
+    "autoStartWindows": "Autostart with Windows",
+    "autoStartSocksProxy": "Launch SOCKS5 proxy at startup",
+    "autoStartTgProxy": "Auto-start Telegram proxy",
+    "startMinimized": "Start minimized",
+    "closeToTray": "Close to tray",
+    "updateCheck": "Update check",
+    "checkInterval": "Resource check frequency",
+    "checkIntervalDesc": "How often to check resource availability",
+    "updates": "Updates",
+    "removeService": "Remove service",
+    "removeServiceBtn": "Remove service",
+    "removeServiceConfirm": "Are you sure? The Zapret service will be removed from the system.",
+    "svcAutostart": "Service autostart",
+    "svcAutostartOn": "The zapret service will start with Windows",
+    "svcAutostartOff": "Zapret service autostart disabled",
+    "svcAutostartFailed": "Failed to change service autostart",
+    "svcRowVersion": "Service",
+    "svcRowApp": "App",
+    "svcRowAutostart": "Service autostart",
+    "svcRowCrashes": "Crashes",
+    "svcLastExit": "last exit {date}",
+    "svcAutostartYes": "on",
+    "svcAutostartNo": "off",
+    "svcPanelTitle": "ZPUI service",
+    "svcNoData": "No data",
+    "svcRunning": "Running",
+    "svcStopped": "Not responding",
+    "svcNotInstalled": "Service not installed",
+    "svcUptimeHm": "up {h} h {m} min",
+    "svcUptimeM": "up {m} min",
+    "serviceRemoved": "Service removed",
+    "installZapret": "Install Zapret",
+    "installZapretDesc": "Reset no-zapret mode and start installation",
+    "installZapretBtn": "Install",
+    "installZapretConfirm": "The app will restart to install Zapret. Continue?",
+    "reinstallServiceBtn": "Reinstall",
+    "reinstallServiceConfirm": "Reinstall Zapret service? This will stop, remove and restart.",
+    "serviceReinstalled": "Service reinstalled",
+    "installServiceBtn": "Install service",
+    "serviceInstalled": "Service installed",
+    "serviceMode": "Service mode",
+    "processMode": "Process mode",
+    "fullReinstall": "Full reinstall",
+    "fullReinstallBtn": "Full reinstall",
+    "fullReinstallConfirm": "WARNING: Zapret folder will be completely deleted and re-downloaded. This may take several minutes. Continue?",
+    "fullReinstallStarted": "Full reinstall started. This will take a few minutes.",
+    "fullReinstallComplete": "Full reinstall complete",
+    "whatsNewTip": "What's new",
+    "checkingUpdates": "Checking...",
+    "powerSaving": "Power saving mode",
+    "powerSavingEnable": "Enable power saving",
+    "powerLevel": "Saving level",
+    "powerLow": "Low",
+    "powerMedium": "Medium",
+    "powerMax": "Max",
+    "powerThreshold": "Trigger at charge",
+    "powerThresholdAlways": "Always",
+    "powerThresholdOnBattery": "On battery",
+    "tabData": "Data & diagnostics",
+    "serverRecommends": "Server recommends: {version}",
+    "updSource": "Update source",
+    "updSourceSaved": "Update source saved",
+    "updSrc": {
+      "auto": "Auto",
+      "server": "ZPUI Live",
+      "yandex": "Yandex Disk",
+      "github": "GitHub",
+      "ghproxy": "GitHub proxy"
+    }
+  },
+  "themeEditor": {
+    "title": "Custom theme",
+    "base": "Base",
+    "secAccent": "Accent & status",
+    "accent": "Accent",
+    "success": "Success",
+    "warning": "Warning",
+    "danger": "Danger",
+    "secBg": "Backgrounds",
+    "bgPage": "Page",
+    "bgCard": "Cards & panels",
+    "bgInset": "Insets",
+    "secText": "Text",
+    "textPrimary": "Primary",
+    "textSecondary": "Secondary",
+    "textTertiary": "Tertiary",
+    "secBorders": "Borders",
+    "border": "Main",
+    "borderLight": "Subtle",
+    "contrast": "Text contrast",
+    "secImage": "Background image",
+    "bgClear": "Remove image",
+    "bgRibbon": "Available images",
+    "bgUpload": "Upload",
+    "bgUploadOk": "Image uploaded",
+    "bgUploadFail": "Failed to upload the image",
+    "bgDelete": "Delete",
+    "bgDeleteConfirm": "Delete image “{name}” from the library? Themes using it will lose the background.",
+    "bgDeleteFail": "Failed to delete the image",
+    "bgEmpty": "No images yet — upload the first one and it will appear in the ribbon",
+    "panelOpacity": "Panel opacity",
+    "dim": "Dimming",
+    "secEffects": "Effects",
+    "glow": "Accent glow",
+    "translucent": "Translucent panels",
+    "strength": "Effect strength",
+    "reset": "Reset",
+    "export": "Export",
+    "exportOk": "Theme exported to zpui-theme.json",
+    "exportFail": "Failed to export the theme",
+    "import": "Import",
+    "importOk": "Theme imported",
+    "importFail": "Import failed: not a ZPUI theme file",
+    "apply": "Apply & close",
+    "previewNote": "Changes apply to the stand instantly. “Apply & close” saves the theme and returns to General.",
+    "shellOpacity": "Shell opacity",
+    "fitMode": "Fit mode",
+    "fit_cover": "Cover",
+    "fit_contain": "Fit",
+    "fit_repeat": "Tile",
+    "posX": "Position X",
+    "posY": "Position Y",
+    "satur": "Saturation",
+    "bright": "Brightness",
+    "glowColor": "Glow color",
+    "name": "Theme name",
+    "namePh": "Theme name",
+    "modalOpacity": "Modal opacity",
+    "statusActive": "Active",
+    "statusDraft": "Draft",
+    "makeActive": "Make active",
+    "pvTitle": "Preview",
+    "pvHeading": "Card heading",
+    "pvLine": "Primary sample text",
+    "pvLine2": "Secondary text — captions and descriptions",
+    "pvLine3": "Tertiary — supporting details",
+    "pvBtn": "Button",
+    "pvBtnAccent": "Action",
+    "pvSlider": "Sample slider",
+    "pvInputPh": "Text field",
+    "pvOk": "OK",
+    "pvErr": "Error",
+    "pvSurfaces": "surfaces",
+    "palette": "Palette",
+    "backToGallery": "Back to themes"
+  },
+  "update": {
+    "releaseTitle": "Release information",
+    "loadingRelease": "Loading information...",
+    "releaseError": "Failed to load release information",
+    "availableTitle": "Update available",
+    "availableBody": "A new version of {component} is available: {latest}. We recommend updating.",
+    "whatsNew": "What's new",
+    "whatsNewFull": "Full changelog",
+    "later": "Later",
+    "install": "Install",
+    "mb": "MB",
+    "sourceYandex": "Yandex Disk",
+    "downloadTitle": "Downloading {component} update",
+    "downloadComplete": "Update downloaded",
+    "installingTitle": "Installing {component} update",
+    "launchingTitle": "Starting installation",
+    "launchingInstaller": "Closing the app and launching the installer…",
+    "downloadedSetupHint": "The ZPUI {version} installer has been downloaded. When you click \"Install\", the app will close and the installer will start.",
+    "downloadedZipHint": "Zapret {version} has been downloaded. Installation takes about a minute — the engine will be restarted.",
+    "fromSource": "Source: {source}",
+    "doneTitle": "{component} updated",
+    "doneBody": "Done — version {version} is installed.",
+    "errorTitle": "Update error",
+    "errorBody": "The update could not be completed.",
+    "retry": "Retry",
+    "close": "Close",
+    "sourceServer": "Server"
+  },
+  "startup": {
+    "steps": {
+      "connect": "Connecting to backend",
+      "health": "Checking system integrity",
+      "envscan": "Scanning environment: third-party Zapret, VPN, conflicts",
+      "check-service": "Checking Zapret service",
+      "decide-service": "Checking Zapret installation",
+      "remove-service": "Removing system service",
+      "check-local": "Checking local copy",
+      "install": "Downloading and installing Zapret",
+      "install-service": "Installing Zapret service",
+      "strategy-prompt": "Ready to work",
+      "auto-strategy": "Auto-selecting strategy",
+      "auto-select": "Auto-selecting strategy",
+      "done": "Launching application",
+      "sync-suggest": "Sync with another device"
+    },
+    "thirdparty": {
+      "title": "Third-party Zapret detected",
+      "desc": "A separate Zapret installation was found. It must be stopped or removed — otherwise it will conflict with ZPUI.",
+      "vpnWarn": "Attention: another bypass or VPN running alongside ZPUI will interfere with it.",
+      "remove": "Remove third-party Zapret",
+      "keep": "Keep and continue",
+      "vpnTitle": "Active VPN detected",
+      "vpnDesc": "A VPN is active: {names}. A VPN interferes with bypassing and checks — it is better to turn it off.",
+      "vpnDisable": "Turn off VPN",
+      "vpnSkip": "Skip",
+      "vpnSkipHint": "Skip remembers this VPN — it won't be asked about again on the next launches. The list is managed in Settings."
+    },
+    "diag": {
+      "title": "Issues affecting Zapret detected",
+      "text": "The automatic post-install check found critical issues. You can resolve them manually, or turn Zapret off so it does not interfere with the system.",
+      "stopZapret": "Turn Zapret off",
+      "skip": "Skip"
+    },
+    "errors": {
+      "title": "Error",
+      "backendConnect": "Failed to connect to backend.\nMake sure the app is running as administrator.",
+      "zapretFailed": "Zapret failed to start: {error}",
+      "serviceCheckTimeout": "Service health check timed out (no network?). Try again or continue without Zapret.",
+      "serviceInstallFailed": "Service installation failed: {error}",
+      "serviceInstallFailedLog": "Service installation failed. See log."
+    },
+    "installLog": "Install log",
+    "autoSelect": {
+      "finishing": "Finishing selection…",
+      "skip": "Skip",
+      "remain": "Remaining: {time}",
+      "elapsed": "Elapsed: {time}",
+      "usual": "Quick best-strategy selection using your provider's data"
+    },
+    "serviceHealth": {
+      "critical": "Critical error",
+      "criticalDesc": "Zapret service cannot be started. Manual diagnostics required.",
+      "retry": "Diagnostics",
+      "continueWithout": "Continue without Zapret"
+    },
+    "tagline": "Startup & first-time setup",
+    "stage": {
+      "prep": "Prepare",
+      "check": "Check",
+      "install": "Install",
+      "select": "Auto-select"
+    },
+    "card": {
+      "download": "Downloading zapret",
+      "total": "of {mb} total",
+      "preparing": "preparing the environment",
+      "waitSvc": "Connecting to the service…",
+      "waitResources": "Checking resources (first speed measurement)…",
+      "waitFinishing": "Finishing up…",
+      "launching": "ready — opening the app"
+    },
+    "rotating": {
+      "system": "Setting things up, please wait",
+      "engine": "Configuring the engine",
+      "database": "Preparing the database",
+      "server": "Checking server connection",
+      "almost": "Almost ready",
+      "selecting": "Finding the best settings for you"
+    }
+  },
+  "selectionStale": {
+    "title": "Selection data is stale",
+    "body": "Strategies haven't been tested for over 7 days. Run the selection to refresh data for your ISP.",
+    "run": "Run selection",
+    "later": "Later"
+  },
+  "offline": {
+    "title": "Backend unavailable",
+    "desc": "Cannot connect to ZPUI backend.",
+    "desc2": "Check if the process is running.",
+    "bridgeDesc": "The interface did not receive the backend communication module.",
+    "bridgeDesc2": "The window will reload automatically — that is usually enough.",
+    "reasonOldCopy": "another (older) copy of the app is running — close it from the tray",
+    "reasonInstaller": "the app was installed over a running instance — reinstall with the window closed",
+    "reasonAntivirus": "antivirus blocked some files — add ZPUI to exclusions",
+    "versionHint": "Compare the version in the window title with the installer version.",
+    "backendUnavailable": "Backend unavailable"
+  },
+  "logs": {
+    "title": "Logs",
+    "all": "All",
+    "app": "App",
+    "zapret": "ZAPRET",
+    "service": "Service",
+    "updater": "Updater",
+    "tgproxy": "Telegram",
+    "level": "Level",
+    "time": "Time",
+    "message": "Message",
+    "nothingFound": "Nothing found",
+    "noLogs": "No logs",
+    "emptyHint": "No entries yet — new ones will appear automatically",
+    "emptyHintSearch": "Nothing matched — change the query or reset the filters",
+    "errors": "Errors",
+    "rows": "Logs",
+    "dbSize": "DB",
+    "errorsShort": "err.",
+    "availability": "Availability",
+    "debugMode": "Debug",
+    "noErrors": "No errors",
+    "clear": "Clear",
+    "clearAll": "Clear all",
+    "clearConfirm": "Delete all entries? This cannot be undone.",
+    "export": "Export to ZIP",
+    "total": "Total",
+    "shown": "Shown",
+    "showing": "Showing",
+    "of": "of",
+    "clearBtn": "Delete",
+    "exportTip": "Export to ZIP",
+    "exportDone": "ZIP archive created and opened in explorer",
+    "exportError": "Error creating ZIP archive",
+    "copyTip": "Copy",
+    "clearAllConfirm": "Delete ALL logs? This will irreversibly clear all log files.",
+    "clearCatConfirm": "Delete all entries in category \"{cat}\"?",
+    "module": "Module",
+    "proxy": "Proxy",
+    "xboxdns": "Xbox DNS",
+    "monitor": "Monitor",
+    "config": "Config",
+    "tray": "Tray",
+    "system": "System",
+    "network": "Network",
+    "autoScroll": "Auto-scroll",
+    "clearedToast": "Logs cleared",
+    "snapshot": "Snapshot",
+    "snapshotTip": "Save a data snapshot to a file (Downloads folder)"
+  },
+  "health": {
+    "centerTitle": "Health center",
+    "problemsTitle": "Issues",
+    "problem": {
+      "zapret_missing": {
+        "title": "Zapret is not installed",
+        "desc": "Local engine files were not found — blocking bypass cannot work, and Discord and YouTube stay unreachable. Install the engine in the Zapret tab."
+      },
+      "unknown": {
+        "desc": "An issue with one of the components was detected. See diagnostics and logs for details."
+      }
+    },
+    "action": {
+      "openZapret": "Open Zapret"
+    },
+    "actionDone": "Done, rechecking",
+    "components": "Components",
+    "satellites": "Modules"
+  },
+  "checker": {
+    "available": "Available",
+    "dnsBlock": "DNS blocking",
+    "dpiSni": "DPI via SNI (TLS)",
+    "rknStub": "RKN stub page",
+    "timeout": "Timeout",
+    "unreachable": "Unreachable",
+    "unknown": "Unknown",
+    "confHigh": "high",
+    "confMedium": "medium",
+    "confLow": "low",
+    "backendError": "Check failed: backend unavailable",
+    "addedToList": "{host} added to custom list",
+    "alreadyInList": "Already in list",
+    "title": "Resource check",
+    "placeholder": "Enter URL or domain (e.g., instagram.com)",
+    "checkingLayers": "Checking resource by layers: DNS → TCP → TLS → HTTP",
+    "provider": "Provider",
+    "city": "City",
+    "checkResult": "Check result",
+    "direct": "Direct connection",
+    "confidence": "Confidence: {level}",
+    "layerDetails": "Layer details (direct connection)",
+    "notResolving": "Not resolving",
+    "tcpError": "Error: {error}",
+    "tcpOk": "Connection established",
+    "cert": "Certificate: {cn}",
+    "rknDetected": "RKN/TSPU stub detected",
+    "httpStatus": "Status: {status}",
+    "noResponse": "No response",
+    "notes": "Notes",
+    "blocked": "Resource is blocked",
+    "notInLists": "{host} not found in bypass lists",
+    "addToList": "Add to list",
+    "inUserList": "✓ {host} already in custom list",
+    "deepToggle": "Deep investigation",
+    "deepHint": "Check the resource and every address it connects to (CDN, APIs, scripts)",
+    "deepProgress": "Analyzing the resource and all its connections. This may take up to a minute…",
+    "deepFetchFail": "Failed to fetch page content",
+    "deepSubTitle": "Own subdomains",
+    "deepSubStats": "Candidates: {candidates}, exist: {existing}",
+    "deepFound": "Connections found: {total}",
+    "deepBlocked": "blocked: {count}",
+    "deepOk": "available: {count}",
+    "deepAllOk": "All sub-resources are available — no blocking detected",
+    "deepSelected": "Selected: {count}",
+    "addSelected": "Add to bypass list",
+    "addedBatch": "Hosts added to bypass list: {count}",
+    "deepAddedDone": "✓ Selected hosts added to custom list",
+    "emptyTitle": "Check resource availability",
+    "emptyHint": "Enter a URL — we will test its DNS, TCP, TLS and HTTP layers over a direct connection, no proxy"
+  },
+  "toast": {
+    "filesMissing": "Missing zapret files ({count}). Reinstall via Settings.",
+    "reportBug": "Report bug",
+    "requestFailed": "Request failed",
+    "titleSuccess": "Success",
+    "titleError": "Error",
+    "titleWarning": "Warning",
+    "titleInfo": "Info"
+  },
+  "xboxdns": {
+    "autoDisabled": "Xbox DNS was disabled automatically: DNS servers unreachable ({reason})"
+  },
+  "recovery": {
+    "title": "Recovering Zapret…",
+    "startMessage": "Starting recovery…",
+    "success": "Service recovered",
+    "failed": "Recovery failed",
+    "failedTitle": "Zapret service not recovered",
+    "failedDesc": "An error occurred during automatic recovery. Copy the report and contact support.",
+    "errorCode": "Error code",
+    "stepsLog": "Recovery steps",
+    "diagnostics": "Diagnostics",
+    "installLog": "Install log",
+    "copyReport": "Copy report",
+    "contactSupport": "Contact support",
+    "copyFailed": "Failed to copy to clipboard",
+    "restarting": "Recovery failed — restarting the app…",
+    "restartingDesc": "After the restart, Zapret will try to start again. Do not close the application.",
+    "failedAfterRestartTitle": "Zapret could not be recovered",
+    "failedAfterRestartDesc": "Automatic recovery failed even after an app restart. Copy the report and contact support.",
+    "saveSnapshot": "Save snapshot"
+  },
+  "auth": {
+    "suggestTitle": "Connect a ZPUI account",
+    "suggestText": "The app works without an account, but one unlocks your subscription and phone-in-tunnel features:",
+    "suggestPoint1": "Plus subscription: phone in the tunnel and server-stats smart selection",
+    "suggestPoint2": "your profile survives reinstalls — devices are matched by hardware fingerprint",
+    "suggestAuth": "Sign in or create",
+    "suggestNever": "Don't show again",
+    "suggestLater": "Not now",
+    "err": {
+      "generic": "Something went wrong. Please try again.",
+      "callFailed": "Call failed: {detail}",
+      "fillAll": "Fill in all fields",
+      "badEmail": "Invalid email address",
+      "badNick": "Nickname: 2-32 characters",
+      "weak": "Password must be at least 8 characters",
+      "passMismatch": "Passwords do not match",
+      "fillCode": "Enter the code",
+      "bad_request": "Malformed request — update the app to the latest version",
+      "bad_login": "Login: 3-32 chars, letters, digits, _ . -",
+      "bad_email": "Invalid email address",
+      "login_taken": "This login is already taken",
+      "email_taken": "This email is already linked to an account",
+      "invalid_credentials": "Wrong login or password",
+      "account_banned": "Account is banned",
+      "bad_code": "Wrong code",
+      "captcha_required": "Enter the characters from the image",
+      "captcha_invalid": "Captcha is wrong — try again",
+      "code_unknown_or_expired": "Code not found or expired — request a new one",
+      "too_many_attempts": "Too many attempts — request a new code",
+      "mail_not_configured": "Email service is not configured on the server",
+      "mail_send_failed": "Could not send the email — try again later",
+      "renew_window": "Renewal opens 5 days before subscription end",
+      "subscription_permanent": "Subscription is permanent — no renewal needed",
+      "device_limit": "Your account has no free slots for this device. Renew your subscription or contact support.",
+      "email_required": "No email linked to this account",
+      "bad_to": "Invalid recipient address",
+      "current_device": "Cannot unbind the current device with an active subscription",
+      "not_found": "Not found",
+      "server_unreachable": "Server unreachable — check your connection and try again",
+      "timeout": "Server did not respond in time — try again",
+      "connection_refused": "Server unreachable — try again",
+      "network": "Network problem — try again",
+      "not_authorized": "Session expired — sign in again",
+      "email_disabled": "Email sending is temporarily off — use the authenticator app to sign in",
+      "bad_totp": "Wrong authenticator code",
+      "bad_captcha": "Verification failed — try again",
+      "bad_keyword": "Unknown login or recovery keyword",
+      "weak_password": "Password must be at least 6 characters",
+      "bad_nick": "Nick: 2 to 32 characters",
+      "bad_keyword_len": "Recovery keyword: at least 8 characters",
+      "recovery_unavailable": "Keyword recovery is not available for this account",
+      "totp_required": "Enter the code from the app",
+      "totp_already": "Authenticator is already linked",
+      "token_unknown_or_expired": "The code has expired — start over",
+      "bad_token": "Code expired — start over",
+      "expired_token": "Code expired — start over",
+      "rate_limited": "Too many attempts — wait a minute",
+      "device_bound": "Device is already registered to different hardware",
+      "forbidden": "Not allowed for this session",
+      "nick_taken": "This nick is already taken",
+      "totp_setup_required": "Re-enroll your authenticator",
+      "internal": "Server error — try again later",
+      "shortKeyword": "Secret word: minimum 8 characters",
+      "bad_promo": "Invalid or exhausted promo code",
+      "device_owner": "This device is already registered to another user and cannot be linked to your account. Contact that user or support."
+    }
+  },
+  "dns": {
+    "applyingBusy": "DNS change in progress — please wait",
+    "sourceLocked": "This source is locked by another enabled source",
+    "title": "System DNS",
+    "currentTitle": "Currently in the system",
+    "currentNone": "None — the router's DNS is used",
+    "staticLabel": "Static IP instead of DHCP",
+    "staticNet": "Current address: {ip} · subnet {subnet}",
+    "stateOkTip": "Source servers are responding",
+    "stateDeadTip": "Servers are not responding: enabling is locked, an enabled source will be disabled automatically",
+    "staticConfirmTitle": "Enable static IP?",
+    "staticConfirmText": "A static IP is recommended for stationary PCs only: the computer keeps a permanent address on the current network, and the phone always finds it at one address. When the network changes, the static address is released automatically.",
+    "provider": {
+      "xbox": "Xbox DNS (xbox-dns.ru)",
+      "yandex": "Yandex",
+      "cloudflare": "Cloudflare",
+      "google": "Google",
+      "adguard": "AdGuard",
+      "comss": "Comss One"
+    },
+    "applied": "Applied",
+    "notApplied": "Not applied",
+    "applyStateTip": "All enabled addresses are present on the system adapter",
+    "add": "Add",
+    "customTitle": "DNS",
+    "customEmpty": "No custom entries yet — click Add.",
+    "customAdd": "New DNS entry",
+    "customEdit": "Edit entry",
+    "baseTitle": "Built-in providers",
+    "sysVersionTip": "System provider list · updated {date}",
+    "baseDesc": "A provider's address pair is toggled by a single switch",
+    "nameLabel": "Name",
+    "namePh": "e.g. My DNS",
+    "primaryLabel": "Primary DNS",
+    "primaryPh": "8.8.8.8",
+    "secondaryLabel": "Fallback DNS",
+    "secondaryPh": "Optional",
+    "addrHint": "IPv4 address only",
+    "encryptedLabel": "Encrypted (DoH)",
+    "encryptedHint": "Register the «IP + template» pair in Windows as a DoH server",
+    "dohLabel": "DoH template",
+    "dohPh": "https://dns.google/dns-query",
+    "dohBadgeTip": "DoH — DNS over HTTPS: queries are encrypted, your provider can't see which sites you open",
+    "deleteTitle": "Delete entry",
+    "deleteConfirm": "Delete entry «{name}»? If it was enabled, the system DNS will be reapplied without it.",
+    "stateUser": "Active: your DNS servers",
+    "stateOff": "Off — default addresses are used",
+    "unreachable": "Failed to enable DNS: the servers are unreachable",
+    "blockedTip": "Disabled on the server: {reason}. Cannot be enabled.",
+    "blockedBadge": "Disabled"
+  },
+  "stand": {
+    "closeFailed": "Close failed (demo rejection)",
+    "minimize": "Minimize",
+    "close": "Close",
+    "maximize": "Maximize",
+    "restore": "Restore window",
+    "updateAvailable": "Update available {v}",
+    "updateAvailableShort": "Update"
+  },
+  "themeGallery": {
+    "title": "Custom theme",
+    "create": "Create theme",
+    "import": "Import",
+    "apply": "Apply",
+    "isActive": "Active",
+    "active": "Active",
+    "edit": "Edit",
+    "export": "Export",
+    "delete": "Delete",
+    "deleteActiveTip": "The active theme cannot be deleted",
+    "deleteConfirm": "Delete theme \"{name}\"?",
+    "deleteFail": "Failed to delete the theme",
+    "deleted": "Theme deleted",
+    "applied": "Theme applied",
+    "imported": "Theme added to saved themes",
+    "unnamed": "Unnamed theme",
+    "newDefaultName": "New theme",
+    "empty": "No saved themes yet. Create a new one or import a theme file.",
+    "pickToEdit": "Pick a theme: edit, create or import",
+    "emptyPicker": "No saved themes yet. Manage themes on the Theme subtab."
+  },
+  "profile": {
+    "stateOk": "Signed in",
+    "stateOffline": "Server unreachable",
+    "stateNone": "Sign-in required",
+    "copyFailed": "Copy failed",
+    "qrAlt": "Bot QR code",
+    "authDone": "Done",
+    "authDoneToast": "Signed in",
+    "logout": "Sign out",
+    "logoutDone": "Signed out",
+    "subActive": "Subscription active",
+    "drawerTitle": "Account",
+    "tabLogin": "Sign in",
+    "tabHome": "Home",
+    "tabManage": "Manage",
+    "tabSub": "Subscription",
+    "tabPromo": "Promo code",
+    "subtabs": "Account sections",
+    "planCurrent": "Current plan",
+    "renewBtn": "Renew",
+    "tabRegister": "Sign up",
+    "fldLogin": "Login",
+    "fldEmail": "Email",
+    "fldPassword": "Password",
+    "fldNewPassword": "New password",
+    "loginBtn": "Sign in",
+    "registerBtn": "Create account",
+    "verifyBtn": "Confirm",
+    "forgotLink": "Forgot password?",
+    "forgotBtn": "Reset password",
+    "backToLogin": "Back to sign in",
+    "passwordChanged": "Password changed — sign in again",
+    "baseIncluded": "The Basic plan is already enabled: bypass and auto-selection are free, no ads.",
+    "daysLeftShort": "{n} days left",
+    "fldTotp": "Authenticator code",
+    "enrollTitle": "Set up your authenticator",
+    "enrollHint": "Scan the QR with an authenticator app — Yandex Key, Google Authenticator, Microsoft Authenticator and others work — and enter the code. Login is impossible without it.",
+    "qrRefreshIn": "Code refreshes in {time}",
+    "qrRefreshed": "Time is up — the QR has been refreshed, scan the new code",
+    "keywordTitle": "Recovery keyword",
+    "keywordWarn": "Store it safely: it is the only way back if you lose your authenticator. Shown only once.",
+    "keywordRotated": "Recovery keyword updated",
+    "copied": "Copied",
+    "copy": "Copy",
+    "accountsHere": "Accounts on this device",
+    "subInactive": "Free mode",
+    "boostyBtn": "Subscribe on Boosty",
+    "boostyHint": "A Boosty subscription = one month of ZPUI. Your Boosty email must match the account email — linking is automatic, no codes involved.",
+    "mgmtTitle": "Account management",
+    "changeNickBtn": "Change nick",
+    "changePassBtn": "Change password",
+    "keywordBtn": "Recovery keyword",
+    "deleteBtn": "Delete account",
+    "newNick": "New nick",
+    "curPassword": "Current password",
+    "newPassTitle": "Choose a new password",
+    "recoveryLogin": "Nick or email",
+    "recoveryKeyword": "Recovery keyword",
+    "deleteWarn": "The account will be permanently deleted together with the subscription and history. This cannot be undone.",
+    "deleteConfirmBtn": "Delete account",
+    "saveBtn": "Save",
+    "saved": "Saved",
+    "deleted": "Account deleted",
+    "fldSecretWord": "Secret word",
+    "secretWordPlaceholder": "make up a phrase, min 8 chars",
+    "secretWordHint": "The secret word is the only way to recover access if you lose your authenticator. Write it down and keep it safe.",
+    "keywordSelfNote": "You chose the secret word at registration — store it somewhere safe: without it and the authenticator code login is impossible.",
+    "keywordNew": "New secret word",
+    "keywordNewPlaceholder": "empty — we will generate one",
+    "fldPassword2": "Repeat password",
+    "pwWeak": "Weak password",
+    "pwMedium": "Medium password",
+    "pwStrong": "Strong password",
+    "changeEmailBtn": "Change email",
+    "emailNew": "New email",
+    "emailChanged": "Email updated",
+    "devicesCurrent": "this device",
+    "deviceUnnamed": "Device",
+    "devicesLast": "last seen {date}",
+    "sessionKill": "End session",
+    "sessionKilled": "Session ended",
+    "subsCurrent": "Current",
+    "subsFree": "Free",
+    "subsPerMonth": "/mo",
+    "subsDevices": "{n} devices",
+    "subsDevicesUnlim": "unlimited devices",
+    "deviceUnbound": "Device unbound",
+    "unbindBtn": "Unbind",
+    "unbindConfirm": "Unbind “{name}” from the account? The app on that device will sign out on its own and the device disappears from the list (it comes back on the next sign-in).",
+    "secDevices": "Devices",
+    "secPlans": "Plans",
+    "subForever": "No expiry",
+    "trafficResetOnRenew": "resets on renewal",
+    "bannerAlt": "Promo",
+    "promoTitle": "Promo code",
+    "promoPlaceholder": "Promo code",
+    "promoActivate": "Activate",
+    "promoOk": "Promo activated: {sub} for {days} days",
+    "promoDoneToast": "Promo activated: +{days} days",
+    "promoHint": "Enter a promo code — subscription days are credited instantly.",
+    "deviceDisabled": "disabled",
+    "mailCodeTitle": "Email confirmation",
+    "mailCodeHint": "A confirmation code has been sent to your email — check your inbox.",
+    "fldMailCode": "Code from email"
+  },
+  "syncd": {
+    "statusTitle": "Channel status",
+    "online": "online",
+    "offline": "offline",
+    "channelRow": "Data channel",
+    "channelDesc": "Diagnostics and server recommendations; on by default, works without an account",
+    "channelOffHint": "The channel is off — no data is sent to the server",
+    "authHint": "Server communication is disabled in the app configuration — the data channel is unavailable",
+    "lastTick": "Last tick",
+    "rtt": "Server response",
+    "lastError": "Last error",
+    "snapshotTitle": "Snapshot for support",
+    "snapshotDesc": "Exports all data locally to a JSON file in Downloads — attach it to a support request",
+    "snapshotBtn": "Save to file",
+    "snapshotSaved": "Snapshot saved: {path}",
+    "snapshotFail": "Failed to save the snapshot",
+    "catalogTitle": "What data is sent",
+    "catalogHint": "The set is fixed in the app — the device never sends anything beyond the catalog. Multipliers make sending less frequent.",
+    "multLabel": "Send frequency",
+    "every": "every {interval}",
+    "onchange": "on change",
+    "diff": "incremental",
+    "sentAt": "sent at {time}",
+    "reqTitle": "Server requests",
+    "reqEmpty": "The server has not requested anything",
+    "reqSkips": "plus skipping background ticks",
+    "unitSec": "s",
+    "unitMin": "min",
+    "unitHr": "h",
+    "sec": {
+      "status": "Engine status",
+      "runtime": "Live state",
+      "availability": "Resource availability",
+      "network": "Network",
+      "strategies": "Strategies",
+      "traffic": "Traffic",
+      "operator": "Carrier",
+      "errors": "Engine errors",
+      "events": "Event log",
+      "system": "System info",
+      "versions": "Versions",
+      "config": "Settings",
+      "exclusions": "Exclusion lists"
+    },
+    "hist": {
+      "btn": "History",
+      "title": "Request history",
+      "period": "Period",
+      "today": "Today",
+      "7d": "7 days",
+      "30d": "30 days",
+      "date": "Date",
+      "time": "Time",
+      "who": "Who",
+      "what": "What",
+      "whoServer": "Server",
+      "whoDevice": "Device",
+      "hello": "Device registration",
+      "pull": "Fetching lists and settings",
+      "asked": "Asked for: {what}",
+      "fail": "error ({code})",
+      "empty": "No entries yet",
+      "emptyHint": "Entries appear as the channel talks to the server and are kept for 30 days",
+      "whoAll": "All",
+      "count": "Records: {n}",
+      "filterEmpty": "Nothing matches this filter"
+    }
+  },
+  "feedback": {
+    "title": "Report a problem",
+    "hint": "Describe what went wrong. A topic is required — it routes your report to the right specialist faster.",
+    "user": "User",
+    "device": "Device",
+    "date": "Date",
+    "notAuthorized": "not authorized",
+    "topicLabel": "Topic",
+    "topicPlaceholder": "— pick a topic —",
+    "messageLabel": "Description",
+    "messagePh": "What happened, what you expected, what you got",
+    "sendBtn": "Send",
+    "sendOk": "Report sent. Thank you!",
+    "sendFail": "Failed to send the report",
+    "topic": {
+      "engine": "Engine / bypass (zapret)",
+      "proxy": "SOCKS5 proxy",
+      "telegram": "Telegram proxy",
+      "dns": "DNS",
+      "account": "Account & billing",
+      "updates": "Updates",
+      "ui": "Interface & themes",
+      "other": "Other"
+    }
+  },
+  "mcp": {
+    "title": "MCP",
+    "toggle": "Let AI agents control the app",
+    "hint": "Local MCP protocol: your agent (ZCode, Claude Desktop, etc.) can read status, switch strategies and pull analytics.",
+    "commands": "Commands: status · engine on/off/restart · list & switch strategies · auto-select · resource availability · DNS · proxy · logs",
+    "hintOff": "Server is off — turn it on and give the config below to your AI agent.",
+    "secServer": "Server",
+    "stateOn": "Running",
+    "stateOff": "Off",
+    "stateError": "Error",
+    "urlLabel": "Address",
+    "port": "Port",
+    "skillTitle": "Agent skill",
+    "skillDesc": "An instruction file for AI agents: it explains how to connect and which tools are available. It lives in the app folder and is updated along with the app.",
+    "skillOpenFolder": "File location",
+    "skillOpenFail": "Could not open the folder",
+    "secAgents": "Agents",
+    "noSessions": "No agents have connected yet",
+    "waiting": "Server is running — waiting for agents to connect",
+    "sessionLast": "last seen {time}",
+    "secAccess": "Access",
+    "keyTitle": "Access key",
+    "regen": "Generate",
+    "regenConfirm": "Generate a new key? Existing agent configs will stop working.",
+    "regenDone": "Key updated — replace the config in your agents",
+    "jsonTitle": "Agent config"
+  },
+  "sync": {
+    "choiceTitle": "Restore from another device?",
+    "choiceText": "Other devices of this account have synced settings, themes and data. You can restore them here or start fresh.",
+    "skip": "Start fresh",
+    "empty": "No sync snapshots from other devices of this account.",
+    "lastAt": "Synced: {date}",
+    "restore": "Restore",
+    "restored": "Restored: {what}",
+    "thisDevice": "This device — synced {date}",
+    "slots": "Sync slots used: {used} of {limit}",
+    "loadErr": "Failed to load the device list."
+  },
+  "regpromo": {
+    "title": "Registration gift",
+    "tap": "Tap to open",
+    "reveal": "Open the gift card",
+    "later": "I'll activate later",
+    "activate": "Activate",
+    "defaultDesc": "Promo code for {days} days of subscription — press Activate to apply.",
+    "activated": "Promo activated{until}"
+  },
+  "hvci": {
+    "fixBtn": "Fix automatically",
+    "fixing": "Disabling Memory Integrity…",
+    "fixDone": "Your PC will restart in a few seconds — then turn the bypass back on.",
+    "fixFail": "Could not change the policy — disable Memory Integrity manually in Windows Security.",
+    "fixHint": "turns off Memory Integrity and restarts the PC"
+  },
+  "crash": {
+    "title": "Interface error",
+    "reload": "Reload"
+  },
+  "starPromo": {
+    "title": "Star ZPUI on GitHub",
+    "text": "If you like the app, give the project a star on GitHub. It is free but really helps — more people discover ZPUI.",
+    "boosty": "Want to support the project? Get a Boosty subscription — the page is available in your user profile.",
+    "later": "Skip",
+    "star": "Star on GitHub"
+  },
+  "engineFail": {
+    "title": "Bypass failed to start",
+    "lead": "The bypass engine could not start — the bypass is not working right now.",
+    "hvciAdvice": "It looks like Memory Integrity (HVCI) is blocking it. Fix: Windows Security → Device security → Core isolation → turn Memory Integrity off, then restart the PC.",
+    "reinstall": "Reinstall engine",
+    "reinstalling": "Reinstalling engine…",
+    "report": "Report a problem",
+    "reportTitle": "Engine fails to start",
+    "hvciLine": "Memory Integrity (HVCI)",
+    "reportNote": "Please send this message — it already includes the details.",
+    "note": "Without the bypass, blocked sites may not open."
+  }
+}

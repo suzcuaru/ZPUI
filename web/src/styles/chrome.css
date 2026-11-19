@@ -1,0 +1,185 @@
+/* ── Header ────────────────────────────── */
+.header {
+  height:var(--header-h); min-height:var(--header-h);
+  display:flex; align-items:center; gap:4px;
+  padding:0 10px; background:var(--bg-page);
+  flex-shrink:0;
+  z-index:100; user-select:none;
+}
+.header-logo {
+  display:flex; align-items:center; gap:6px; cursor:pointer;
+  padding:3px 8px; border-radius:var(--radius-sm); margin-right:auto;
+  transition:background 150ms;
+}
+.header-logo:hover { background:var(--bg-hover); }
+.header-logo-text { font-size:14px; font-weight:700; color:var(--accent); letter-spacing:-0.3px; }
+
+.header-sep { width:1px; height:18px; background:var(--border); flex-shrink:0; margin:0 2px; }
+
+.header-btn {
+  width:28px; height:28px; border-radius:var(--radius-sm);
+  border:none; background:transparent; color:var(--text-secondary);
+  cursor:pointer; display:flex; align-items:center; justify-content:center;
+  transition:all 150ms; flex-shrink:0;
+}
+.header-btn:hover { background:var(--bg-hover); color:var(--text-primary); }
+.header-btn:active { transform:scale(0.96); }
+.header-btn.active { background:var(--bg-active); color:var(--accent); }
+.header-btn svg { width:16px; height:16px; stroke:currentColor; fill:none; stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round; }
+
+/* ── Sidebar ───────────────────────────── */
+.sidebar {
+  width:var(--sidebar-w); min-width:var(--sidebar-w); height:100vh;
+  background:var(--bg-page);
+  display:flex; flex-direction:column; align-items:center;
+  padding:6px 0; flex-shrink:0; overflow:visible;
+}
+.sidebar-logo {
+  width:32px; height:32px; border-radius:10px;
+  background:linear-gradient(135deg, var(--accent), #7b5cff);
+  display:flex; align-items:center; justify-content:center;
+  margin-bottom:6px; flex-shrink:0; box-shadow:0 2px 8px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.sidebar-logo svg { width:18px; height:18px; color:#fff; fill:none; stroke:#fff; stroke-width:2; }
+
+.sidebar-nav { display:flex; flex-direction:column; gap:3px; width:100%; padding:0 4px; }
+.sidebar-nav-item {
+  width:36px; height:36px; margin:0 auto;
+  border-radius:10px; border:var(--border-w) solid transparent; background:transparent;
+  color:var(--text-secondary); cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  transition:background var(--dur-base) var(--ease-out),
+             color var(--dur-base) var(--ease-out),
+             border-color var(--dur-base) var(--ease-out),
+             transform var(--dur-fast) var(--ease-out);
+  position:relative;
+}
+.sidebar-nav-item:hover {
+  background:var(--bg-hover); color:var(--text-primary);
+}
+.sidebar-nav-item:active { transform:scale(0.96); }
+.sidebar-nav-item.active {
+  background:var(--accent-soft); color:var(--accent);
+  border-color:transparent;
+}
+/* Активный сервис (Запрет/Прокси/Xbox DNS запущены) — зелёная иконка и подпись */
+.sidebar-nav-item.svc-on { color:var(--success); }
+.sidebar-nav-item.svc-on:hover { color:var(--text-primary); }
+.sidebar-nav-item.svc-on.active { color:var(--accent); }
+.sidebar-nav-item.active::before {
+  content:''; position:absolute; left:-4px; top:8px; bottom:8px;
+  width:3px; background:var(--accent); border-radius:0 2px 2px 0;
+  border:none; transform:none; opacity:1;
+  animation:navIndicatorIn var(--dur-base) var(--ease-out);
+}
+@keyframes navIndicatorIn {
+  from{transform:scaleY(0);opacity:0}
+  to{transform:scaleY(1);opacity:1}
+}
+.sidebar-nav-item svg {
+  width:var(--sidebar-icon); height:var(--sidebar-icon);
+  transition:transform var(--dur-base) var(--ease-out);
+}
+.sidebar-nav-item:hover svg { transform:scale(1.08); }
+
+.sidebar-spacer { flex:1; }
+
+.sidebar-footer-btn {
+  width:36px; height:36px; border-radius:10px;
+  border:none; background:transparent; color:var(--text-tertiary);
+  cursor:pointer; display:flex; align-items:center; justify-content:center;
+  transition:all 150ms; margin:0 auto; position:relative;
+}
+.sidebar-footer-btn:hover { background:var(--bg-hover); color:var(--text-secondary); }
+.sidebar-footer-btn:active { transform:scale(0.96); }
+.sidebar-footer-btn svg { width:18px; height:18px; }
+/* Мёртвая (недоступная) кнопка футера сайдбара: pointer-events не глушим —
+   иначе не сработает data-tooltip с причиной. Клик отключён в JSX. */
+.sidebar-footer-btn.disabled { opacity:0.4; cursor:default; }
+.sidebar-footer-btn.disabled:hover { background:transparent; color:var(--text-secondary); }
+.sidebar-footer-btn.disabled:active { transform:none; }
+
+.sidebar-divider {
+  width:28px; height:1px; background:var(--border); margin:4px auto;
+}
+
+.sidebar-nav-item { position:relative; }
+
+.sidebar-health-count {
+  position:absolute; top:0px; right:0px; min-width:13px; height:13px;
+  border-radius:7px; background:var(--danger-strong); color:#fff; font-size:8px;
+  display:flex; align-items:center; justify-content:center; padding:0 3px; font-weight:600;
+}
+
+/* Tooltip — disabled */
+
+/* ── Footer (статус-бар в новом стиле: чипы) ── */
+.footer {
+  height:44px; min-height:44px;
+  display:flex; align-items:center; gap:6px;
+  padding:0 12px; background:var(--bg-section);
+  flex-shrink:0;
+  font-size:10px; color:var(--text-tertiary);
+  overflow:hidden;
+}
+.footer-sep { width:1px; height:12px; background:var(--border); flex-shrink:0; }
+.ft-chip {
+  display:flex; align-items:center; gap:6px;
+  height:18px; padding:0 8px; flex-shrink:0;
+  background:var(--bg-card); border:none;
+  border-radius:var(--radius-sm); box-shadow:var(--shadow-sm);
+  white-space:nowrap; overflow:hidden; min-width:0;
+}
+.ft-chip .ft-label { color:var(--text-secondary); font-weight:500; }
+.ft-chip .ft-val { font-family:var(--font-mono); font-size:9.5px; color:var(--text-primary); font-weight:600; overflow:hidden; text-overflow:ellipsis; }
+.ft-chip .ft-val.accent { color:var(--accent); }
+.ft-chip .ft-val.ok { color:var(--success); }
+.ft-chip .ft-key { color:var(--text-tertiary); }
+/* Значения скорости/трафика — фиксированной ширины: чип не «дышит»
+   при каждом обновлении данных (моно-шрифт, выравнивание влево). */
+.ft-speed .ft-val, .ft-totals .ft-val { width:58px; min-width:58px; font-variant-numeric:tabular-nums; }
+.ft-dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; background:var(--text-tertiary); }
+.ft-dot.ok { background:var(--success); box-shadow:0 0 4px color-mix(in srgb, var(--success) 50%, transparent); }
+.ft-dot.err { background:var(--danger); }
+.ft-dot.wait { background:var(--accent); animation:ftWaitPulse 1.6s ease-in-out infinite; }
+@keyframes ftWaitPulse { 0%,100% { opacity:1; } 50% { opacity:0.35; } }
+:is(body.power-save, body.render-lite) .ft-dot.wait { animation:none; }
+/* Чип оператора: имя → ISP/Org → ASN; «определяется» — с пульсирующей точкой */
+.ft-op .ft-val { max-width:150px; }
+.ft-vpn-badge {
+  font-size:8.5px; font-weight:800; letter-spacing:0.05em;
+  padding:1px 5px; border-radius:6px; flex-shrink:0;
+  background:var(--accent-soft); color:var(--accent);
+}
+/* Яндекс-замеры: скорость + пинг, фиксированная ширина значений — чип не «дышит» */
+.ft-tag.y { background:var(--warning-bg); color:var(--warning); }
+.ft-y-speed, .ft-y-ping { width:auto; min-width:0; }
+.ft-y-sep { color:var(--text-tertiary); flex-shrink:0; }
+.ft-tag {
+  font-size:9px; font-weight:700; letter-spacing:0.05em;
+  padding:0 4px; border-radius:3px; line-height:12px; flex-shrink:0;
+}
+.ft-tag.dl { background:var(--accent-soft); color:var(--accent); }
+.ft-tag.ul { background:var(--success-bg); color:var(--success); }
+.ft-tag.muted { background:var(--bg-inset); color:var(--text-tertiary); }
+.ft-right { margin-left:auto; display:flex; align-items:center; gap:6px; flex-shrink:0; }
+/* Правая группа чипов: при нехватке места сжимаются средние,
+   чип «Сервер ZPUI» (последний) остаётся целым */
+.ft-right .ft-chip { min-width:0; }
+.ft-right .ft-chip:last-child { flex-shrink:0; }
+.ft-speed, .ft-totals, .ft-strat, .ft-host { flex-shrink:1; }
+
+/* Скрытие чипов при нехватке места делает Footer.jsx по фактическому
+   переполнению строки (естественные ширины против доступного места),
+   а не media-запросами: ширины чипов зависят от контента, DPI и зума
+   --ui-k. «Оператор» и «Сервер» не прячутся никогда. Кадр измерения
+   (.measuring) не отрисовывается — useLayoutEffect до пэйнта. */
+.footer.measuring { visibility:hidden; }
+/* На измерительном кадре чипы не сжимаются — снимаются натуральные ширины. */
+.footer.measuring .ft-chip { flex-shrink:0; }
+.ft-chip.ft-hidden { display:none; }
+
+/* Ориентация подсказок (data-tooltip-pos) — предпочтительное размещение,
+   флип и клампинг делает TooltipLayer. CSS-вариантов позиций больше нет. */
+.header-right { margin-left:auto; }
+.footer-right { margin-left:auto; }

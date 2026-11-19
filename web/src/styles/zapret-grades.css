@@ -1,0 +1,188 @@
+/* ── Балльная система v2: грейды, балл, ключевые, игровой балл ── */
+/* Тир — цветная буква БЕЗ фона (как в карточках стратегий). */
+.asm2-grade {
+  flex:none; display:inline-flex; align-items:center; justify-content:center;
+  min-width:16px; height:18px; padding:0 2px;
+  font-size:12px; font-weight:800; letter-spacing:0.02em;
+}
+.asm2-grade.g-S { color:var(--success); }
+.asm2-grade.g-A { color:var(--accent); }
+.asm2-grade.g-B { color:var(--accent); opacity:0.8; }
+.asm2-grade.g-C { color:var(--warning); }
+.asm2-grade.g-D { color:var(--danger); }
+.asm2-r-score { font-weight:700; font-size:12px; color:var(--text-primary); }
+.asm2-r-key { color:var(--accent); }
+.asm2-r-game {
+  display:inline-flex; align-items:center; gap:3px; margin-left:auto;
+  font-family:var(--font-mono); font-size:10px; color:var(--text-tertiary);
+}
+.asm2-r-game.ok { color:var(--success); }
+.asm2-r-game.mid { color:var(--warning); }
+.asm2-r-game.low { color:var(--danger); }
+.asm2-live-item .asm2-r-game { margin-left:0; }
+.asm2-stat-score { display:inline-flex; align-items:center; gap:6px; font-weight:800; font-size:15px; }
+/* Рейка фаз внутри модалки — ступени: точка сверху, полная подпись под ней,
+   линия между центрами соседних точек. Подписи не обрезаются и не распирают
+   модалку: каждая фаза — гибкая колонка. */
+.asm2-rail { margin-bottom:12px; gap:0; min-width:0; }
+.asm2-rail .startup-stage {
+  flex:1 1 0; min-width:0; position:relative;
+  flex-direction:column; gap:6px; justify-content:flex-start;
+}
+.asm2-rail .startup-stage-dot {
+  width:22px; height:22px; font-size:11px;
+  background:var(--bg-inset);
+}
+.asm2-rail .startup-stage-label { font-size:10px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.asm2-rail .startup-stage-line {
+  position:absolute; top:10px; left:calc(50% + 15px);
+  width:calc(100% - 30px); flex:none;
+}
+.asm2-rail .startup-stage:first-child .startup-stage-line { display:none; }
+.asm2-rail.sst-rail { margin-bottom:2px; }
+.asm2-rail.sst-rail .startup-stage { flex:none; padding:0 18px; }
+.asm2-rail.sst-rail .startup-stage-line { left:calc(100% - 7px); width:36px; }
+.asm2-rail.sst-rail .startup-stage:first-child { padding-left:0; }
+.asm2-rail.sst-rail .startup-stage:last-child { padding-right:0; }
+/* Строки результатов не шире модалки: имя стратегии сжимается, чипы фиксированы. */
+.asm2-live-item { min-width:0; }
+.asm2-r-err { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.asm2-brow { margin-bottom:0; }
+
+/* ── Прогресс-карточка подбора: фаза+ETA, бар, строка текущей стратегии ── */
+.asm2-progress-card {
+  background:var(--bg-inset);
+  border-radius:var(--radius-md);
+  padding:12px 14px;
+  display:flex; flex-direction:column; gap:9px;
+}
+.asm2-progress-top { display:flex; align-items:baseline; justify-content:space-between; gap:8px; min-height:16px; }
+.asm2-progress-title { display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:var(--accent); background:var(--accent-bg); padding:3px 10px; border-radius:999px; white-space:nowrap; }
+.asm2-progress-sub { display:flex; align-items:center; gap:9px; min-height:18px; }
+.asm2-sub-num {
+  flex:none; font-family:var(--font-mono); font-size:12px; font-weight:700;
+  color:var(--accent); font-variant-numeric:tabular-nums;
+}
+.asm2-sub-detail {
+  flex:1; min-width:0; font-family:var(--font-mono); font-size:11px;
+  color:var(--text-tertiary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.asm2-sub-spin {
+  flex:none; width:22px; height:22px; border-radius:50%;
+  display:inline-flex; align-items:center; justify-content:center;
+  background:var(--accent-soft); color:var(--accent);
+}
+/* Спиннер по умолчанию белый (для цветных подложек) — в пузырях на
+   accent-soft он не виден: перекрашиваем в акцент. */
+.asm2-sub-spin .spinner,
+.modal-icon.tone-accent .spinner { color:var(--accent); }
+.asm2-topbar { display:flex; align-items:center; gap:8px; min-width:0; flex-wrap:wrap; }
+.asm2-topbar-sp { flex:1 1 auto; min-width:8px; }
+.asm2-topbar .asm2-mode-chip { flex-shrink:0; }
+/* Мягкая отмена: призрачная кнопка с красной иконкой */
+.asm2-cancel svg { color:var(--danger); }
+.asm2-intro-hero {
+  display:flex; flex-direction:column; align-items:center; gap:6px;
+  text-align:center; margin-bottom:14px;
+}
+.asm2-intro-icon {
+  width:44px; height:44px; border-radius:14px;
+  display:inline-flex; align-items:center; justify-content:center;
+  background:var(--grad-accent); color:var(--accent-text);
+  box-shadow:0 4px 14px var(--accent-soft);
+  margin-bottom:2px;
+}
+.asm2-intro-title { font-size:15px; font-weight:700; color:var(--text-primary); }
+.asm2-mode-opt-badge {
+  font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:0.05em;
+  background:var(--accent); color:var(--accent-text);
+  border-radius:5px; padding:1px 6px; margin-left:6px;
+}
+
+/* ── Вкладка стратегий: грейд/геймпад в карточке ── */
+.strat-card-game { flex:none; display:inline-flex; color:var(--success); }
+.strat-card-game.mid { color:var(--warning); }
+.strat-card-game.low { color:var(--danger); }
+.asm2-grade { flex:none; }
+
+/* ── Красивый тултип карточки стратегии (тир/геймпад): тёмная панель
+   в визуале системной подсказки + чип, полоса балла, строки метрик. ── */
+.stip-host { display:inline-flex; min-width:0; }
+.stip {
+  position:fixed; z-index:3000; width:248px; padding:10px 12px;
+  border-radius:10px; background:var(--tooltip-bg); color:var(--tooltip-text);
+  border:var(--border-w) solid rgba(255,255,255,0.06);
+  box-shadow:0 4px 14px rgba(0,0,0,0.35), 0 1px 3px rgba(0,0,0,0.2);
+  display:flex; flex-direction:column; gap:8px;
+  pointer-events:none; animation:stipIn 0.16s ease;
+}
+@keyframes stipIn { from { opacity:0; } }
+:is(body.power-save, body.render-lite) .stip { animation:none; }
+.stip-head { display:flex; align-items:center; gap:7px; min-width:0; }
+.stip-title { font-size:10.5px; font-weight:600; line-height:1.3; flex:1; min-width:0; }
+.stip-grade {
+  flex:none; width:22px; height:22px; border-radius:7px;
+  display:inline-flex; align-items:center; justify-content:center;
+  background:var(--bg-inset); font-size:12px; font-weight:800;
+}
+.stip-score { flex:none; font-family:var(--font-mono); font-size:13px; font-weight:800; }
+.stip-bar {
+  height:6px; border-radius:4px; background:rgba(255,255,255,0.12); overflow:hidden;
+}
+.stip-bar span { display:block; height:100%; border-radius:4px; background:var(--success); }
+.stip-bar.b-warning span { background:var(--warning-bright); }
+.stip-bar.b-danger span { background:var(--danger-strong, #c02b2b); }
+.stip-rows { display:flex; flex-direction:column; gap:3px; }
+.stip-row { display:flex; align-items:baseline; justify-content:space-between; gap:10px; font-size:10px; }
+.stip-row span { color:inherit; opacity:0.72; }
+.stip-row b { font-family:var(--font-mono); font-weight:700; white-space:nowrap; }
+.stip-hint { font-size:10px; line-height:1.4; opacity:0.9; }
+/* Тона игровых цветов — глобально: работают и в тултипе, и в модалке проверки */
+.c-success { color:var(--success); }
+.c-warning { color:var(--warning-bright); }
+.c-danger { color:var(--danger-strong); }
+/* Игровой результат в модалке ПКМ-проверки — те же элементы в потоке модалки */
+.sst-game-head { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+.sst-modal .stip-bar { margin-bottom:8px; }
+.sst-modal .stip-rows { margin-bottom:8px; }
+.sst-modal .stip-hint { margin-bottom:2px; }
+
+/* ── ipset-статистика в панели фильтров ── */
+.zp-filter-ipset-stats {
+  font-family:var(--font-mono); font-size:10px; color:var(--text-tertiary);
+  white-space:nowrap;
+  margin-left:auto; padding-left:6px; /* прижата к правому краю полосы */
+}
+
+/* ── Отказ игрового режима ── */
+.game-refusal { display:flex; flex-direction:column; gap:10px; }
+.game-refusal-text { margin:0; font-size:12.5px; color:var(--text-secondary); line-height:1.5; }
+.game-refusal-sub { font-size:11.5px; font-weight:600; color:var(--text-tertiary); }
+.game-refusal-list { display:flex; flex-direction:column; gap:6px; }
+.game-refusal-item {
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  background:var(--bg-inset); border:var(--border-w) solid var(--border-light);
+  border-radius:10px; padding:9px 12px; cursor:pointer;
+  transition:border-color var(--dur-fast) ease, background var(--dur-fast) ease;
+}
+.game-refusal-item:hover { border-color:var(--success); background:var(--bg-card); }
+.game-refusal-name { display:inline-flex; align-items:center; gap:7px; font-size:12px; font-weight:600; color:var(--text-primary); }
+.game-refusal-name svg { color:var(--success); }
+.game-refusal-score { font-size:12px; font-weight:700; color:var(--success); }
+.game-refusal-hint { font-size:11px; color:var(--text-tertiary); }
+
+/* ── Порты игрового фильтра (модалка в панели фильтров) ── */
+.game-ports { display:flex; flex-direction:column; gap:10px; }
+.game-ports-hint { margin:0; font-size:12.5px; color:var(--text-secondary); line-height:1.5; }
+.game-ports-field { display:flex; align-items:center; gap:10px; }
+.game-ports-field > span { width:34px; font-size:11px; font-weight:700; color:var(--text-tertiary); }
+.game-ports-field .form-input { flex:1; font-family:var(--font-mono, monospace); }
+.game-ports-actions { display:flex; gap:6px; flex-wrap:wrap; }
+.game-ports-strategy { margin:0; font-size:11px; color:var(--text-tertiary); }
+
+/* ── Еженедельный промпт полного прогона ── */
+.sweep-prompt { display:flex; flex-direction:column; gap:8px; }
+.sweep-prompt-text { margin:0; font-size:12.5px; color:var(--text-secondary); line-height:1.5; }
+.sweep-prompt-list { margin:0; padding-left:18px; display:flex; flex-direction:column; gap:4px; }
+.sweep-prompt-list li { font-size:12px; color:var(--text-secondary); }
+.sweep-prompt-note { font-size:11px; color:var(--text-tertiary); }

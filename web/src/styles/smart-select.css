@@ -1,0 +1,262 @@
+/* ── Умный подбор v5: конвейер, план, шкала ── */
+.asm2-steps { display:flex; align-items:center; gap:5px; flex-wrap:wrap; margin-bottom:8px; }
+.asm2-step {
+  display:inline-flex; align-items:center; gap:4px;
+  font-size:10px; font-weight:600; color:var(--text-tertiary);
+  background:var(--bg-inset); border:var(--border-w) solid var(--border-light);
+  border-radius:999px; padding:3px 8px;
+}
+.asm2-step.active { color:var(--accent); border-color:var(--accent); background:var(--accent-bg); }
+.asm2-step.done { color:var(--success); border-color:var(--success); background:var(--success-bg); }
+.asm2-step-n { width:11px; height:11px; border-radius:50%; background:var(--border-light); color:var(--text-secondary); font-size:8px; display:inline-flex; align-items:center; justify-content:center; }
+.asm2-scenario { font-size:10.5px; color:var(--text-tertiary); margin:-4px 0 8px; padding-left:2px; }
+
+.asm2-plan-list { display:flex; flex-direction:column; gap:4px; max-height:300px; overflow-y:auto; margin-bottom:10px; }
+.asm2-plan-row {
+  display:flex; align-items:center; gap:8px; padding:6px 9px;
+  background:var(--bg-inset); border:var(--border-w) solid var(--border-light); border-radius:9px;
+  transition:opacity var(--dur-fast) ease;
+}
+.asm2-plan-row.filtering { border-color:var(--accent); }
+.asm2-plan-row.dropped { opacity:.45; }
+.asm2-plan-row.dropped .asm2-r-name { text-decoration:line-through; }
+.asm2-plan-row.err { border-color:var(--danger); }
+.asm2-plan-status { margin-left:auto; display:inline-flex; align-items:center; gap:7px; font-size:10.5px; color:var(--text-tertiary); }
+.asm2-plan-st-txt { color:var(--accent); font-weight:600; }
+.asm2-plan-key { display:inline-flex; align-items:center; gap:3px; }
+.asm2-plan-key.ok { color:var(--success); }
+.asm2-plan-key.bad { color:var(--danger); }
+.asm2-plan-wait { color:var(--text-tertiary); }
+
+.asm2-src {
+  display:inline-flex; align-items:center; gap:3px;
+  font-size:9px; font-weight:700; letter-spacing:.02em;
+  border-radius:999px; padding:2px 6px; flex-shrink:0;
+}
+.asm2-src b { font-weight:700; margin-left:1px; }
+.asm2-src.s-srv { color:var(--accent); background:var(--accent-bg); }
+.asm2-src.s-dev { color:var(--warning); background:var(--warning-bg); }
+.asm2-src.s-exp { color:var(--violet, #a78bfa); background:rgba(167,139,250,.14); }
+.asm2-src.s-all { color:var(--text-tertiary); background:var(--bg-card); }
+
+.asm2-scale { margin:2px 0 10px; }
+.asm2-scale-track { position:relative; height:8px; border-radius:999px; background:var(--bg-inset); border:var(--border-w) solid var(--border-light); }
+.asm2-scale-fill { position:absolute; inset:0 auto 0 0; border-radius:999px; background:linear-gradient(90deg, var(--danger), var(--warning) 55%, var(--success)); transition:width 400ms ease; }
+.asm2-scale-mark { position:absolute; top:-4px; bottom:-4px; width:2px; background:var(--text-primary); transform:translateX(-1px); }
+.asm2-scale-dot { position:absolute; top:50%; width:12px; height:12px; border-radius:50%; background:var(--accent); border:2px solid var(--bg-card); transform:translate(-50%,-50%); transition:left 400ms ease; }
+.asm2-scale-labels { position:relative; display:flex; justify-content:space-between; font-size:9px; color:var(--text-tertiary); margin-top:3px; }
+.asm2-scale-thr { position:absolute; transform:translateX(-50%); font-weight:700; color:var(--text-secondary); }
+/* Буквы грейдов на шкале: пройденные лучшим баллом подсвечены. */
+.asm2-scale-thr.hit { color:var(--success); }
+
+.asm2-algo-line {
+  display:flex; align-items:center; gap:6px;
+  font-size:10.5px; color:var(--text-tertiary); margin-bottom:8px;
+}
+.asm2-clear-btn { flex-shrink:0; gap:4px; }
+/* Общий ход подбора: бар дизайн-системы (ui/ProgressBar) + проценты.
+   Дорожка толще штатного sm (5px) — 7px, заметнее на узкой модалке */
+.asm2-progress-row { display:flex; align-items:center; gap:8px; padding:0 2px; }
+.asm2-run-bar { flex:1; }
+.asm2-run-bar.pb-sm .pb-track { height:20px; border-radius:6px; }
+.asm2-run-pct {
+  flex:none; font-size:10.5px; font-weight:600; color:var(--text-secondary);
+  font-variant-numeric:tabular-nums;
+}
+
+.asm2-now {
+  display:flex; align-items:center; gap:10px;
+  font-size:11px; color:var(--text-tertiary);
+  padding:2px 2px 0;
+}
+.asm2-now-name { color:var(--text-secondary); font-weight:600; }
+.asm2-now-sp { flex:1; }
+.asm2-now-count { color:var(--text-tertiary); }
+
+/* ════════════════════════════════════════════════════════════════════
+   MOTION LAYER — единые принципы движения интерфейса.
+   Эталон и «песочница»: web/devstratmenu.html (стенд). Принципы:
+   • вход 300–340ms --ease-soft с подъёмом 6–12px; выход 140–240ms
+     --ease-standard через .is-closing (узел держит useDelayedUnmount);
+   • каскад детей/строк 40–50ms на элемент, глифы меняются «попом»
+     --ease-spring; перестановки списков — FLIP 340ms (JS инвертирует);
+   • активная (проверяемая) строка — .testing: рамка + мягкий пульс;
+   • скроллится только список, модалки целиком — никогда;
+   • все нововведения уважают prefers-reduced-motion.
+   ════════════════════════════════════════════════════════════════════ */
+
+/* — Модалки: вход «из глубины» (opacity+transform; анимированный blur убран —
+     per-frame gaussian поверх живого стекла оверлея был самым дорогим кадром),
+     выход — решительное растворение. Оверлей гаснет чуть дольше карточки. — */
+@keyframes modalIn {
+  from { opacity:0; transform:scale(0.97) translateY(14px); }
+  to { opacity:1; transform:none; }
+}
+@keyframes modalOut { to { opacity:0; } }
+@keyframes modalCardOut {
+  to { opacity:0; transform:scale(0.965) translateY(10px); }
+}
+.modal-overlay.is-closing { animation:modalOut 300ms var(--ease-standard) forwards; }
+.modal-overlay.is-closing .modal { animation:modalCardOut 280ms var(--ease-standard) forwards; }
+.modal-footer .btn { animation:childIn 240ms var(--ease-soft) backwards; }
+.modal-footer .btn:nth-child(2) { animation-delay:50ms; }
+
+/* — Дропдауны (zp-autoswitch-menu и наследники) — */
+@keyframes menuIn { from { opacity:0; transform:scale(0.95) translateY(-6px); } }
+@keyframes menuOut { to { opacity:0; transform:scale(0.97) translateY(-3px); } }
+
+/* — Контекстное меню стратегий: каскад пунктов — */
+@keyframes ctxIn { from { opacity:0; transform:scale(0.94) translateY(-4px); } }
+@keyframes ctxOut { to { opacity:0; transform:scale(0.96); } }
+@keyframes ctxItemIn { from { opacity:0; transform:translateX(-6px); } }
+.strat-ctx-item { animation:ctxItemIn 220ms var(--ease-soft) backwards; }
+.strat-ctx-item:nth-child(2) { animation-delay:40ms; }
+
+/* — Карточки стратегий: каскад входа (сетка выставляет --ci) + отклик — */
+@keyframes cardIn { from { opacity:0; transform:translateY(9px) scale(0.985); } }
+.strat-card {
+  animation:cardIn 340ms var(--ease-soft) backwards;
+  animation-delay:calc(var(--ci, 0) * 22ms);
+  transition:all 150ms var(--ease-out);
+}
+.strat-card:not(.active):hover { box-shadow:var(--shadow-sm); }
+.strat-card:active:not(.locked) { transform:scale(0.985); }
+
+/* — Смена состояний экранов модалок: каскад прямых детей — */
+@keyframes childIn { from { opacity:0; transform:translateY(9px); } }
+.asm2-content > * { animation:childIn 300ms var(--ease-soft) backwards; }
+.asm2-content > *:nth-child(1) { animation-delay:0ms; }
+.asm2-content > *:nth-child(2) { animation-delay:50ms; }
+.asm2-content > *:nth-child(3) { animation-delay:100ms; }
+.asm2-content > *:nth-child(4) { animation-delay:150ms; }
+.asm2-content > *:nth-child(5) { animation-delay:200ms; }
+.asm2-content > *:nth-child(6) { animation-delay:250ms; }
+.asm2-content > *:nth-child(7) { animation-delay:300ms; }
+
+/* — План подбора: вход строк, FLIP-переезд, вспышки статусов — */
+@keyframes rowIn { from { opacity:0; transform:translateY(6px); } }
+.asm2-plan-row {
+  transition:transform 340ms var(--ease-soft),
+              opacity 320ms var(--ease-soft),
+              border-color var(--dur-base) var(--ease-out),
+              filter 320ms var(--ease-soft);
+  animation:rowIn 260ms var(--ease-soft) backwards;
+  animation-delay:calc(var(--ri, 0) * 30ms);
+}
+.asm2-plan-row.dropped { filter:saturate(0.5); }
+.asm2-plan-row.flash { animation:rowFlash 900ms var(--ease-out); }
+@keyframes rowFlash { 0% { background:var(--accent-soft); } 100% { background:var(--bg-inset); } }
+.asm2-plan-row.dropped.flash { animation:rowFlashBad 900ms var(--ease-out); }
+@keyframes rowFlashBad { 0% { background:var(--danger-bg); } 100% { background:var(--bg-inset); } }
+.asm2-plan-status > * { animation:statusIn 240ms var(--ease-out); }
+@keyframes statusIn { from { opacity:0; transform:translateX(4px); } }
+/* Строка в полном тесте: проверяется прямо сейчас */
+.asm2-plan-row.testing { border-color:var(--accent); animation:rowTesting 1.8s var(--ease-out) infinite; }
+@keyframes rowTesting {
+  0%, 100% { box-shadow:0 0 0 0 var(--accent-soft); }
+  50% { box-shadow:0 0 0 4px var(--accent-soft); }
+}
+
+/* — Степпер этапов: цветные переходы + «поп» глифа — */
+.asm2-step {
+  transition:color 280ms var(--ease-out),
+              background-color 280ms var(--ease-out),
+              border-color 280ms var(--ease-out);
+}
+.asm2-step .swap { display:inline-flex; align-items:center; animation:stepSwap 300ms var(--ease-spring); }
+@keyframes stepSwap { from { transform:scale(0.4); opacity:0; } }
+
+/* — Шкала баллов: плавный ход, зелёный маркер за порогом — */
+.asm2-scale-fill { transition:width 600ms var(--ease-soft); }
+.asm2-scale-dot {
+  transition:left 600ms var(--ease-soft), background-color 320ms ease, box-shadow 320ms ease;
+}
+.asm2-scale-dot.above { background:var(--success); box-shadow:0 0 0 3px var(--success-bg); }
+
+/* — Строка «сейчас проверяем»: числа не дрожат, имя сменяется микро-фейдом — */
+.asm2-now-count, .asm2-eta, .asm2-now-name { font-variant-numeric:tabular-nums; }
+.asm2-now-name.swap { animation:nameSwap 220ms var(--ease-out); }
+@keyframes nameSwap { from { opacity:0; transform:translateY(4px); } }
+
+/* — Итог: поп иконки баннера, каскад чипов статистики, каскад строк — */
+.asm2-rb-icon { animation:popIn 380ms var(--ease-spring) 80ms backwards; }
+@keyframes popIn { from { transform:scale(0.5); opacity:0; } }
+.asm2-best-stats > * { animation:statIn 260ms var(--ease-soft) backwards; }
+.asm2-best-stats > *:nth-child(1) { animation-delay:80ms; }
+.asm2-best-stats > *:nth-child(2) { animation-delay:130ms; }
+.asm2-best-stats > *:nth-child(3) { animation-delay:180ms; }
+.asm2-best-stats > *:nth-child(4) { animation-delay:230ms; }
+.asm2-best-stats > *:nth-child(5) { animation-delay:280ms; }
+.asm2-best-stats > *:nth-child(6) { animation-delay:330ms; }
+.asm2-best-stats > *:nth-child(7) { animation-delay:380ms; }
+@keyframes statIn { from { opacity:0; transform:translateY(6px) scale(0.96); } }
+.asm2-live-item { animation-delay:calc(var(--ri, 0) * 45ms); }
+
+/* — Капы списков: скролл только у списка, модалка влезает в 640px окна
+     (592px доступно модалке минус шапка/футер/паддинги/зазоры) — */
+.asm2-plan-list { max-height:256px; overscroll-behavior:contain; }
+.asm2-live-list { max-height:244px; margin:0; overscroll-behavior:contain; }
+.asm2-strat-list { max-height:264px; overscroll-behavior:contain; }
+
+/* — Гейм-пик: данные стратегии в строке + подсказка предвыбора — */
+.asm2-strat-meta { margin-left:auto; display:inline-flex; align-items:center; gap:8px; flex-shrink:0; }
+.asm2-strat-meta .strat-card-tier { font-size:11px; font-weight:800; }
+.asm2-strat-score { font-family:var(--font-mono); font-size:10px; color:var(--text-tertiary); }
+.asm2-strat-score.good { color:var(--success); }
+.asm2-strat-score.mid { color:var(--warning); }
+.asm2-strat-score.low { color:var(--danger); }
+.asm2-gamepick-hint { font-size:10.5px; line-height:1.45; color:var(--text-tertiary); }
+
+/* — Стартовый экран: каскад блоков, плавный бар, микросмена шага — */
+.startup-card > * { animation:childIn 300ms var(--ease-soft) backwards; }
+.startup-card > *:nth-child(1) { animation-delay:0ms; }
+.startup-card > *:nth-child(2) { animation-delay:60ms; }
+.startup-card > *:nth-child(3) { animation-delay:120ms; }
+.startup-card > *:nth-child(4) { animation-delay:180ms; }
+.startup-card > *:nth-child(5) { animation-delay:240ms; }
+.startup-bar .pb-fill { transition-duration:600ms; transition-timing-function:var(--ease-soft); }
+.startup-row-nm.swap, .startup-row-eta.swap { animation:nameSwap 220ms var(--ease-out); }
+
+@media (prefers-reduced-motion: reduce) {
+  .modal, .modal-overlay,
+  .modal-overlay.is-closing, .modal-overlay.is-closing .modal,
+  .strat-ctx-menu, .strat-ctx-item, .zp-autoswitch-menu,
+  .strat-card, .asm2-content > *, .asm2-plan-row, .asm2-plan-status > *,
+  .asm2-plan-row.testing, .asm2-step .swap, .asm2-rb-icon,
+  .asm2-best-stats > *, .modal-footer .btn, .asm2-now-name.swap,
+  .asm2-live-item, .startup-card > *, .startup-row-nm.swap, .startup-row-eta.swap { animation:none; }
+  .asm2-plan-row { transition:opacity var(--dur-fast) ease; }
+}
+
+/* ── Sync history drawer ────────────────
+   Каркас lg-* (лог-панель); свои ширины колонок дата/время/кто/что,
+   бейдж направления и подсветка ошибки в «Что». */
+.sh-th-date { width:52px; min-width:52px; flex-shrink:0; }
+.sh-th-time { width:64px; min-width:64px; flex-shrink:0; }
+.sh-th-who { width:92px; min-width:92px; flex-shrink:0; }
+.sh-th-what { flex:1; min-width:0; }
+.sh-who-badge {
+  display:inline-block; max-width:100%; padding:1px 7px;
+  border-radius:var(--radius-sm); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  font-size:10px; font-weight:600; line-height:1.5;
+  color:var(--text-secondary); background:var(--bg-hover);
+}
+.sh-who-badge.server { color:var(--accent-text); background:var(--accent-soft); }
+.sh-err { color:var(--danger); }
+
+/* Промежуточное состояние применения (DNS): тумблер уже в целевом цвете,
+   ползунок «примеряет» обе позиции, пока бэкенд применяет. Функциональная
+   анимация — в экономном режиме не глушится. */
+.switch-track.pending { border-color: var(--accent); cursor: progress; }
+.switch-track.pending .switch-thumb { animation: switchPending 0.9s ease-in-out infinite; }
+@keyframes switchPending {
+  0% { transform: translateX(0); }
+  45%, 55% { transform: translateX(16px); }
+  100% { transform: translateX(0); }
+}
+.switch-track.pending.switch-lg .switch-thumb { animation-name: switchPendingLg; }
+@keyframes switchPendingLg {
+  0% { transform: translateX(0); }
+  45%, 55% { transform: translateX(20px); }
+  100% { transform: translateX(0); }
+}

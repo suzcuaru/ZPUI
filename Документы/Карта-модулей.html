@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZPUI — карта связи модулей</title>
+<style>
+  :root {
+    --bg: #141418;
+    --panel: #1c1c23;
+    --panel2: #22222b;
+    --border: rgba(255,255,255,.09);
+    --text: #e8eaf0;
+    --muted: #8a90a0;
+    --accent: #5b8cff;
+    --warn: #e6a23c;
+    --ok: #4ad295;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    background: var(--bg); color: var(--text);
+    font: 13px/1.45 "Segoe UI", system-ui, sans-serif;
+  }
+  #topbar {
+    position: fixed; top: 0; left: 0; right: 0; height: 52px; z-index: 30;
+    background: var(--panel); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 14px; padding: 0 16px;
+  }
+  #topbar h1 { font-size: 15px; font-weight: 600; white-space: nowrap; }
+  #topbar h1 span { color: var(--muted); font-weight: 400; font-size: 12px; margin-left: 8px; }
+  #search {
+    background: var(--panel2); border: 1px solid var(--border); border-radius: 8px;
+    color: var(--text); padding: 6px 12px; width: 260px; outline: none; font: inherit;
+  }
+  #search:focus { border-color: var(--accent); }
+  .tbtn {
+    background: var(--panel2); border: 1px solid var(--border); border-radius: 8px;
+    color: var(--text); padding: 6px 12px; cursor: pointer; font: inherit; white-space: nowrap;
+  }
+  .tbtn:hover { border-color: var(--accent); }
+  #stats { color: var(--muted); font-size: 12px; white-space: nowrap; margin-left: auto; }
+
+  #legend {
+    position: fixed; top: 62px; left: 12px; z-index: 25;
+    background: rgba(28,28,35,.92); border: 1px solid var(--border); border-radius: 10px;
+    padding: 10px 12px; max-width: 230px; user-select: none;
+  }
+  #legend .lt { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+  .lrow { display: flex; align-items: center; gap: 7px; padding: 3px 4px; border-radius: 6px; cursor: pointer; }
+  .lrow:hover { background: var(--panel2); }
+  .lrow.off { opacity: .35; }
+  .ldot { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+  .lrow .ln { font-size: 12px; }
+  #legend .lt2 { margin-top: 10px; }
+  .erow { display: flex; align-items: center; gap: 7px; padding: 2px 4px; font-size: 11px; color: var(--muted); }
+  .eline { width: 22px; height: 0; border-top: 2px solid; flex: none; }
+
+  #canvas { position: fixed; inset: 52px 0 0 0; cursor: grab; overflow: hidden; }
+  #canvas.panning { cursor: grabbing; }
+  #viewport { position: absolute; transform-origin: 0 0; width: 0; height: 0; }
+  #edges { position: absolute; overflow: visible; }
+  .edge { stroke-linecap: round; transition: opacity .15s; }
+
+  .node {
+    position: absolute; transform: translate(-50%, -50%);
+    display: flex; flex-direction: column; align-items: center;
+    cursor: pointer; user-select: none; z-index: 5; width: 130px;
+  }
+  .node .ball {
+    border-radius: 50%; border: 2px solid; display: flex; align-items: center; justify-content: center;
+    background: var(--panel); transition: box-shadow .15s, transform .1s;
+    font-size: 10px; font-weight: 600; color: var(--text); text-align: center;
+    line-height: 1.1; padding: 4px;
+  }
+  .node .lbl { margin-top: 5px; font-size: 11px; color: var(--text); text-align: center;
+    text-shadow: 0 1px 3px rgba(0,0,0,.9); max-width: 130px; }
+  .node .sub { font-size: 10px; color: var(--muted); text-shadow: 0 1px 3px rgba(0,0,0,.9); }
+  .node.dim { opacity: .12; pointer-events: none; }
+  .node.hl .ball { box-shadow: 0 0 0 3px rgba(91,140,255,.35), 0 0 18px rgba(91,140,255,.25); }
+  .node.sel .ball { box-shadow: 0 0 0 3px var(--accent), 0 0 24px rgba(91,140,255,.5); }
+  .node.warn .lbl::after { content: " ⚠"; color: var(--warn); }
+
+  #hint {
+    position: fixed; bottom: 12px; left: 12px; z-index: 20;
+    color: var(--muted); font-size: 11px; background: rgba(28,28,35,.85);
+    border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px; max-width: 380px;
+  }
+
+  #tooltip {
+    position: fixed; z-index: 40; pointer-events: none; display: none;
+    background: var(--panel2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 8px 11px; max-width: 320px; font-size: 12px; box-shadow: 0 6px 24px rgba(0,0,0,.5);
+  }
+  #tooltip .tt-t { font-weight: 600; margin-bottom: 3px; }
+  #tooltip .tt-d { color: var(--muted); }
+
+  #panel {
+    position: fixed; top: 52px; right: -420px; width: 400px; bottom: 0; z-index: 35;
+    background: var(--panel); border-left: 1px solid var(--border);
+    transition: right .22s ease; display: flex; flex-direction: column;
+  }
+  #panel.open { right: 0; }
+  #panel .ph { padding: 16px 18px 12px; border-bottom: 1px solid var(--border); }
+  #panel .ph h2 { font-size: 16px; margin-bottom: 6px; }
+  .chip {
+    display: inline-block; font-size: 11px; padding: 2px 9px; border-radius: 20px;
+    border: 1px solid; margin-right: 6px; margin-bottom: 4px;
+  }
+  .chip.gray { color: var(--muted); border-color: var(--border); }
+  #panel .pb { padding: 14px 18px 24px; overflow-y: auto; flex: 1; }
+  #panel .pb p { margin-bottom: 10px; color: var(--text); }
+  #panel .pb .sec { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; margin: 16px 0 6px; }
+  #panel .pb ul { list-style: none; }
+  #panel .pb li { padding: 3px 0; font-size: 12px; }
+  #panel .pb li code { color: #9fb6e8; font-family: Consolas, monospace; font-size: 11.5px; }
+  .link-node { color: var(--accent); cursor: pointer; }
+  .link-node:hover { text-decoration: underline; }
+  .note {
+    background: rgba(230,162,60,.08); border: 1px solid rgba(230,162,60,.3);
+    border-radius: 8px; padding: 8px 11px; font-size: 12px; margin-bottom: 10px;
+  }
+  #pclose {
+    position: absolute; top: 12px; right: 14px; background: none; border: none;
+    color: var(--muted); font-size: 18px; cursor: pointer;
+  }
+  #pclose:hover { color: var(--text); }
+  .badge-orphan { color: var(--warn); border-color: rgba(230,162,60,.5); }
+
+  @media (max-width: 900px) { #panel { width: 340px; right: -360px; } }
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <h1>ZPUI — карта связи модулей <span>аудит по коду · go list + api.js · 14.11.2026</span></h1>
+  <input id="search" type="text" placeholder="Поиск модуля… (Enter — перейти)">
+  <button class="tbtn" id="btnFit">Вписать</button>
+  <button class="tbtn" id="btnShuffle">Разложить заново</button>
+  <div id="stats"></div>
+</div>
+
+<div id="legend">
+  <div class="lt">Слои (клик — скрыть/показать)</div>
+  <div id="layersBox"></div>
+  <div class="lt lt2">Тип связи</div>
+  <div class="erow"><span class="eline" style="border-color:#6b7694"></span> вызов / импорт</div>
+  <div class="erow"><span class="eline" style="border-color:#e6a23c; border-top-style:dashed"></span> запуск / дочерний процесс / IPC</div>
+  <div class="erow"><span class="eline" style="border-color:#5b8cff; border-top-style:dotted"></span> события (Wails EventsEmit)</div>
+  <div class="erow"><span class="eline" style="border-color:#4ad295; border-top-width:1px"></span> сетевой доступ наружу</div>
+</div>
+
+<div id="canvas"><div id="viewport">
+  <svg id="edges" width="10" height="10"></svg>
+  <div id="nodesBox"></div>
+</div></div>
+
+<div id="hint">
+  <b>Как читать:</b> наведение — подсветка связей; клик по узлу — карточка модуля;
+  перетаскивание узлов и фона, колесо — зум. Узел без связей — потенциально мёртвый код.
+</div>
+
+<div id="tooltip"></div>
+
+<div id="panel">
+  <button id="pclose" title="Закрыть">✕</button>
+  <div class="ph"><h2 id="ptitle"></h2><div id="pchips"></div></div>
+  <div class="pb" id="pbody"></div>
+</div>
+
+<script>
+"use strict";
+
+// ─────────────────────────── Данные: слои ───────────────────────────
+const LAYERS = {
+  fe:     { name: "Фронтенд (web/)",        color: "#5b8cff" },
+  core:   { name: "Ядро приложения",        color: "#ff8a4a" },
+  engine: { name: "Движок и сервисы",       color: "#4ad295" },
+  intel:  { name: "Мониторинг и сеть",      color: "#e6c74a" },
+  data:   { name: "Данные и состояние",     color: "#c07ef0" },
+  system: { name: "Система и интеграции",   color: "#7ec8e3" },
+  cmd:    { name: "Модули (cmd/)",          color: "#f07e9c" },
+  ext:    { name: "Внешние компоненты",     color: "#8a90a0" },
+};
+
+// ─────────────────────────── Данные: узлы ───────────────────────────
+// size — условный вес (строк Go или относительный), desc — карточка.
+const NODES = [
+  // ── Фронтенд ──
+  { id:"fe_app", layer:"fe", label:"React-приложение", sub:"web/src", size:9000,
+    files:["App.jsx","main.jsx","pages/ (7 страниц)","context/ToastContext.jsx","styles/"],
+    desc:"UI приложения: 7 вкладок (Дашборд, Запрет, DNS, Прокси, Монитор, Справка, Настройки), стартовый экран, модалки. Только отражает состояние бэкенда — источник истины (config.json, SQLite) всегда на стороне Go." },
+  { id:"fe_components", layer:"fe", label:"Компоненты", sub:"components/", size:6000,
+    files:["components/ui/ (Switch, Modal, Row, Card…)","SetupWizard","AutoSelectModal","StartupScreen","ThemeGallery","ErrorBoundary"],
+    desc:"Кирпичики дизайн-системы (components/ui) и доменные модалки/экраны. Стили — только токены CSS-переменных, строки — только i18n." },
+  { id:"fe_hooks", layer:"fe", label:"Хуки", sub:"hooks/", size:1500,
+    files:["usePolling","useNow","useDebouncedSave","useUpdateCheck / useUpdateFlow","useWailsEvent","usePowerInterval"],
+    desc:"Переиспользуемая логика: поллинг с гейтом видимости окна, живые тики, отложенное сохранение настроек, флоу обновлений, подписка на события бэкенда." },
+  { id:"fe_api", layer:"fe", label:"api.js — ШИМ", sub:"единственная точка FE→BE", size:475,
+    files:["api.js: GET/POST/DELETE_ROUTES","createStream() → автоподбор","SWR-кэш вкладок (apiWarm)"],
+    desc:"Шим-слой: ~130 маршрутов '/api/...' отображаются в методы window.go.app.App.*. Прямые вызовы биндингов из компонентов запрещены конвенцией. Ответы: {status:'ok'} / {error}." },
+  { id:"fe_i18n", layer:"fe", label:"i18n + локали", sub:"locales/ru,en.json", size:2000,
+    files:["i18n/index.jsx (useT / tr)","locales/ru.json","locales/en.json"],
+    desc:"Локализация: все пользовательские строки через t('ключ'). Vitest ловит литеральные (не из локалей) ключи." },
+
+  // ── Ядро ──
+  { id:"core_main", layer:"core", label:"main.go", sub:"точка входа · 468 строк", size:468,
+    files:["ensureAdmin() — UAC при ручном запуске","singleinstance.Check()","флаги: -devmode/-devtools/-diag/-hidden","wails.Run (безрамочное окно 900–1280×650–720)"],
+    desc:"Точка входа Wails: повышение прав, единственный экземпляр, загрузка config/logger/SQLite, создание менеджеров (zapret, трафик, DNS), запуск трея, встраивание web/dist и фонов /api/bg/*." },
+  { id:"core_app", layer:"core", label:"internal/app — ЯДРО", sub:"84 файла · ~18,8 тыс. строк", size:18854,
+    files:["app.go — struct App, Startup/Shutdown, emitSafe","app_api_*.go — биндинги по доменам","app_monitors.go — фоновые циклы","app_autoselect_stream.go — автоподбор","app_auth*.go — аккаунт V4 (XML-конверт)","app_sync*.go — канал ZPUI Sync","app_zapret_*.go — движок: control/strategy/service/filters/lists"],
+    desc:"Центральный объект App: все Wails-биндинги (файл = домен), фоновые горутины (ресурсы, DNS-watch, трафик, ISP, health), автоподбор и AutoSwitch, обновления, аккаунт, диагностика, восстановление после сбоев. Хаб, к которому сходится почти всё." },
+
+  // ── Движок и сервисы ──
+  { id:"eng_zapret", layer:"engine", label:"internal/zapret", sub:"40 файлов · 7,9 тыс. строк", size:7892,
+    files:["manager.go — старт/стоп/PID-надзор winws","autotest.go — автоподбор стратегий","service_install.go — служба zapret (SCM)","gamefilter.go, strategy*.go, lists/ipset","backup_state.go — снимок списков","download.go / install.go — InstallFromZip"],
+    desc:"Менеджер движка zapret: управление дочерним winws.exe, стратегии (.bat), состояния stopped/starting/running/error/restarting (лимит 5 рестартов / 60 с), автотест, игровые фильтры, бэкап/восстановление списков, установка пакета zapret с откатом." },
+  { id:"eng_winws", layer:"engine", label:"winws.exe", sub:"внешний процесс (zapret)", size:200,
+    files:["build/zapret/ (дистрибутив Flowseal)","стратегии *.bat"],
+    desc:"Сам движок обхода DPI — внешний процесс. ZPUI его не содержит: порождает, следит, передаёт стратегию. Требует прав администратора." },
+  { id:"eng_windivert", layer:"engine", label:"WinDivert", sub:"драйвер ядра Windows", size:120,
+    files:["WinDivert 2.2.x (в составе zapret)"],
+    desc:"Драйвер перехвата/модификации пакетов, которым winws.exe обманывает DPI. Причина, по которой ZPUI требует админа и не портируется на macOS/Linux." },
+  { id:"eng_zapret2", layer:"engine", label:"internal/zapret2", sub:"2 файла · 436 строк · эксп.", size:436,
+    files:["zapret2.go — скачивание zip/tar.gz","sources.go — манифест: сервер ↔ GitHub/ghproxy (auto = где свежее)"],
+    desc:"Экспериментальный второй движок (zapret2, bol-van). Пока только источники и установка пакета: сервер — зеркало /updates/zapret2 (SHA из манифеста), GitHub — релизы (SHA из sha256sum.txt). Яндекс исключён (решение владельца 13.11.2026)." },
+  { id:"eng_tgproxy", layer:"engine", label:"internal/tgproxy", sub:"5 файлов · 1,1 тыс. строк", size:1109,
+    files:["spawn/kill/watchdog дочернего exe","ready-гейт, парсер лога (stats, per-IP)","учёт экономного режима"],
+    desc:"Супервизор Telegram-моста: порождает и следит за ZPUI-TgProxy.exe, парсит его лог (счётчики трафика, per-IP), рестартует при падении. Исходники моста — соседний проект ../ZPUI-TgProxy (апстрим tg-ws-proxy)." },
+  { id:"eng_tgproxy_exe", layer:"engine", label:"ZPUI-TgProxy.exe", sub:"дочерний процесс (Python)", size:200,
+    files:["MTProto-мост через WSS к Telegram DC","версия из __version__ апстрима"],
+    desc:"MTProto-прокси (мост) для обхода блокировок Telegram. Собирается отдельно, ZPUI только управляет им и читает его лог." },
+  { id:"eng_proxy", layer:"engine", label:"internal/proxy", sub:"SOCKS5 :1080 · 457 строк", size:457,
+    files:["собственный SOCKS5-сервер","порт и вкл/выкл через config"],
+    desc:"SOCKS5-сервер внутри процесса ZPUI: раздача обхода на другие устройства домашней сети (проксирование их трафика через движок)." },
+  { id:"eng_xboxdns", layer:"engine", label:"internal/xboxdns", sub:"3 файла · 1,3 тыс. строк", size:1308,
+    files:["manager.go — смена системного DNS (dnsapi/реестр)","снимок/восстановление прежних DNS","CheckServers — health DNS-провайдеров","netif_windows.go — интерфейсы/LAN IP"],
+    desc:"Управление DNS: переключает системные DNS-адреса (plain IPv4) на выбранных провайдеров, хранит снимок прежних значений и восстанавливает его, проверяет доступность DNS-серверов, умеет авто-выключать мёртвых." },
+  { id:"eng_zsvc", layer:"engine", label:"internal/zsvc", sub:"13 файлов · 2,0 тыс. строк", size:2041,
+    files:["SCM-установка/удаление службы","named pipe — IPC-клиент","watchdog конфига (HKLM\\Software\\ZPUI\\Service)","repair-флоу (1056/1061, svcAwaitReady)"],
+    desc:"Клиентская сторона службы запрета: ZPUI.exe устанавливает ZPUI-Service.exe как службу Windows, общается по named pipe, следит за конфигом и чинит службу (repair/upgrade, ожидание START_PENDING и т. п.)." },
+  { id:"eng_cmd_service", layer:"engine", label:"ZPUI-Service.exe", sub:"cmd/service · служба запрета", size:700,
+    files:["cmd/service — SCM-сервис","watchdog: следит за winws.exe","версия из versions.txt (service=)"],
+    desc:"Сама служба (компилируется из cmd/service): работает до входа пользователя, следит/перезапускает движок. ZPUI.exe управляет ею через zsvc." },
+
+  // ── Мониторинг и сеть ──
+  { id:"int_monitor", layer:"intel", label:"internal/monitor", sub:"317 строк", size:317,
+    files:["TrafficMonitor — фоновый сбор трафика"],
+    desc:"Фоновый сбор сетевого трафика хоста для графики мониторинга и истории в SQLite." },
+  { id:"int_blockcheck", layer:"intel", label:"internal/blockcheck", sub:"14 файлов · 2,3 тыс. строк", size:2269,
+    files:["TCP+TLS+HTTP-пробы ресурса","используется автотестом zapret","CLI: cmd/blockcheck"],
+    desc:"Проверка факта блокировки/доступности ресурсов (Discord, YouTube и пул мониторинга). Основа баллов доступности стратегий и автоподбора." },
+  { id:"int_ytcheck", layer:"intel", label:"internal/ytcheck", sub:"148 строк · ОРФАН", size:148, orphan:true,
+    files:["ytcheck.go — DNS-уровень проверки YouTube"],
+    desc:"Проверка YouTube на DNS-уровне. НАХОДКА АУДИТА: пакет не импортируется ни одним другим пакетом (проверено go list по всему дереву) — мёртвый код либо потерянный вызов." },
+  { id:"int_isp", layer:"intel", label:"internal/isp", sub:"5 файлов · 1,2 тыс. строк", size:1221,
+    files:["определение оператора (ASN-канон)","история операторов → SQLite","учёт экономного режима"],
+    desc:"Определяет оператора связи по внешнему IP. От оператора зависит выбор стратегий (пресеты провайдеров) и смарт-подбор; история пишется в базу." },
+  { id:"int_netcheck", layer:"intel", label:"internal/netcheck", sub:"40 строк", size:40,
+    files:["TCP-проба к anycast-DNS"],
+    desc:"Быстрая проверка общего онлайна (есть ли сеть вообще) — отделяет «нет интернета» от «нет обхода»." },
+  { id:"int_netmetrics", layer:"intel", label:"internal/netmetrics", sub:"530 строк", size:530,
+    files:["замеры канала (пинг/потери)","база для балла скорости стратегий"],
+    desc:"Сетевые метрики хоста: базовые замеры канала, относительно которых нормализуется скорость в баллах стратегий (MeasureChannelBase)." },
+  { id:"int_power", layer:"intel", label:"internal/power", sub:"экономный режим · 228 строк", size:228,
+    files:["Set(on, level, threshold)","глобальные множители интервалов"],
+    desc:"Экономный режим: растягивает интервалы всех фоновых циклов (мониторинг, ISP, syncclient, tgproxy…). Пакеты сами спрашивают множитель — единая точка." },
+
+  // ── Данные ──
+  { id:"dat_config", layer:"data", label:"internal/config", sub:"config.json · 20 файлов · 3,9 тыс.", size:3861,
+    files:["config.go — ядро + мьютексы","dns.go, zapret_prefs.go, proxy_prefs.go","tgproxy_prefs.go, server_prefs.go","autoswitch_prefs.go, skip_resources.go","device_id.go, paths.go"],
+    desc:"Единственный источник истины настроек — config.json рядом с exe. Разбит на подсфайлы по доменам; UI читает/пишет только через биндинги App." },
+  { id:"dat_database", layer:"data", label:"internal/database", sub:"SQLite zpui.db · 2,7 тыс.", size:2705,
+    files:["db.go — схема (modernc.org/sqlite, без cgo)","queries_devices / availability / operator","queries_logs / versions / metrics / backup"],
+    desc:"Слой SQLite: устройства в LAN, история доступности, операторы связи, версии, метрики, бэкап-состояние. Пишут app, zapret (баллы стратегий), isp." },
+  { id:"dat_logdb", layer:"data", label:"internal/logdb", sub:"журналы в SQLite · 877 строк", size:877,
+    files:["таблицы логов: app/zapret/updater/report"],
+    desc:"Журнал логов в SQLite — просмотр и фильтры на вкладке журналов, экспорт, таб «Служба»." },
+  { id:"dat_logger", layer:"data", label:"internal/logger", sub:"629 строк", size:629,
+    files:["slog-подобное API","ротация файлов logs/*.log","дублирование в logdb"],
+    desc:"Структурное логирование: файлы в logs/ с ротацией + зеркалирование в SQLite (logdb). Ранний boot.log — в main.go отдельно." },
+  { id:"dat_themes", layer:"data", label:"internal/themes", sub:"280 строк", size:280,
+    files:["чтение/валидация zip-тем"],
+    desc:"Кастомные темы оформления: пакеты-zip, галерея и редактор на фронтенде, применение в рантайме." },
+  { id:"dat_bgstore", layer:"data", label:"internal/bgstore", sub:"147 строк", size:147,
+    files:["HTTP-handler /api/bg/* и /bg/<файл>"],
+    desc:"Хранилище фонов кастомных тем: раздача картинок из dataDir/bg через assetserver Wails (main.go подключает Handler)." },
+
+  // ── Система и интеграции ──
+  { id:"sys_tray", layer:"system", label:"internal/tray", sub:"трей · 419 строк", size:419,
+    files:["fyne.io/systray","меню: движок, DNS, показ окна, обновления","контроллер = App (обратные вызовы)"],
+    desc:"Иконка и меню системного трея. Управляет окном через Wails runtime, читает состояние zapret/DNS, дергает методы App. Иконки генерит cmd/genicon." },
+  { id:"sys_notify", layer:"system", label:"internal/notify", sub:"тосты Windows · 362 строки", size:362,
+    files:["go-toast (Win10/11 тосты)","ShowThrottled — дедуп по ключу"],
+    desc:"Windows-уведомления (тосты): события автосмены, обновлений, восстановления и т. д. с защитой от повтора." },
+  { id:"sys_singleinstance", layer:"system", label:"internal/singleinstance", sub:"114 строки", size:114,
+    files:["named mutex + активация существующего окна"],
+    desc:"Гарантия одного экземпляра ZPUI: named mutex; второй запуск активирует существующее окно." },
+  { id:"sys_executil", layer:"system", label:"internal/executil", sub:"83 строки", size:83,
+    files:["HiddenCmd","SetProcessAppID"],
+    desc:"Безопасный запуск внешних процессов (скрытое окно консоли, кавычки, таймауты) — используют все, кто spawn'ит exe." },
+  { id:"sys_sysinfo", layer:"system", label:"internal/sysinfo", sub:"412 строк", size:412,
+    files:["ОС, CPU/RAM, антивирус, сеть"],
+    desc:"Сведения о системе для диагностики и отчётов (вкладка «Данные и диагностика», отчёты на сервер)." },
+  { id:"sys_winopt", layer:"system", label:"internal/winopt", sub:"166 строк", size:166,
+    files:["твики реестра «Оптимизация пинга»"],
+    desc:"Системные твики реестра Windows («Оптимизация пинга»): применение и откат, бэкап прежних значений." },
+  { id:"sys_updater", layer:"system", label:"internal/updater", sub:"13 файлов · 1,5 тыс. строк", size:1524,
+    files:["ZPUI: сервер → Яндекс-фолбэк","zapret: только GitHub (Flowseal)","zapret2: GitHub-релизы","SHA-256 верификация (манифест/checksums)"],
+    desc:"Загрузка и верификация обновлений всех компонентов. ZPUI: сервер управления (uploads/) → Яндекс.Диск как фолбэк. Ответ «обновлений нет» — окончательный. Проверки только при старте." },
+  { id:"sys_pkginst", layer:"system", label:"internal/pkginst", sub:"5 файлов · 1,2 тыс. строк", size:1211,
+    files:["установка/обновление/удаление пакета","гашение ZPUI+winws перед заменой","общая логика всех трёх инсталляторов"],
+    desc:"Пакетный движок инсталляторов: Setup/Update/Uninstall — три тонких Wails-обёртки над pkginst. Тихий обновлятор гасит приложение и движок, накатывает файлы, данные и zapret не трогает." },
+  { id:"sys_syncclient", layer:"system", label:"internal/syncclient", sub:"ZPUI Sync · 1,6 тыс. строк", size:1615,
+    files:["отправка telemetry-секций","queue + busy-талоны, джиттер","gzip + SHA-256"],
+    desc:"Клиент канала ZPUI Sync — телеметрия на сервер управления. Каталог секций зашит; передача включена по умолчанию у всех (политика 11.2026), отключается тумблером «Канал данных»." },
+  { id:"sys_mcpserver", layer:"system", label:"internal/mcpserver", sub:"MCP · 4 файла · 672 строки", size:672,
+    files:["JSON-RPC 2.0 over HTTP (streamable)","stateless, SSE-ответ одним event'ом","tools/* — инструменты для ИИ-клиентов","ключ: crypto/subtle"],
+    desc:"Встроенный MCP-сервер (Model Context Protocol): внешние ИИ-агенты могут опрашивать и управлять ZPUI через локальный HTTP с ключом. Включается/порт — вкладка настроек (GetMcpInfo / SetMcp*)." },
+
+  // ── Модули (cmd/) ──
+  { id:"cmd_setup", layer:"cmd", label:"ZPUI-Setup.exe", sub:"cmd/setup · установщик", size:400,
+    files:["Wails-окно установщика","вся логика в pkginst","installer/manifest.xml"],
+    desc:"Установщик: кастомное Wails-приложение поверх pkginst (NSIS выведен из эксплуатации)." },
+  { id:"cmd_update", layer:"cmd", label:"ZPUI-Update.exe", sub:"cmd/updater · тихий обновлятор", size:350,
+    files:["без страниц/подтверждений","гасит ZPUI+winws → Wait-Process → накат"],
+    desc:"Тихий обновлятор ZPUI: скачанный пакет запускается, тот гасит приложение и движок, заменяет файлы, не трогая данные и zapret." },
+  { id:"cmd_uninstall", layer:"cmd", label:"Удалятор", sub:"cmd/uninstall", size:350,
+    files:["снимает и службу ZPUI","чистит реестр/задачи/файлы"],
+    desc:"Удаление приложения: через pkginst, включая снятие службы ZPUI-Service и очистку артефактов." },
+  { id:"cmd_service_src", layer:"cmd", label:"cmd/service", sub:"исходник ZPUI-Service.exe", size:700,
+    files:["SCM-сервис (golang.org/x/sys/windows/svc)","обёртка над internal/zsvc"],
+    desc:"Исходный код службы запрета (см. узел «ZPUI-Service.exe» в слое движка)." },
+  { id:"cmd_blockcheck", layer:"cmd", label:"cmd/blockcheck", sub:"CLI · dev-утилита", size:80,
+    files:["консольная проверка блокировки"],
+    desc:"CLI-обёртка над internal/blockcheck для проверки блокировки ресурсов из консоли." },
+  { id:"cmd_genicon", layer:"cmd", label:"cmd/genicon", sub:"dev-утилита", size:60,
+    files:["генерация иконок трея → build/windows/icon.ico"],
+    desc:"Dev-утилита: генерирует набор иконок трея (обычная/подключено/ошибка и т. д.)." },
+
+  // ── Внешние ──
+  { id:"ext_webview2", layer:"ext", label:"WebView2", sub:"нативное окно", size:100,
+    files:["каркас Wails v2","frameless, фон тёмной темы"],
+    desc:"Рантайм фронтенда: WebView2 внутри нативного окна. DevTools: ZPUI.exe -devmode (CDP :9223)." },
+  { id:"ext_internet", layer:"ext", label:"Внешняя сеть", sub:"сервер, зеркала, ресурсы", size:150,
+    files:["сервер управления ZPUI (zpui-life.ru)","Яндекс.Диск — фолбэк обновлений","GitHub — релизы zapret/zapret2","пул ресурсов мониторинга"],
+    desc:"Всё, куда приложение ходит само: сервер управления (обновления, списки, аккаунт V4, ZPUI Sync, обратная связь), зеркала, IP-сервисы ISP, замеры канала, проверяемые ресурсы." },
+  { id:"ext_mcp", layer:"ext", label:"MCP-клиенты", sub:"локальные ИИ-агенты", size:60,
+    files:["HTTP → встроенный MCP-сервер"],
+    desc:"Внешние ИИ-клиенты (агенты), подключающиеся к встроенному MCP-серверу ZPUI по локальному HTTP." },
+];
+
+// ─────────────────────────── Данные: связи ───────────────────────────
+// type: call | run | event | net
+const EDGES = [
+  // Фронтенд ↔ ядро
+  ["fe_app","fe_components","call"],["fe_app","fe_hooks","call"],["fe_app","fe_i18n","call"],["fe_app","fe_api","call"],
+  ["fe_api","core_app","call","~130 маршрутов → App.*"],
+  ["core_app","fe_app","event","шина EventsEmit: autoselect:event/done, engine:*, update:*, zapret:recovery_*, dns:apply, operator:changed, strategy:*, window:*, theme:sync…"],
+
+  // main.go → инициализация
+  ["core_main","core_app","call","app.NewApp() + wails.Run(Bind)"],
+  ["core_main","dat_config","call","config.Load()"],["core_main","dat_logger","call","logger.New()"],
+  ["core_main","dat_database","call","database.Init()"],["core_main","sys_singleinstance","call"],
+  ["core_main","sys_executil","call"],["core_main","int_power","call","power.Set()"],
+  ["core_main","eng_zapret","call","zapret.NewManager()"],["core_main","int_monitor","call","TrafficMonitor"],
+  ["core_main","eng_xboxdns","call","xboxdns.NewManager()"],["core_main","sys_tray","call","tray.New()+Run()"],
+  ["core_main","dat_bgstore","call","Handler(/api/bg/*)"],["core_main","eng_zsvc","call","релей задачи автозапуска"],
+  ["core_main","ext_webview2","run","хост окна Wails/WebView2"],
+
+  // Ядро → домены (фактические импорты internal/app)
+  ["core_app","dat_config","call"],["core_app","dat_database","call"],["core_app","dat_logdb","call"],
+  ["core_app","dat_logger","call"],["core_app","sys_executil","call"],["core_app","int_power","call"],
+  ["core_app","int_monitor","call"],["core_app","int_blockcheck","call"],["core_app","int_isp","call"],
+  ["core_app","int_netcheck","call"],["core_app","int_netmetrics","call"],["core_app","sys_notify","call"],
+  ["core_app","eng_proxy","call"],["core_app","eng_tgproxy","call"],["core_app","eng_xboxdns","call"],
+  ["core_app","eng_zapret","call"],["core_app","eng_zapret2","call","app_zapret2.go — эксперт-движок"],
+  ["core_app","eng_zsvc","call"],["core_app","sys_updater","call"],["core_app","sys_pkginst","call"],
+  ["core_app","sys_syncclient","call"],["core_app","sys_sysinfo","call"],["core_app","dat_themes","call"],
+  ["core_app","sys_winopt","call"],["core_app","sys_mcpserver","call"],
+
+  // Движок
+  ["eng_zapret","eng_winws","run","spawn winws.exe + PID-надзор"],
+  ["eng_winws","eng_windivert","run","WinDivert (требует админа)"],
+  ["eng_zapret","dat_config","call"],["eng_zapret","dat_database","call","баллы стратегий"],
+  ["eng_zapret","sys_executil","call"],["eng_zapret","dat_logger","call"],
+  ["eng_zapret","int_blockcheck","call","пробы при автотесте"],["eng_zapret","int_isp","call"],
+  ["eng_zapret","int_netmetrics","call"],["eng_zapret","sys_updater","call","обновления zapret"],
+  ["eng_zapret","ext_internet","net","скачивание zapret (GitHub)"],
+  ["eng_tgproxy","eng_tgproxy_exe","run","spawn/kill/watchdog"],
+  ["eng_tgproxy","dat_config","call"],["eng_tgproxy","sys_executil","call"],["eng_tgproxy","dat_logger","call"],["eng_tgproxy","int_power","call"],
+  ["eng_proxy","dat_config","call"],["eng_proxy","sys_executil","call"],["eng_proxy","dat_logger","call"],["eng_proxy","int_power","call"],
+  ["eng_xboxdns","dat_config","call"],["eng_xboxdns","sys_executil","call"],
+  ["eng_zsvc","dat_config","call"],["eng_zsvc","sys_executil","call"],["eng_zsvc","eng_xboxdns","call"],
+  ["eng_zsvc","eng_cmd_service","run","named pipe IPC (служба ↔ клиент)"],
+
+  // Мониторинг и данные
+  ["int_isp","dat_database","call","история операторов"],["int_isp","int_power","call"],
+  ["dat_logger","dat_logdb","call","зеркало логов в SQLite"],
+  ["int_isp","ext_internet","net","IP/ASN-сервисы"],
+  ["int_netmetrics","ext_internet","net","замеры канала"],
+  ["int_netcheck","ext_internet","net","TCP-проба онлайна"],
+  ["int_blockcheck","ext_internet","net","пробы ресурсов (TCP/TLS/HTTP)"],
+
+  // Система
+  ["sys_tray","core_app","call","контроллер: показать окно, старт обновления"],
+  ["sys_tray","eng_zapret","call"],["sys_tray","eng_xboxdns","call"],["sys_tray","dat_config","call"],["sys_tray","dat_logger","call"],
+  ["sys_pkginst","sys_updater","call"],["sys_pkginst","eng_zapret","call"],["sys_pkginst","eng_zsvc","call"],
+  ["sys_singleinstance","sys_executil","call"],
+  ["sys_updater","ext_internet","net","сервер → Яндекс-фолбэк"],
+  ["sys_syncclient","ext_internet","net","ZPUI Sync (телеметрия)"],
+  ["sys_updater","eng_zapret2","call","манифесты zapret2 (обратная сторона: zapret2 зовёт updater)"],
+  ["ext_mcp","sys_mcpserver","net","локальный HTTP + ключ"],
+
+  // cmd/
+  ["cmd_setup","sys_pkginst","call"],["cmd_update","sys_pkginst","call"],["cmd_uninstall","sys_pkginst","call"],
+  ["cmd_service_src","eng_zsvc","call","служба = тонкая обёртка над zsvc"],
+  ["cmd_blockcheck","int_blockcheck","call"],["cmd_genicon","sys_tray","call"],
+];
+
+// ─────────────────────────── Движок карты ───────────────────────────
+const byId = Object.fromEntries(NODES.map(n => [n.id, n]));
+const layerHidden = new Set();
+let selected = null, hovered = null, query = "";
+
+const canvas = document.getElementById("canvas");
+const viewport = document.getElementById("viewport");
+const nodesBox = document.getElementById("nodesBox");
+const svg = document.getElementById("edges");
+const tooltip = document.getElementById("tooltip");
+const panel = document.getElementById("panel");
+
+let W = canvas.clientWidth, H = canvas.clientHeight;
+let tx = 0, ty = 0, scale = 1;
+
+const nodes = NODES.map(n => ({ ...n, x: 0, y: 0, vx: 0, vy: 0, r: radius(n), el: null }));
+const edges = EDGES.map(e => ({ from: e[0], to: e[1], type: e[2], label: e[3] || "", el: null }));
+
+function radius(n) {
+  return Math.min(54, 15 + Math.pow(n.size, 0.4) * 0.85);
+}
+function labelSize(n) {
+  return n.r < 20 ? 9 : n.r < 30 ? 10 : 11;
+}
+
+// стартовые позиции: кластеры по слоям на кольце
+const layerKeys = Object.keys(LAYERS);
+function seedPositions() {
+  const cx = W / 2, cy = H / 2, R = Math.min(W, H) * 0.34;
+  const per = {};
+  layerKeys.forEach(k => per[k] = 0);
+  for (const n of nodes) {
+    const li = layerKeys.indexOf(n.layer);
+    const ang = (li / layerKeys.length) * Math.PI * 2 - Math.PI / 2;
+    const cnt = nodes.filter(m => m.layer === n.layer).length;
+    const idx = per[n.layer]++;
+    const spread = (idx - (cnt - 1) / 2) * (0.55 / cnt + 0.045) * 2;
+    const rr = R * (0.55 + 0.45 * (idx % 3) / 2);
+    n.x = cx + Math.cos(ang + spread * 0.35) * rr * (1 + 0.12 * Math.sin(idx * 2.1));
+    n.y = cy + Math.sin(ang + spread * 0.35) * rr * (1 + 0.12 * Math.cos(idx * 1.7));
+  }
+}
+
+function simulate(alpha) {
+  const grav = 0.006, damping = 0.85;
+  for (let i = 0; i < nodes.length; i++) {
+    const a = nodes[i];
+    for (let j = i + 1; j < nodes.length; j++) {
+      const b = nodes[j];
+      let dx = b.x - a.x, dy = b.y - a.y;
+      let d2 = dx * dx + dy * dy || 1;
+      if (d2 > 800 * 800) continue;
+      const d = Math.sqrt(d2);
+      const charge = a.r + b.r + 70;
+      let f = (charge * charge) / (d2 * 6) * alpha;
+      const minD = a.r + b.r + 26;
+      if (d < minD) f += (minD - d) * 0.5;
+      const fx = dx / d * f, fy = dy / d * f;
+      a.vx -= fx; a.vy -= fy;
+      b.vx += fx; b.vy += fy;
+    }
+  }
+  for (const e of edges) {
+    const a = nodes.find(n => n.id === e.from), b = nodes.find(n => n.id === e.to);
+    if (!a || !b) continue;
+    let dx = b.x - a.x, dy = b.y - a.y;
+    const d = Math.sqrt(dx * dx + dy * dy) || 1;
+    const rest = 110 + a.r + b.r;
+    const f = (d - rest) * 0.02 * alpha;
+    a.vx += dx / d * f; a.vy += dy / d * f;
+    b.vx -= dx / d * f; b.vy -= dy / d * f;
+  }
+  const cx = W / 2, cy = H / 2;
+  for (const n of nodes) {
+    n.vx += (cx - n.x) * grav * alpha * 3;
+    n.vy += (cy - n.y) * grav * alpha * 3;
+    if (n.fx != null) { n.x = n.fx; n.y = n.fy; n.vx = n.vy = 0; continue; }
+    n.x += n.vx *= damping; n.y += n.vy *= damping;
+    n.x = Math.max(70, Math.min(W - 70, n.x));
+    n.y = Math.max(60, Math.min(H - 60, n.y));
+  }
+}
+
+let alpha = 1;
+function frame() {
+  if (alpha > 0.004) { simulate(alpha); alpha *= 0.985; renderPositions(); }
+  requestAnimationFrame(frame);
+}
+
+function renderPositions() {
+  for (const n of nodes) {
+    if (n.el) n.el.style.transform = `translate(${n.x}px, ${n.y}px) translate(-50%,-50%)`;
+  }
+  for (const e of edges) {
+    const a = byId[e.from], b = byId[e.to];
+    if (!e.el) continue;
+    e.el.setAttribute("x1", a.x); e.el.setAttribute("y1", a.y);
+    e.el.setAttribute("x2", b.x); e.el.setAttribute("y2", b.y);
+  }
+}
+
+const EDGE_STYLE = {
+  call:  { stroke: "#6b7694", width: 1.4, dash: "" },
+  run:   { stroke: "#e6a23c", width: 1.6, dash: "7,5" },
+  event: { stroke: "#5b8cff", width: 1.7, dash: "2,4" },
+  net:   { stroke: "#4ad295", width: 1.1, dash: "" },
+};
+
+function buildDom() {
+  svg.setAttribute("width", W); svg.setAttribute("height", H);
+  for (const e of edges) {
+    const st = EDGE_STYLE[e.type] || EDGE_STYLE.call;
+    const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    line.setAttribute("class", "edge");
+    line.setAttribute("stroke", st.stroke);
+    line.setAttribute("stroke-width", st.width);
+    if (st.dash) line.setAttribute("stroke-dasharray", st.dash);
+    line.setAttribute("opacity", "0.4");
+    svg.appendChild(line);
+    e.el = line;
+  }
+  for (const n of nodes) {
+    const el = document.createElement("div");
+    el.className = "node";
+    const short = n.label.length > 24 ? n.label.slice(0, 23) + "…" : n.label;
+    el.innerHTML = `<div class="ball" style="width:${n.r * 2}px;height:${n.r * 2}px;border-color:${LAYERS[n.layer].color};font-size:${labelSize(n)}px">${n.r > 26 ? short : ""}</div>
+      <div class="lbl">${n.label}</div><div class="sub">${n.sub || ""}</div>`;
+    if (n.orphan) el.classList.add("warn");
+    nodesBox.appendChild(el);
+    n.el = el;
+
+    el.addEventListener("mouseenter", () => { hovered = n; applyFocus(); showTip(n, el); });
+    el.addEventListener("mouseleave", () => { hovered = null; applyFocus(); tooltip.style.display = "none"; });
+    el.addEventListener("mousedown", (ev) => startDrag(n, ev));
+    el.addEventListener("click", (ev) => {
+      ev.stopPropagation();
+      if (dragEndAt && performance.now() - dragEndAt < 180) return;
+      selectNode(n);
+    });
+  }
+}
+
+function neighbors(id) {
+  const set = new Set();
+  for (const e of edges) {
+    if (e.from === id) set.add(e.to);
+    if (e.to === id) set.add(e.from);
+  }
+  return set;
+}
+
+function applyFocus() {
+  const focusId = (hovered || selected || {}).id || null;
+  const match = query ? new Set(
+    nodes.filter(n => (n.label + " " + (n.sub || "") + " " + n.desc).toLowerCase().includes(query)).map(n => n.id)
+  ) : null;
+  const nb = focusId ? neighbors(focusId) : null;
+  for (const e of edges) {
+    let vis = !layerHidden.has(byId[e.from].layer) && !layerHidden.has(byId[e.to].layer);
+    let on = true;
+    if (focusId) on = e.from === focusId || e.to === focusId;
+    else if (match) on = match.has(e.from) && match.has(e.to);
+    e.el.style.opacity = (vis && on) ? "0.85" : (vis ? "0.10" : "0");
+  }
+  for (const n of nodes) {
+    let vis = !layerHidden.has(n.layer);
+    let dim = false;
+    if (focusId) dim = focusId !== n.id && !nb.has(n.id);
+    else if (match) dim = !match.has(n.id);
+    n.el.classList.toggle("dim", !vis || dim);
+    n.el.classList.toggle("hl", !!(focusId && (focusId === n.id || nb.has(n.id)) && !selected));
+    n.el.classList.toggle("sel", selected && selected.id === n.id);
+  }
+}
+
+function showTip(n, el) {
+  const rect = el.getBoundingClientRect();
+  tooltip.innerHTML = `<div class="tt-t">${n.label}</div><div class="tt-d">${(n.desc || "").slice(0, 160)}${(n.desc || "").length > 160 ? "…" : ""}</div>
+    <div class="tt-d" style="margin-top:4px;color:var(--accent)">клик — карточка модуля</div>`;
+  tooltip.style.display = "block";
+  const tw = tooltip.offsetWidth, th = tooltip.offsetHeight;
+  let x = rect.left + rect.width / 2 - tw / 2;
+  let y = rect.bottom + 10;
+  if (y + th > innerHeight - 10) y = rect.top - th - 10;
+  x = Math.max(8, Math.min(innerWidth - tw - 8, x));
+  tooltip.style.left = x + "px"; tooltip.style.top = y + "px";
+}
+
+function selectNode(n) {
+  selected = n;
+  applyFocus();
+  document.getElementById("ptitle").textContent = n.label;
+  document.getElementById("pchips").innerHTML =
+    `<span class="chip" style="color:${LAYERS[n.layer].color};border-color:${LAYERS[n.layer].color}">${LAYERS[n.layer].name}</span>
+     ${n.orphan ? '<span class="chip badge-orphan">мёртвый код?</span>' : ""}
+     <span class="chip gray">${n.sub || ""}</span>`;
+  const incoming = edges.filter(e => e.to === n.id);
+  const outgoing = edges.filter(e => e.from === n.id);
+  const row = (e, other, dir) => {
+    const o = byId[other];
+    return `<li><span style="color:var(--muted)">${dir}</span> <span class="link-node" data-nid="${o.id}">${o.label}</span>${e.label ? ` <span style="color:var(--muted)"> — ${e.label}</span>` : ""}</li>`;
+  };
+  document.getElementById("pbody").innerHTML = `
+    <p>${n.desc}</p>
+    ${n.files && n.files.length ? `<div class="sec">Ключевые файлы</div><ul>${n.files.map(f => `<li><code>${f}</code></li>`).join("")}</ul>` : ""}
+    ${outgoing.length ? `<div class="sec">Исходящие связи (${outgoing.length})</div><ul>${outgoing.map(e => row(e, e.to, "→")).join("")}</ul>` : ""}
+    ${incoming.length ? `<div class="sec">Входящие связи (${incoming.length})</div><ul>${incoming.map(e => row(e, e.from, "←")).join("")}</ul>` : ""}
+    ${n.orphan ? `<div class="note">Никто не импортирует этот пакет (go list по всему дереву). Либо мёртвый код — удалить, либо потерянный вызов — вернуть в цепочку.</div>` : ""}
+  `;
+  document.querySelectorAll("#pbody .link-node").forEach(a => {
+    a.addEventListener("click", () => selectNode(byId[a.dataset.nid]));
+  });
+  panel.classList.add("open");
+}
+
+document.getElementById("pclose").addEventListener("click", () => {
+  panel.classList.remove("open"); selected = null; applyFocus();
+});
+
+// ── панорамирование / зум ──
+function applyTransform() {
+  viewport.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
+}
+let panning = false, px = 0, py = 0;
+canvas.addEventListener("mousedown", ev => {
+  if (ev.target.closest(".node")) return;
+  panning = true; px = ev.clientX; py = ev.clientY;
+  canvas.classList.add("panning");
+});
+addEventListener("mousemove", ev => {
+  if (panning) { tx += ev.clientX - px; ty += ev.clientY - py; px = ev.clientX; py = ev.clientY; applyTransform(); }
+});
+addEventListener("mouseup", () => { panning = false; canvas.classList.remove("panning"); });
+canvas.addEventListener("wheel", ev => {
+  ev.preventDefault();
+  const k = ev.deltaY < 0 ? 1.12 : 1 / 1.12;
+  const mx = ev.clientX - canvas.offsetLeft, my = ev.clientY - canvas.offsetTop;
+  tx = mx - (mx - tx) * k; ty = my - (my - ty) * k;
+  scale = Math.max(0.25, Math.min(2.6, scale * k));
+  applyTransform();
+}, { passive: false });
+
+// ── перетаскивание узлов ──
+let dragNode = null, dragging = false, dragEndAt = 0;
+function startDrag(n, ev) {
+  dragNode = n; dragging = false;
+  const move = (e2) => {
+    const dx = (e2.clientX - ev.clientX) / scale, dy = (e2.clientY - ev.clientY) / scale;
+    if (!dragging && Math.hypot(dx, dy) > 3) { dragging = true; alpha = Math.max(alpha, 0.35); }
+    if (dragging) { n.fx = n.x + dx; n.fy = n.y + dy; alpha = 0.4; }
+  };
+  const up = () => {
+    removeEventListener("mousemove", move);
+    removeEventListener("mouseup", up);
+    dragNode = null;
+    if (dragging) { n.fx = null; n.fy = null; alpha = Math.max(alpha, 0.25); dragEndAt = performance.now(); }
+  };
+  addEventListener("mousemove", move);
+  addEventListener("mouseup", up);
+  ev.preventDefault();
+}
+
+// ── слои ──
+const layersBox = document.getElementById("layersBox");
+for (const [key, L] of Object.entries(LAYERS)) {
+  const row = document.createElement("div");
+  row.className = "lrow";
+  row.innerHTML = `<span class="ldot" style="background:${L.color}"></span><span class="ln">${L.name}</span>`;
+  row.addEventListener("click", () => {
+    if (layerHidden.has(key)) layerHidden.delete(key); else layerHidden.add(key);
+    row.classList.toggle("off", layerHidden.has(key));
+    applyFocus();
+  });
+  layersBox.appendChild(row);
+}
+
+// ── поиск ──
+const searchEl = document.getElementById("search");
+searchEl.addEventListener("input", () => { query = searchEl.value.trim().toLowerCase(); selected = null; applyFocus(); });
+searchEl.addEventListener("keydown", ev => {
+  if (ev.key === "Enter" && query) {
+    const hit = nodes.find(n => n.label.toLowerCase().includes(query));
+    if (hit) { selectNode(hit); centerOn(hit); }
+  }
+});
+
+function centerOn(n) {
+  tx = W / 2 - n.x * scale; ty = H / 2 - n.y * scale;
+  applyTransform();
+}
+
+// ── кнопки ──
+document.getElementById("btnFit").addEventListener("click", fitAll);
+function fitAll() {
+  const xs = nodes.map(n => n.x), ys = nodes.map(n => n.y);
+  const minX = Math.min(...xs) - 80, maxX = Math.max(...xs) + 80;
+  const minY = Math.min(...ys) - 80, maxY = Math.max(...ys) + 80;
+  scale = Math.min(W / (maxX - minX), H / (maxY - minY), 1.6);
+  tx = W / 2 - (minX + maxX) / 2 * scale;
+  ty = H / 2 - (minY + maxY) / 2 * scale;
+  applyTransform();
+}
+document.getElementById("btnShuffle").addEventListener("click", () => {
+  seedPositions();
+  for (let i = 0; i < 300; i++) simulate(Math.max(0.05, 1 - i * 0.004));
+  renderPositions();
+  fitAll();
+  alpha = 0.25;
+});
+
+// ── статистика ──
+const goLoc = nodes.filter(n => !n.layer.startsWith("fe") && !n.layer.startsWith("ext") && n.size > 100)
+  .reduce((s, n) => s + n.size, 0);
+document.getElementById("stats").textContent =
+  `${nodes.length} узлов · ${edges.length} связей · ~${(goLoc / 1000).toFixed(0)} тыс. строк Go (внутр.)`;
+
+// ── запуск ──
+function init() {
+  W = canvas.clientWidth; H = canvas.clientHeight;
+  seedPositions();
+  // прелоад раскладки: 300 тихих итераций до первого кадра
+  for (let i = 0; i < 300; i++) simulate(Math.max(0.05, 1 - i * 0.004));
+  buildDom();
+  renderPositions();
+  applyFocus();
+  applyTransform();
+  fitAll();
+  alpha = 0.25;
+  requestAnimationFrame(frame);
+}
+addEventListener("resize", () => { W = canvas.clientWidth; H = canvas.clientHeight; svg.setAttribute("width", W); svg.setAttribute("height", H); });
+init();
+</script>
+</body>
+</html>

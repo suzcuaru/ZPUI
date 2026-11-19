@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZPUI — отчёт: служба, связь с сервером, диагностика</title>
+<style>
+  :root {
+    --bg: #0e0f17; --panel: #151824; --card: #1a1e2e; --inset: #12141f;
+    --border: #262b3d; --text: #e8eaf2; --text2: #a8b0c4; --text3: #6e7689;
+    --accent: #5b8def; --accent-soft: rgba(91,141,239,.14);
+    --green: #34b46b; --yellow: #d9a13c; --red: #d5544f;
+    --mono: 'JetBrains Mono', 'Cascadia Code', Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 14px/1.65 'Segoe UI', Inter, system-ui, sans-serif;
+    padding: 32px 16px 64px;
+  }
+  .wrap { max-width: 920px; margin: 0 auto; }
+  header.hero { margin-bottom: 28px; }
+  .hero h1 { font-size: 24px; margin: 0 0 6px; letter-spacing: .2px; }
+  .hero .sub { color: var(--text3); font-size: 13px; }
+  .hero .sub b { color: var(--text2); font-weight: 600; }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+  .chip {
+    font-size: 12px; padding: 4px 12px; border-radius: 20px;
+    background: var(--accent-soft); color: var(--accent); font-weight: 600;
+  }
+  section {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 14px; padding: 22px 24px; margin-bottom: 18px;
+  }
+  h2 {
+    font-size: 17px; margin: 0 0 14px; display: flex; align-items: center; gap: 10px;
+  }
+  h2 .num {
+    flex: none; width: 28px; height: 28px; border-radius: 9px;
+    background: var(--accent-soft); color: var(--accent);
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700;
+  }
+  h3 { font-size: 13.5px; color: var(--text); margin: 18px 0 8px; }
+  p { margin: 8px 0; color: var(--text2); }
+  p strong, li strong { color: var(--text); }
+  ul, ol { margin: 8px 0; padding-left: 22px; color: var(--text2); }
+  li { margin: 5px 0; }
+  li::marker { color: var(--accent); }
+  code {
+    font-family: var(--mono); font-size: 12px; color: #9fc0ff;
+    background: var(--inset); border: 1px solid var(--border);
+    border-radius: 5px; padding: 1px 6px; word-break: break-all;
+  }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 13px; }
+  th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--text3); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; font-weight: 600; }
+  td:first-child { white-space: nowrap; }
+  td code { white-space: normal; }
+  .tag { display: inline-block; font-size: 10.5px; font-weight: 700; border-radius: 5px; padding: 1px 7px; margin-left: 6px; vertical-align: 1px; }
+  .tag.in { background: rgba(52,180,107,.16); color: var(--green); }
+  .tag.out { background: rgba(91,141,239,.16); color: var(--accent); }
+  .tag.both { background: rgba(217,161,60,.16); color: var(--yellow); }
+  .card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px 16px; margin: 10px 0;
+  }
+  .card.ok { border-left: 3px solid var(--green); }
+  .card.warn { border-left: 3px solid var(--yellow); }
+  .card.fix { border-left: 3px solid var(--accent); }
+  .card .ttl { font-weight: 700; font-size: 13px; margin-bottom: 4px; }
+  .card.ok .ttl { color: var(--green); }
+  .card.warn .ttl { color: var(--yellow); }
+  .card.fix .ttl { color: var(--accent); }
+  .flow {
+    font-family: var(--mono); font-size: 12px; color: var(--text2);
+    background: var(--inset); border: 1px solid var(--border); border-radius: 10px;
+    padding: 12px 16px; overflow-x: auto; margin: 10px 0; line-height: 1.9;
+  }
+  .flow b { color: var(--accent); font-weight: 600; }
+  .flow .ok { color: var(--green); }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 720px) { .cols { grid-template-columns: 1fr; } }
+  footer { color: var(--text3); font-size: 12px; text-align: center; margin-top: 26px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <h1>Служба ZPUI, связь с сервером и диагностический отчёт</h1>
+  <div class="sub">Внутренний отчёт по продукту <b>ZPUI</b> · 23 октября 2026 · по состоянию кода 2.0.5 (с фиксами этой сессии)</div>
+  <div class="chips">
+    <span class="chip">Служба ZPUI (zsvc)</span>
+    <span class="chip">Протокол v4 — POST /api</span>
+    <span class="chip">Телеметрия и отчёт</span>
+    <span class="chip">Что доработать</span>
+  </div>
+</header>
+
+<!-- ============================================================ -->
+<section>
+  <h2><span class="num">1</span>Служба ZPUI — чем занимается и как работает</h2>
+
+  <p><strong>Служба ZPUI</strong> — это Windows-служба <code>ZPUI</code> (файл <code>components\service\ZPUI-Service.exe</code>),
+  которая работает в фоне <strong>независимо от открытого приложения</strong> и решает три задачи:</p>
+
+  <ol>
+    <li><strong>Надзор за приложением (watchdog).</strong> Если ZPUI.exe завершился крашем, служба чистит движок
+      (winws.exe) и перезапускает приложение через задачу Планировщика — с нарастающей паузой 1с → 5с → 15с.
+      После 5 крашей за час служба останавливает цикл перезапусков (состояние <code>failed</code>) до ручного запуска.</li>
+    <li><strong>Автозапуск.</strong> Задача Планировщика <code>ZPUI</code> (ONLOGON, флаг <code>--hidden</code>) создаётся и
+      удаляется через службу; там же хранятся флаги «автозапуск включён» и «запуск свёрнутым».</li>
+    <li><strong>DNS-надзор.</strong> Пока приложение закрыто, раз в 5 минут сверяет системный DNS с включённым в
+      config.json набором (вкладка DNS) и возвращает адреса на адаптер, если их сняли вручную или сторонним ПО.
+      Решения (включение/выключение) остаются за приложением — служба только чинит факт.</li>
+  </ol>
+
+  <h3>Как устроена</h3>
+  <table>
+    <tr><th>Элемент</th><th>Как работает</th></tr>
+    <tr><td><code>SCM</code></td><td>Тип запуска — автоматический (отложенный); при сбое самой службы SCM перезапускает её через 60 секунд.</td></tr>
+    <tr><td><code>IPC</code></td><td>Named pipe <code>\\.\pipe\ZPUI-Service</code>: приложение и служба обмениваются командами —
+      <code>ping</code>, <code>status</code>, <code>app-hello</code> (запуск приложения), <code>app-exiting / app-restarting / app-updating</code>,
+      <code>restart-app</code>, <code>close-app</code>, <code>set-autostart</code>, <code>set-hidden</code>.</td></tr>
+    <tr><td><code>Состояние</code></td><td>Реестр <code>HKLM\Software\ZPUI\Service</code> — единственный источник истины:
+      статус (idle/watching/paused/failed), автозапуск, hidden, путь приложения, счётчик крашей, причина последнего краша.</td></tr>
+    <tr><td><code>Лог</code></td><td><code>logs\service.log</code> рядом с установкой, усечение при 512 КБ. <b>С 2.0.5 читается прямо в приложении:</b>
+      журнал → подвкладка «Служба» (наравне с Zapret/Приложение/Обновления/Telegram).</td></tr>
+    <tr><td><code>Жизненный цикл</code></td><td>Приложение при старте сообщает <code>app-hello</code> (pid, версия, hidden) — надзор «привязывается»;
+      при штатном выходе — <code>app-exiting</code>; на время обновления — <code>app-updating</code> (пауза 10 минут).
+      Выход без уведомления считается крашем.</td></tr>
+  </table>
+
+  <h3>Что добавлено/исправлено сегодня</h3>
+  <div class="card fix">
+    <div class="ttl">Стартовая проверка службы: «не работает — восстановить, не установлена — установить»</div>
+    Раньше приложение при старте только <em>устанавливало</em> службу, если её нет; молчащая служба оставалась как есть.
+    Теперь при каждом запуске (с правами администратора): служба отвечает на ping? Если нет —
+    <strong>остановить → перерегистрировать exe из компонентов → запустить</strong>; если версия отличается — обновить файл;
+    если и после этого тишины нет — повторный ремонт, и только потом отказ с записью в лог.
+  </div>
+  <div class="card fix">
+    <div class="ttl">Исправлен путь установки бинар службы</div>
+    При установке «с нуля» самим приложением служба регистрировалась с путём к <code>ZPUI.exe</code> вместо
+    <code>ZPUI-Service.exe</code> — такая служба работать не могла (и обновление exe пыталось перезаписать запущенное приложение).
+    Теперь регистрация всегда идёт из <code>components\service\ZPUI-Service.exe</code>, а процедура ремонта заодно лечит
+    уже испорченный путь в SCM.
+  </div>
+  <div class="card fix">
+    <div class="ttl">Журнал службы в приложении</div>
+    Подвкладка «Служба» в журнале (шкала уровней INFO/ERROR/DEBUG, фильтры, очистка) — как у остальных источников.
+    Файл службы не в общей SQLite (служба работает от SYSTEM независимо), поэтому вкладка читает <code>logs\service.log</code> напрямую.
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section>
+  <h2><span class="num">2</span>Связь с сервером: что передаём и что получаем</h2>
+
+  <p>Клиент общается с сервером управления <code>https://zpui-life.ru</code> через <strong>один endpoint —
+  <code>POST /api</code></strong> (протокол v4). Каждый запрос — XML-конверт: версия протокола, время, операция
+  и паспорт устройства (<code>device_id</code>, имя ПК, версия ZPUI, ОС, MAC-отпечаток). Ответ — тот же конверт
+  с кодом результата и данными. Соединение HTTPS; без авторизации (тумблер «Сервер» выключен) клиент
+  <strong>не отправляет наружу ничего</strong> — ни телеметрии, ни регистрации.</p>
+
+  <table>
+    <tr><th>Операция</th><th>Когда</th><th>Отправляем → / Получаем ←</th></tr>
+    <tr>
+      <td><code>device.register</code></td>
+      <td>при старте, пока не подтвердится; ретраи 15с → … → 10 мин</td>
+      <td><span class="tag out">→</span> паспорт устройства (id, имя, версия, ОС, MAC)<br>
+          <span class="tag in">←</span> подтверждение регистрации; при конфликте — <code>device_bound</code> (id занят другим железом)</td>
+    </tr>
+    <tr>
+      <td><code>telemetry.push</code></td>
+      <td>раз в 30 мин (настраивается, мин. 10); в экономном режиме — в 5 раз реже; сразу при старте и при ошибках</td>
+      <td><span class="tag out">→</span> версии, текущая стратегия, оператор (имя + ASN), результаты автотеста стратегий (доступность/пинг/скорость),
+          игровые баллы, метрики Интернетметра, накопленные ошибки, режим питания<br>
+          <span class="tag in">←</span> код принятия; сервер пишет сэмплы в рейтинги «оператор × стратегия» (ими питается умный подбор)</td>
+    </tr>
+    <tr>
+      <td><code>report.upload</code></td>
+      <td>при старте и не чаще раза в час; сразу после автоподбора; вручную кнопкой «Отправить отчёт»</td>
+      <td><span class="tag out">→</span> multipart: XML-мета + JSON-снапшот диагностического отчёта (см. раздел 3)<br>
+          <span class="tag in">←</span> сервер сохраняет снапшот как отчёт, закреплённый за устройством</td>
+    </tr>
+    <tr>
+      <td><code>updates.check</code></td>
+      <td>проверка обновлений ZPUI (только при запуске, по тумблеру)</td>
+      <td><span class="tag out">→</span> паспорт устройства<br>
+          <span class="tag in">←</span> манифест: версия, ссылка на файл (раздача через сервер), SHA-256, заметки «что нового», признак принудительного.
+          Ответ «обновлений нет» — окончательный, кэшируется; недоступен сервер — фолбэк на Яндекс.Диск</td>
+    </tr>
+    <tr>
+      <td><code>account / totp / captcha / recovery</code></td>
+      <td>вход, регистрация, 2FA, восстановление пароля</td>
+      <td><span class="tag both">⇄</span> учётные данные и коды → профиль, подписка (тариф, срок, состав, лимит устройств), токен сессии</td>
+    </tr>
+    <tr>
+      <td><code>strategies.top</code></td>
+      <td>умный подбор</td>
+      <td><span class="tag both">⇄</span> оператор → топ-стратегии с серверным баллом по статистике оператора×стратегия</td>
+    </tr>
+    <tr>
+      <td><code>domains</code>, <code>promo</code>, <code>session</code></td>
+      <td>по мере надобности</td>
+      <td><span class="tag both">⇄</span> пользовательские исключения; активация промокода; продление сессии</td>
+    </tr>
+  </table>
+
+  <div class="card ok">
+    <div class="ttl">Доступность сервера</div>
+    Фоновый опрос <code>/healthz</code> раз в 60 секунд (в экономном режиме — реже) кормит индикатор в футере;
+    любые HTTP-ответы, включая 401/5xx, считаются «сервер жив» — сетевой код ошибки появляется только при реальных
+    проблемах транспорта (таймаут, DNS, отказ соединения).
+  </div>
+
+  <h3>Приватность</h3>
+  <ul>
+    <li>Без включённой серверной функциональности наружу не уходит ничего — ни регистрация, ни телеметрия, ни отчёты.</li>
+    <li>Телеметрия и отчёты — только от зарегистрированных устройств; в payload нет истории браузинга, содержимого трафика и персональных данных (только технические метрики и имя ПК).</li>
+    <li>Диагностический отчёт вручную всегда можно посмотреть перед отправкой (панель «Отчёт»).</li>
+  </ul>
+</section>
+
+<!-- ============================================================ -->
+<section>
+  <h2><span class="num">3</span>Диагностический отчёт: что внутри и как уходит</h2>
+
+  <p>Отчёт — это JSON-снапшот состояния устройства (окно 14 дней), который собирается из SQLite-базы и живых данных.
+  Он отправляется на сервер (см. <code>report.upload</code>) и кладётся в файл, который можно сохранить локально.</p>
+
+  <div class="cols">
+    <div class="card">
+      <div class="ttl">Система и окружение</div>
+      ОС, железо (CPU/RAM), аптайм-метрики; компоненты и их версии; версия zapret и стратегия; состояние служб zapret и
+      <b>Службы ZPUI</b> (статус, краши, причина последнего); состояние DNS (адаптеры, применённые адреса); конфиг (снимок настроек).
+    </div>
+    <div class="card">
+      <div class="ttl">Сеть и качество обхода</div>
+      Оператор (ASN, имя) и история операторов; доступность по стратегиям (строки и сэмплы); ежедневная доступность ресурсов
+      (спарклайн); замеры Интернетметра (пинг/скорость); трафик по дням.
+    </div>
+    <div class="card">
+      <div class="ttl">Использование и события</div>
+      Использование приложения по дням; действия пользователя (запуск/остановка/смена стратегии/обновления); журнал ошибок;
+      история авторизаций; пользовательские исключения и skip-списки (с версией системного).
+    </div>
+    <div class="card">
+      <div class="ttl">Выводы модуля</div>
+      Автоматические «findings» — короткие диагнозы (движок не запускается, файлы повреждены, DNS не применён и т.п.),
+      а также последняя автодиагностика стартового экрана (секция <code>diagnostics</code>).
+    </div>
+  </div>
+
+  <h3>Когда отправляется</h3>
+  <ul>
+    <li>автоматически — <strong>при старте</strong> приложения и далее <strong>не чаще раза в час</strong> вместе с контуром телеметрии;</li>
+    <li><strong>сразу после завершения автоподбора</strong> — свежие результаты тестов стратегий уходят на сервер, не дожидаясь часа;</li>
+    <li><strong>вручную</strong> — кнопка «Отправить на сервер» в панели отчёта (и из журнала);</li>
+    <li>при провале восстановления движка — диагностика прикладывается к отчёту восстановления.</li>
+  </ul>
+
+  <h3>Инцидент «постоянного восстановления запрета» — разбор</h3>
+  <p>Логи установленной 2.0.5 показали: при каждом запуске служба zapret «остановлена», три попытки запуска и
+  переустановка службы не помогали, и восстановление доходило до <strong>полного сноса папки zapret и скачивания заново</strong>
+  — хотя проверка файлов была пройдена. Причина цепочки: после жёсткой остановки winws (краш/обновление поверх работающего
+  движка) старый драйвер WinDivert оставался загруженным, и свежезапущенный winws умирал на открытии драйвера; лечил это
+  только полный ре-сетап, который удаляет драйверы. Конвейер восстановления перестроен:</p>
+
+  <div class="flow">
+    Файлы целы? ──нет──&gt; <b>скачивание</b> (обычная ветка «файлы повреждены»)<br>
+    Служба остановлена → <b>Фаза 1</b>: 3 попытки запуска<br>
+    &nbsp;&nbsp;не завелась → <b>Фаза 2</b>: стоп winws + <b>сброс драйверов WinDivert</b> + переустановка службы → 3 попытки <span class="ok">← ключевой шаг теперь здесь</span><br>
+    &nbsp;&nbsp;не завелась → <b>Фаза 3</b>: полная переустановка — <b>не чаще раза в 6 часов</b> (гард от петли),<br>
+    &nbsp;&nbsp;иначе — честный провал с кодом R-000 вместо бесконечного сноса папки
+  </div>
+
+  <div class="card ok">
+    <div class="ttl">Дополнительно</div>
+    В лог восстановления добавлена <b>последняя ошибка движка</b> из журнала zapret — сразу видно, почему winws не удержался,
+    без раскопок базы. Счётчики и метка последней полной переустановки хранятся в config.json и переживают перезапуски.
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section>
+  <h2><span class="num">4</span>Что стоит доработать (дальше)</h2>
+
+  <div class="card warn">
+    <div class="ttl">1. Тумблер «Передача телеметрии» в профиле ни на что не влияет</div>
+    Телеметрия сейчас всегда включена при авторизации (продуктовое решение), а тумблер <code>TelemetryEnabled</code> остался в
+    интерфейсе как декорация. Либо убрать тумблер, либо вернуть ему силу — сейчас он вводит в заблуждение.
+  </div>
+  <div class="card warn">
+    <div class="ttl">2. Журнал службы — один файл 512 КБ без ротации</div>
+    Для диагностики «что было вчера» этого мало: файл усекается целиком. Стоит вести 2–3 ротированных файла
+    (как boot.log) или писать службу в SQLite при доступности БД.
+  </div>
+  <div class="card warn">
+    <div class="ttl">3. Отчёт молча не отправляется, если снапшот &gt; 1 МБ</div>
+    В <code>report.upload</code> поле snapshot отбрасывается при превышении лимита без записи в лог — на «тяжёлых» машинах
+    отчёт может не доходить незаметно. Нужно логировать усечение и/или сжимать снапшот (история сети — главный кандидат на вес).
+  </div>
+  <div class="card warn">
+    <div class="ttl">4. Причина смерти winws логируется только со второй фазы</div>
+    Последняя ошибка движка берётся из журнала перед фазой 2. Полезнее снимать её сразу после первой неудачной попытки фазы 1 —
+    в лог попадёт вся история, даже если фаза 2 внезапно помогла.
+  </div>
+  <div class="card warn">
+    <div class="ttl">5. IPC-канал службы без проверки вызывающего</div>
+    Любой локальный процесс может отправить службе <code>app-hello</code>/<code>close-app</code>. Стандартная практика для
+    машинных служб, но дешёвая страховка — проверка PID вызывающего на путь установки (GetNamedPipeClientProcessId + путь образа).
+  </div>
+  <div class="card warn">
+    <div class="ttl">6. Watchdog и «тихие» обновления</div>
+    Пауза надзора при обновлении — 10 минут TTL. Обновлятор на медленном канале (файлы >1 ГБ) может не уложиться — стоит
+    продлевать TTL по ходу установки, а не надеяться на фиксированный запас.
+  </div>
+
+  <h3>Сделано в этой сессии (вошло в сборку)</h3>
+  <ul>
+    <li>Стартовая проверка Службы ZPUI: не отвечает — ремонт (stop → перерегистрация → start); не установлена — установка; не та версия — обновление exe.</li>
+    <li>Фикс регистрации службы с неверным путём (ZPUI.exe → ZPUI-Service.exe).</li>
+    <li>Восстановление запрета: сброс драйверов WinDivert перенесён в фазу 2; полный ре-сетап — под гард «не чаще раза в 6 часов»; в лог — последняя ошибка движка.</li>
+    <li>Журнал: подвкладка «Служба» (чтение/фильтры/очистка <code>service.log</code>), юнит-тест парсера.</li>
+    <li>Редизайн модалок подбора (умный/игровой/ручная проверка по ПКМ): степпер фаз, прогресс-карточка, иконки-пузыри в результатах, плитки режимов; крестик скрыт, пока идёт прогон — модалку нельзя закрыть случайно.</li>
+  </ul>
+</section>
+
+<footer>
+  ZPUI · внутренний отчёт · сгенерирован 23.10.2026 · источники: internal/zsvc, internal/app (app_service, app_startup, app_recovery, app_v4, app_server, app_telemetry), internal/reports, логи установленной 2.0.5
+</footer>
+
+</div>
+</body>
+</html>

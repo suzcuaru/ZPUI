@@ -1,0 +1,213 @@
+/* ── AuthGate helpers (бывший User page v2: живы только эти классы) ── */
+.up-pill {
+  display:inline-flex; align-items:center; justify-content:center; gap:5px;
+  border:0; cursor:pointer;
+  font-family:var(--font); font-size:11px; font-weight:600;
+  padding:5px 12px; border-radius:8px; white-space:nowrap;
+  transition:filter var(--dur-fast) ease, transform var(--dur-fast) ease, opacity var(--dur-fast) ease;
+}
+.up-pill:hover:not(:disabled) { filter:brightness(1.08) saturate(1.1); }
+.up-pill:disabled { opacity:.5; cursor:default; }
+.up-pill-accent { background:var(--grad-accent); color:var(--accent-text); box-shadow:0 2px 8px var(--accent-soft); }
+.up-pill-lg { font-size:12.5px; padding:8px 18px; }
+.up-spin { animation:spin 700ms linear infinite; }
+.up-field-input {
+  display:flex; align-items:center; gap:8px;
+  background:var(--bg-inset); border:var(--border-w) solid var(--border-light);
+  border-radius:var(--radius-md); padding:0 11px;
+  color:var(--text-tertiary);
+  transition:border-color var(--dur-fast) ease, box-shadow var(--dur-fast) ease;
+}
+.up-field-input:focus-within {
+  border-color:var(--accent);
+  box-shadow:0 0 0 2px var(--accent-soft);
+  color:var(--accent);
+}
+.up-field-input input {
+  flex:1; min-width:0; border:0; outline:0; background:transparent;
+  padding:8px 0; font-size:12.5px; color:var(--text-primary); font-family:var(--font);
+}
+.up-field-input input::placeholder { color:var(--text-tertiary); opacity:1; }
+.up-field-input .ag-eye { flex-shrink:0; }
+
+/* ══════════════════════════════════════════════════
+   AuthGate — полноэкранный оверлей входа.
+   Непрозрачная канва на ВСЁ окно на любой теме (в т.ч. custom:
+   --custom-page-solid — непрозрачный цвет страницы, т.к. --bg-page при
+   фоновой картинке полупрозрачен). z-index выше сайдбара/топбара/футера
+   и модалок — сквозь гейт ничего не видно и не кликается. Карточка
+   строго по центру обеих осей (flex center), форма — шаг 8px.
+   compact — встраивание в ЛК: без фона и декора.
+   ══════════════════════════════════════════════════ */
+.ag {
+  position:fixed; inset:0; z-index:900;
+  display:flex; align-items:center; justify-content:center; padding:16px;
+  overflow:hidden;
+  background:
+    radial-gradient(560px 380px at 50% 30%, color-mix(in srgb, var(--accent) 8%, transparent), transparent 70%),
+    radial-gradient(480px 320px at 78% 75%, color-mix(in srgb, var(--accent) 6%, transparent), transparent 70%),
+    var(--custom-page-solid, var(--bg-page));
+  animation:fadeIn 160ms ease;
+  transition:opacity 200ms ease;
+}
+.ag::before {
+  content:''; position:absolute; inset:0; pointer-events:none;
+  background-image:
+    linear-gradient(var(--ag-grid, rgba(229,229,237,0.02)) 1px, transparent 1px),
+    linear-gradient(90deg, var(--ag-grid, rgba(229,229,237,0.02)) 1px, transparent 1px);
+  background-size:48px 48px;
+}
+[data-theme="light"] .ag::before { --ag-grid: rgba(20,24,34,0.03); }
+.ag::after {
+  content:'ZPUI';
+  position:absolute; left:50%; top:50%;
+  transform:translate(-50%, -50%);
+  font-size:230px; font-weight:800; letter-spacing:6px;
+  color:rgba(229,229,237,0.025);
+  white-space:nowrap; user-select:none; pointer-events:none;
+}
+[data-theme="light"] .ag::after { color:rgba(20,24,34,0.03); }
+.ag.closing { opacity:0; pointer-events:none; }
+.ag.closing .ag-card { transform:scale(0.98); }
+.ag-card {
+  position:relative; z-index:1;
+  width:100%; max-width:420px; max-height:100%;
+  overflow-y:auto;
+  background:color-mix(in srgb, var(--bg-card) 86%, transparent);
+  backdrop-filter:blur(14px) saturate(1.3);
+  -webkit-backdrop-filter:blur(14px) saturate(1.3);
+  border:var(--border-w) solid var(--border-light);
+  border-radius:var(--radius-lg); padding:32px 28px 24px;
+  box-shadow:var(--shadow-lg), 0 0 60px -18px var(--accent-soft);
+  display:flex; flex-direction:column; align-items:center; gap:12px;
+  animation:agRise 320ms var(--ease-out);
+  transition:transform 200ms ease;
+}
+.ag-card.shake { animation:agShake 300ms ease; }
+@keyframes agRise {
+  from { opacity:0; transform:translateY(14px) scale(0.98); }
+  to { opacity:1; transform:translateY(0) scale(1); }
+}
+@keyframes agShake {
+  0%, 100% { transform:translateX(0); }
+  20% { transform:translateX(-7px); }
+  40% { transform:translateX(6px); }
+  60% { transform:translateX(-4px); }
+  80% { transform:translateX(3px); }
+}
+.ag-logo {
+  font-size:28px; font-weight:800; letter-spacing:0.1em; color:var(--text-primary);
+  user-select:none; line-height:1;
+}
+.ag-logo-accent {
+  background:var(--grad-accent);
+  -webkit-background-clip:text; background-clip:text;
+  -webkit-text-fill-color:transparent; color:transparent;
+}
+.ag-subtitle { font-size:12px; color:var(--text-secondary); margin-top:-8px; }
+.ag-tabs {
+  display:flex; background:var(--bg-inset); border-radius:10px; padding:3px;
+  width:100%; margin-top:4px;
+}
+.ag-tab {
+  flex:1; border:0; background:transparent; color:var(--text-secondary);
+  font-family:var(--font); font-size:12.5px; font-weight:600;
+  padding:7px 0; border-radius:8px; cursor:pointer;
+  transition:color var(--dur-fast) ease, background var(--dur-fast) ease;
+}
+.ag-tab.active { background:var(--grad-accent); color:var(--accent-text); box-shadow:0 2px 8px var(--accent-soft); }
+.ag-form { width:100%; display:flex; flex-direction:column; gap:8px; margin-top:2px; }
+.ag-code-hint { font-size:11.5px; color:var(--text-secondary); line-height:1.45; text-align:center; }
+.ag-error {
+  display:flex; align-items:flex-start; gap:6px;
+  font-size:11.5px; color:var(--danger); line-height:1.4;
+  background:var(--danger-bg); border-radius:var(--radius-sm); padding:7px 10px;
+}
+.ag-error svg { flex-shrink:0; margin-top:1px; }
+.ag-submit { width:100%; }
+.ag-eye {
+  border:0; background:none; cursor:pointer; padding:2px;
+  color:var(--text-tertiary); display:flex; align-items:center;
+  transition:color var(--dur-fast) ease;
+}
+.ag-eye:hover { color:var(--accent); }
+.ag-note {
+  font-size:11px; color:var(--text-tertiary);
+  line-height:1.45; text-align:center;
+}
+.ag-skip {
+  border:0; background:none; cursor:pointer;
+  color:var(--text-tertiary); font-size:11.5px; padding:2px 4px;
+  transition:color var(--dur-fast) ease;
+}
+.ag-skip:hover { color:var(--accent); }
+/* «Забыли пароль?» — ссылка-кнопка под полем пароля (вход), открытие бота */
+.ag-forgot {
+  align-self:flex-end; margin-top:-4px; padding:0;
+  border:0; background:none; cursor:pointer;
+  font-family:var(--font); font-size:10.5px; font-weight:500;
+  color:var(--text-secondary);
+  transition:color var(--dur-fast) ease;
+}
+.ag-forgot:hover { color:var(--accent); }
+/* Модалка обновлений компонентов с сервера */
+.srvupd-list { display:flex; flex-direction:column; gap:10px; }
+.srvupd-sub { font-size:12px; color:var(--text-secondary); }
+.srvupd-item { display:flex; align-items:center; gap:10px; padding:9px 10px; background:var(--bg-inset); border-radius:10px; }
+.srvupd-icon { color:var(--accent); display:flex; }
+.srvupd-main { flex:1; min-width:0; }
+.srvupd-name { font-size:13px; font-weight:600; }
+.srvupd-vers { font-size:11.5px; color:var(--text-secondary); }
+.srvupd-bar { height:5px; background:var(--border-light); border-radius:3px; overflow:hidden; margin-top:6px; }
+.srvupd-bar i { display:block; height:100%; background:var(--accent); transition:width .3s; }
+.srvupd-action { display:flex; align-items:center; gap:6px; }
+.srvupd-pct { font-size:11.5px; color:var(--text-secondary); min-width:34px; text-align:right; }
+.srvupd-ok { color:var(--success); display:inline-flex; align-items:center; gap:4px; font-size:12px; }
+.srvupd-err { color:var(--danger); display:inline-flex; align-items:center; gap:4px; font-size:12px; }
+
+/* ── Баннеры с сервера ─────────────────── */
+.banner-body { display:flex; flex-direction:column; gap:12px; }
+.banner-text { font-size:12.5px; color:var(--text-secondary); line-height:1.55; white-space:pre-wrap; }
+.banner-image { max-width:100%; border-radius:var(--radius-md); border:var(--border-w) solid var(--border); }
+.banner-actions { display:flex; }
+.banner-link { font-size:12.5px; font-weight:600; color:var(--accent); text-decoration:none; }
+.banner-link:hover { text-decoration:underline; }
+
+/* ── Focus-visible ───────────────────────
+   Единый клавиатурный фокус-ринг: 2px var(--accent) с отступом.
+   Покрывает кнопки, чекбоксы, карточки-строки, ссылки.
+   Текстовые поля (input/select/textarea) в ринге НЕ нуждаются:
+   у каждого есть собственный индикатор (border-color / :focus-within
+   кольцо обёртки), а нативный outline у них выключен ниже —
+   иначе получается двойная рамка. */
+.btn:focus-visible,
+.tbar-btn:focus-visible,
+.sidebar-nav-item:focus-visible,
+.sidebar-footer-btn:focus-visible,
+.subtab:focus-visible,
+.flt2-pill:focus-visible,
+.strat-card:focus-visible,
+.toast-btn:focus-visible,
+.toast-close:focus-visible,
+.header-btn:focus-visible,
+.header-logo:focus-visible,
+.upd-btn-check:focus-visible,
+.upd-btn-apply:focus-visible,
+button:focus-visible,
+input[type="checkbox"]:focus-visible,
+input[type="radio"]:focus-visible,
+summary:focus-visible,
+[tabindex]:focus-visible,
+a:focus-visible {
+  outline: var(--border-w-strong) solid var(--accent);
+  outline-offset: 2px;
+}
+
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):focus,
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):focus-visible,
+select:focus,
+select:focus-visible,
+textarea:focus,
+textarea:focus-visible {
+  outline: none;
+}

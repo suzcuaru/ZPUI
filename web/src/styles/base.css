@@ -1,0 +1,247 @@
+/* ══════════════════════════════════════════════════
+   ZPUI — Compact Redesign (960x640 fixed)
+   ══════════════════════════════════════════════════ */
+
+/* ── Variables ─────────────────────────── */
+:root {
+  /* Толщина рамок: --border-w — обычные контуры контролов/плиток,
+     --border-w-strong — акцентные индикаторы (активные вкладки, selected,
+     focus-ринг). Никаких случайных 2px/3px вразнобой. */
+  --border-w: 2px;
+  --border-w-strong: 3px;
+  --bg-page: #e9edf3;
+  /* Поверхности — мягкий off-white: чистый белый на больших площадях
+     давит на глаза (решение пользователя). Иерархия: страница темнее
+     карточек, inset темнее страницы. */
+  --bg-section: #f3f5f9;
+  --bg-card: #f5f7fa;
+  --bg-hover: rgba(0,0,0,0.04);
+  --bg-active: rgba(43,103,212,0.08);
+  --bg-inset: #e7ebf1;
+  --border: #dde1e9;
+  --border-light: #e7eaf0;
+  --text-primary: #1a1a22;
+  --text-secondary: #5b606e;
+  --text-tertiary: #6b7080;
+  --accent: #2b67d4;
+  --accent-hover: #2258c2;
+  --accent-soft: rgba(43,103,212,0.10);
+  --accent-text: #ffffff;
+  --success: #127544;
+  --success-bg: rgba(18,117,68,0.10);
+  --danger: #c02b2b;
+  --danger-bg: rgba(192,43,43,0.08);
+  --danger-strong: #c02b2b;
+  --warning: #8f6400;
+  --warning-bg: rgba(255,184,0,0.12);
+  --warning-bright: #ffb800;
+  --violet: #9b6df2;
+  --shadow-sm: 0 1px 3px rgba(16,20,30,0.07);
+  --shadow-md: 0 4px 12px rgba(16,20,30,0.10);
+  --shadow-lg: 0 8px 24px rgba(16,20,30,0.13);
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --header-h: 44px;
+  --sidebar-w: 48px;
+  --footer-h: 26px;
+  --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Cascadia Code', 'Consolas', monospace;
+  --sidebar-icon: 20px;
+  --tooltip-bg: #2a2a35;
+  --tooltip-text: #f0f0f5;
+  --grad-accent: linear-gradient(135deg, var(--accent), #9b6df2);
+  --grad-accent-hover: linear-gradient(135deg, var(--accent-hover), #8a5cf0);
+  --toast-scrim: rgba(255,255,255,0.04);
+
+  /* ── Motion tokens ── */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  /* Семейство кривых «дорогого» входа: волна вкладок, модалки, drawer */
+  --ease-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur-fast: 120ms;
+  --dur-base: 180ms;
+  --dur-slow: 240ms;
+}
+
+[data-theme="dark"] body { text-shadow: 0 1px 2px rgba(0,0,0,0.22); }
+[data-theme="dark"] {
+  --bg-page: #141418;
+  --bg-section: #1c1c24;
+  --bg-card: #20202a;
+  --bg-hover: rgba(255,255,255,0.06);
+  --bg-active: rgba(107,163,255,0.10);
+  --bg-inset: #16161e;
+  --border: #2e2e38;
+  --border-light: #262630;
+  --text-primary: #e5e5ed;
+  --text-secondary: #9ea3b3;
+  --text-tertiary: #8a8fa0;
+  --accent: #6ba3ff;
+  --accent-hover: #82b3ff;
+  --accent-soft: rgba(107,163,255,0.12);
+  --accent-text: #ffffff;
+  --success: #34d058;
+  --success-bg: rgba(52,208,88,0.12);
+  --danger: #f55e5e;
+  --danger-bg: rgba(245,94,94,0.10);
+  --danger-strong: #c42b1c;
+  --warning: #ffcc33;
+  --warning-bg: rgba(255,204,51,0.12);
+  --shadow-sm: 0 1px 4px rgba(0,0,0,0.28);
+  --shadow-md: 0 4px 14px rgba(0,0,0,0.35);
+  --shadow-lg: 0 8px 26px rgba(0,0,0,0.4);
+  --tooltip-bg: #3a3a48;
+  --tooltip-text: #f0f0f5;
+  --toast-scrim: rgba(0,0,0,0.26);
+}
+
+/* ── Reset ─────────────────────────────── */
+*,*::before,*::after { margin:0; padding:0; box-sizing:border-box; }
+html { height:100%; -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; }
+body {
+  background:var(--bg-page); height:100vh; overflow:hidden;
+  font-family:var(--font); font-size:calc(12.5px * var(--fs-scale)); line-height:1.45;
+  color:var(--text-primary); letter-spacing:var(--ls-adj);
+  text-shadow: 0 1px 1px rgba(0,0,0,0.08);
+  user-select:none; -webkit-user-select:none;
+}
+input, textarea { user-select:text; -webkit-user-select:text; }
+.mono, .selectable { user-select:text; -webkit-user-select:text; }
+::-webkit-scrollbar { width:4px; height:4px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
+::-webkit-scrollbar-thumb:hover { background:var(--text-tertiary); }
+
+/* ── Layout ────────────────────────────── */
+/* Размер компенсируется делением на --ui-k (zoom оболочки .stand-app, stand.css):
+   элемент тот же (.app.stand-app), значения совпадают в обоих файлах. */
+.app {
+  display:flex; width:calc(100vw / var(--ui-k, 1)); height:calc(100vh / var(--ui-k, 1)); overflow:hidden;
+  background:var(--bg-page);
+}
+.app-body {
+  flex:1; display:flex; flex-direction:column; min-width:0; overflow:hidden;
+}
+.main-area {
+  position:relative;
+  flex:1; display:flex; flex-direction:column; min-height:0; overflow:hidden;
+  padding:10px 14px; gap:8px;
+}
+
+/* ── Page title ────────────────────────── */
+.page-title {
+  font-size:15px; font-weight:600; color:var(--text-primary);
+  flex-shrink:0; letter-spacing:-0.2px;
+}
+
+/* ── Тултипы ─────────────────────────────
+   Подсказки рисует TooltipLayer (portal в body, fixed, z-index выше
+   модалок и AuthGate, флип у краёв). На триггерах остаётся только
+   атрибут data-tooltip — CSS-псевдоэлементы не используются. */
+/* ── Тултип-слой (.ttl): portal поверх всех оверлеев ── */
+.ttl {
+  position:fixed; z-index:3000; left:0; top:0;
+  max-width:min(300px, 84vw);
+  background:var(--tooltip-bg); color:var(--tooltip-text);
+  padding:7px 12px; border-radius:8px;
+  font-family:var(--font); font-size:10.5px; font-weight:500; line-height:1.45;
+  letter-spacing:0.15px; white-space:pre-line; text-align:left;
+  overflow-wrap:anywhere;
+  opacity:0; pointer-events:none;
+  transition:opacity 0.18s ease;
+  box-shadow:0 4px 14px rgba(0,0,0,0.35), 0 1px 3px rgba(0,0,0,0.2);
+  border:var(--border-w) solid rgba(255,255,255,0.06);
+}
+.ttl.show { opacity:1; }
+:is(body.power-save, body.render-lite) .ttl { transition:none; }
+/* ── Anti-jump: классические скроллбары занимают место — появление/исчезание
+   полосы при загрузке данных или смене вкладок сдвигает контент. Резервируем
+   место под полосу во всех скролл-областях: ширина стабильна всегда.
+   (Псевдонимы .zp-tab-body .strat-grid/.strat-grid и дубль .us-list в stand.css
+   покрывать не нужно — правило ниже по классу применяется к тем же элементам.) ── */
+.modal-body,
+ .release-body,
+ .lg-body,
+ .dash-fail-list,
+ .lists-sys-section,
+
+.pp-devices,
+ .upd-notes,
+ .rc-deep-list,
+ .strat-grid,
+
+.avail-fail-scroll,
+ .mon-devices,
+ .diag2-list,
+ .set-columns > .section,
+
+.set-side-col > .section,
+ .zw-strategies,
+ .docs-rail,
+ .docs-content,
+
+.lg-table-body,
+ .rcv-fail-pre,
+ .asm2-live-list,
+
+.te-tab-scroll,
+ .dns-panel-list {
+  scrollbar-gutter: stable;
+}
+
+.page-subtitle {
+  font-size:11px; color:var(--text-tertiary); margin-top:-6px;
+}
+/* Вкладки — мгновенное переключение, БЕЗ анимации (фидбек 04.11, третий
+   прогон: кроссфейд 03.11 мерцал, fade-in 200ms читался как «картинка
+   сначала пропадает, потом появляется» — переход обязан отзываться
+   моментально). Класс оставлен для z-index-наслоения и правил reduced-motion/
+   power-save; анимации у него больше нет. */
+.page-fade {
+  position:relative; z-index:2;
+}
+/* keyframes живы для карточки авторизации (profile.css .ag-card) — сама
+   вкладка их больше не использует. */
+@keyframes pageIn {
+  from{opacity:0}
+  to{opacity:1}
+}
+
+/* Keep-mounted вкладки: каждая посещённая страница живёт в .page-host.
+   Активная — обычный поток; прочие — display:none (опросы/тики гейтит
+   PageVisibleProvider). Анимации перехода убраны по фидбеку 04.11
+   (кроссфейд мерцал, fade-in читался как «пропадает → появляется»). */
+/* .page-host — флекс-колонка, заполняющая .main-area: корни страниц
+   (db-page/zp-page/settings-page — flex:1 или height:100%) рассчитывают на
+   прямого флекс-родителя, как до keep-mounted. Иначе (display:block) flex:1
+   страницы ничего не даёт: контент сжимается к верху и «прижатые книзу»
+   элементы (полоса фильтров Запрета) липнут к контенту, а не к низу. */
+.page-host { position:relative; z-index:2; min-height:0; flex:1; display:flex; flex-direction:column; }
+.page-host-hidden { display:none; }
+
+/* «Волна» каскада детей .stagger на страницах выключена: на фоне кроссфейда
+   каскады с задержками читались как дёргание. Контент, появляющийся позже
+   (скелетоны → данные), возникает сразу — спокойнее и без повторной волны,
+   когда классы перехода снимаются. */
+.page-fade .stagger > * { animation:none; }
+
+/* Смена контента вкладок (подвкладки профиля, вкладки настроек): короткий
+   fade+slide 5px. Только opacity/translateY, без blur — на этой машине
+   blur в переходах лагает; transform — только на мелких поверхностях
+   (контент вкладки), крупные страницы по-прежнему кроссфейдятся чистым
+   opacity (см. .page-fade). */
+.tab-fade { animation:tabIn var(--dur-base) var(--ease-soft) both; }
+/* Только opacity: slide на тяжёлых телах вкладок (списки стратегий/листов)
+   читался как дёрганье при открытии (репорт 13.11.2026). */
+@keyframes tabIn {
+  from { opacity:0; }
+  to { opacity:1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-fade, .ttl, .ag, .ag-card { animation:none !important; transition:none !important; }
+  .tab-fade, .pf-tabpane { animation:none !important; }
+  .skeleton-line { animation:none !important; }
+}

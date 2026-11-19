@@ -1,0 +1,785 @@
+/* ══════════════════════════════════════════════════
+   ZPUI UI Stand — новая оболочка (mockups/app-ui)
+   Тайтлбар + сайдбар + статус-бар = скруглённая
+   «оболочка», контент — врезка-карта с радиусом 10px.
+   ══════════════════════════════════════════════════ */
+
+/* ── Канва браузера (фон вокруг «окна») ── */
+:root {
+  --shell-radius: 12px;
+  --content-radius: 12px;
+  --tbar-h: 34px;
+  --canvas: #0c0c10;
+  /* Типографика темы: --fs-scale — множитель темы к базовым кеглям (0.9…1.15),
+     --fw-heading — вес заголовков, --ls-adj — межбуквенный интервал.
+     Кастомная тема переопределяет их через style-тег :root[data-theme="custom"]. */
+  --fs-scale: 1;
+  --fw-heading: 600;
+  --ls-adj: 0px;
+  /* Шкала типографики стенда (Дизайн-и-типографика §3.2):
+     xs — метаданные/бейджи, sm — вторичный текст, md — основной текст/кнопки,
+     lg — заголовки секций и акцентные значения. */
+  --fs-xs: calc(11px * var(--fs-scale));
+  --fs-sm: calc(12px * var(--fs-scale));
+  --fs-md: calc(13px * var(--fs-scale));
+  --fs-lg: calc(14.5px * var(--fs-scale));
+  /* Шкала отступов (Дизайн-и-типографика §4.1) */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  /* Фиксированный масштаб интерфейса: +5% к базовым размерам (элементы и текст).
+     Бывшая настройка ui_scale удалена — теперь константа. Зумуется оболочка
+     .stand-app (не documentElement): модалки порталится внутрь .stand-win и
+     растут вместе с ней, координатная математика тултипов и контекстных меню
+     (физические координаты) не плывёт. Вьюпорт-размеры самой оболочки
+     компенсируются делением на --ui-k; zoom-блоки медиа-запросов ниже
+     умножают свои коэффициенты на неё. */
+  --ui-k: 1.05;
+}
+[data-theme="light"] { --canvas: #dfe2e8; }
+
+html, body { height: 100%; }
+
+/* ── Сцена: окно растягивается под окно браузера (адаптив 800×600 … 1920×1080+) ── */
+/* Зум на оболочке, размер — с компенсацией (100vh / zoom), чтобы окно
+   ровно заполняло вьюпорт без полос и без горизонтального выезда. */
+.stand-app {
+  zoom: var(--ui-k);
+  width: calc(100vw / var(--ui-k));
+  height: calc(100vh / var(--ui-k));
+  min-height: calc(636px / var(--ui-k));
+  min-width: calc(900px / var(--ui-k));
+  display: flex; flex-direction: column;
+  background: var(--bg-page);
+  position: relative;
+}
+/* Меньше 900×640 не сжимаем: нативное окно держит минимум 900×650, layout не ломается.
+   Скролл документа выключен (окно фиксировано — иначе при тачпад-скролле
+   уезжает весь интерфейс вместе с тайтлбаром); переполнившая страница
+   скроллит внутри себя. Тело-скролл остаётся только во вьюпортах меньше минимальных. */
+@media (max-width: 899px), (max-height: 649px) {
+  html body { overflow:auto !important; height:auto !important; min-height:100vh; }
+}
+
+/* ── Оболочка окна ── */
+.stand-win {
+  position: relative;
+  width: 100%; height: 100%;
+  min-width: calc(900px / var(--ui-k)); min-height: calc(636px / var(--ui-k));
+  display: flex; flex-direction: column;
+  background: var(--bg-page);
+  overflow: hidden;
+}
+
+/* ── Крупные экраны (развёрнутое окно): интерфейс компактнее ── */
+@media (min-width: 1300px) and (min-height: 800px) {
+  .stand-win { zoom: 0.85; }
+}
+@media (min-width: 1700px) and (min-height: 1000px) {
+  .stand-win { zoom: 0.78; }
+}
+
+/* ── Тайтлбар 34px ── */
+.tbar {
+  height: var(--tbar-h); flex: none;
+  display: flex; align-items: center; gap: 10px;
+  padding: 0 0 0 14px;
+  background: var(--bg-page);
+  user-select: none;
+}
+.tbar-logo {
+  text-shadow: none;
+  font-size: 17px; font-weight: 800; letter-spacing: 1px;
+  line-height: var(--tbar-h); display: flex; align-items: center;
+  background: var(--grad-accent);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+}
+.tbar-update {
+  margin-left: 10px;
+  display: flex; align-items: center; gap: 6px;
+  height: 28px; padding: 0 10px;
+  border: none;
+  border-radius: 999px;
+  background: transparent; color: var(--success);
+  font-size: 11px; cursor: pointer;
+  transition: background var(--dur-fast) ease, transform var(--dur-fast) ease;
+}
+.tbar-update:hover { background: var(--bg-hover); }
+.tbar-update:active { transform: scale(0.96); }
+.tbar-update-ver { font-weight: 700; }
+.tbar-update-label { font-weight: 600; }
+.tbar-update:hover .tbar-update-label { text-decoration: underline; }
+.tbar-right { margin-left: auto; display: flex; align-items: center; gap: 2px; height: 100%; }
+.tbar-ver { font-size: 10px; color: var(--text-tertiary); margin-right: 8px; }
+.tbar-sep { width: 1px; height: 14px; background: var(--border); margin: 0 6px; }
+.tbar-btn {
+  width: 34px; height: 24px; flex: none;
+  display: flex; align-items: center; justify-content: center;
+  border: none; border-radius: 6px;
+  background: transparent; color: var(--text-secondary);
+  cursor: pointer;
+  transition: background var(--dur-fast) ease, color var(--dur-fast) ease, transform var(--dur-fast) ease;
+}
+.tbar-btn:hover { background: var(--bg-hover); color: var(--text-primary); }
+.tbar-btn:active { transform: scale(0.96); }
+.tbar-caps { display: flex; align-items: stretch; height: 100%; }
+.tbar-cap {
+  width: 46px; flex: none;
+  display: flex; align-items: center; justify-content: center;
+  border: none; border-radius: var(--radius-sm);
+  background: transparent; color: var(--text-secondary);
+  cursor: pointer;
+  transition: background var(--dur-fast) ease, color var(--dur-fast) ease;
+}
+.tbar-cap:hover { background: var(--bg-hover); color: var(--text-primary); }
+.tbar-cap:active { background: var(--bg-active); color: var(--text-primary); }
+/* Кнопка закрытия: фон НЕ заливается красным (максимум лёгкий нейтральный
+   hover) — меняется ТОЛЬКО цвет глифа: иконка → --danger, ярче на active. */
+.tbar-cap-close:hover { background: var(--bg-hover); color: var(--danger); }
+.tbar-cap-close:active { background: var(--bg-active); color: var(--danger); }
+
+/* ── Средняя часть: сайдбар (оболочка) + контент-врезка ── */
+.stand-frame {
+  flex: 1; min-height: 0;
+  display: flex;
+  background: var(--bg-page);
+}
+
+/* Сайдбар — часть бесшовной оболочки, вплотную к контенту */
+.stand-app .sidebar {
+  height: auto;
+  background: var(--bg-page);
+  border-right: none;
+  align-items: center;
+}
+.stand-app .sidebar .sidebar-nav { padding: 0; }
+.stand-app .sidebar .sidebar-nav-item,
+.stand-app .sidebar .sidebar-footer-btn { margin-right: auto; }
+/* Свёрнутый режим: оптическая центровка иконок. Сдвигаем колонку вправо
+   так, чтобы зазор «край окна ↔ иконка» сравнялся с зазором «иконка ↔
+   карточки контента» (карточки начинаются с ~58px: 10px паддинг main-area
+   на фоне --bg-page). padding-left 10 → центр иконки на ~29 из 58. */
+@media (max-width: 1299px) {
+  .stand-app .sidebar { padding-left: 10px; }
+}
+
+/* Контент — вплотную к сайдбару/тайтлбару/футеру (бесшовная оболочка) */
+.stand-main {
+  flex: 1; min-width: 0; min-height: 0;
+  display: flex; flex-direction: column;
+}
+.stand-content {
+  position: relative;
+  flex: 1; min-width: 0; min-height: 0;
+  /* Перехлёст 1px с тайтлбаром/сайдбаром: при дробном zoom (34×1.25=42.5)
+     на стыке просвечивает нетонированная волосинная линия фона. */
+  margin: -1px 0 0 -1px;
+  display: flex; flex-direction: column;
+  background: var(--bg-page);
+  border: none;
+  overflow: hidden;
+}
+.stand-content .main-area { padding: 10px; }
+
+/* ── Статус-бар (часть оболочки, стиль чипов; начинается правее сайдбара).
+   Высота 44px: чипы 18px центрируются — одинаковые поля сверху/снизу
+   (визуальный отступ от панелей вкладок и от нижнего края окна равный).
+   Padding снизу приподнимает чипы на пару px — оптический центр полосы
+   «панели ↔ низ экрана». ── */
+.stand-app .footer {
+  height: 44px; flex: none;
+  /* Перехлёст 1px с контентом — закрывает дробный шов на стыке */
+  margin-top: -1px;
+  padding-bottom: 5px;
+  background: var(--bg-page);
+}
+/* Кастомная тема: разделители иконок (тайтлбар, сайдбар) — светлые, в цвет
+   иконок: --border из темы на тёмных обоях читается чёрной полоской. */
+:root[data-theme="custom"] .tbar-sep,
+:root[data-theme="custom"] .sidebar-divider {
+  background: color-mix(in srgb, var(--text-secondary) 60%, transparent);
+}
+/* Долгое зажатие чипа не должно запускать нативный drag/выделение
+   («дрожание» и псевдоперемещение — артефакт браузера, не фича). */
+.stand-app .footer .ft-chip { user-select: none; -webkit-user-drag: none; }
+
+/* Hover-тени для карточек/панелей страниц */
+.stand-content .card,
+.stand-content .svc-card,
+.stand-content .dash-card {
+  transition: box-shadow 0.18s ease, border-color 0.18s ease;
+}
+.stand-content .card:hover,
+.stand-content .svc-card:hover,
+.stand-content .dash-card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+/* AuthGate (фирменная канва с сеткой и водяным знаком) перенесена в
+   index.css — гейт рендерится вне .stand-app и должен стилизоваться
+   независимо от оболочки. */
+
+/* Startup-оверлей на той же канве */
+.stand-app-root .startup-overlay,
+.startup-overlay { background: var(--canvas); }
+
+/* ── Светлая тема: канва и тени согласованы ── */
+[data-theme="light"] .stand-app {
+  background:
+    radial-gradient(720px 480px at 50% 28%, color-mix(in srgb, var(--accent) 7%, transparent), transparent 70%),
+    radial-gradient(560px 380px at 78% 78%, rgba(155,109,242,0.05), transparent 70%),
+    var(--canvas);
+}
+
+/* ── Скроллбары чуть мягче в контентной карте ── */
+.stand-content ::-webkit-scrollbar { width: 6px; height: 6px; }
+.stand-content ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+.stand-content ::-webkit-scrollbar-thumb:hover { background: var(--text-tertiary); }
+
+/* ══════════════════════════════════════════════════
+   Typography scale — адаптивный масштаб типографики
+   и отступов по брейкпоинтам (см. Дизайн-заметки):
+   базовый кегль и токены растут на 1280+/1700+,
+   ужимаются на узких окнах.
+   ══════════════════════════════════════════════════ */
+
+/* ── База (900 … 1279) — как в продукте 960×640: сетка 4 колонок
+       работает от минимальных 900px, стек не нужен ── */
+@media (min-width: 1280px) {
+  .stand-content .us-cols { grid-template-columns: repeat(2, minmax(0,1fr)) minmax(300px,340px); grid-template-rows: repeat(5, minmax(0,1fr)); gap: 14px; }
+}
+@media (min-width: 1700px) {
+  .stand-content .us-cols { grid-template-columns: repeat(2, minmax(0,1fr)) minmax(320px,380px); grid-template-rows: repeat(5, minmax(0,1fr)); gap: 16px; }
+}
+
+/* ── Широкие окна: 1280+ — масштаб ВСЕЙ оболочки (zoom) ──
+   zoom применён к .stand-app: тайтлбар, статус-бар, правая панель и
+   контент растут вместе. Высота компенсируется (100vh / zoom),
+   чтобы окно ровно заполняло вьюпорт без полос по краям. */
+@media (min-width: 1280px) and (min-height: 800px) {
+  .stand-app { zoom: calc(1.25 * var(--ui-k)); width: calc(100vw / (1.25 * var(--ui-k))); height: calc(100vh / (1.25 * var(--ui-k))); }
+}
+/* 1080p: крупный удобный UI (база ~17.5px, кнопки ~37px) */
+@media (min-width: 1600px) and (min-height: 900px) {
+  .stand-app { zoom: calc(1.4 * var(--ui-k)); width: calc(100vw / (1.4 * var(--ui-k))); height: calc(100vh / (1.4 * var(--ui-k))); }
+}
+/* 2K: всё целиком крупнее (база ~20px, метрики ~28px, кнопки ~42px) */
+@media (min-width: 2200px) and (min-height: 1000px) {
+  .stand-app { zoom: calc(1.6 * var(--ui-k)); width: calc(100vw / (1.6 * var(--ui-k))); height: calc(100vh / (1.6 * var(--ui-k))); }
+}
+/* 4K: оболочка и панели масштабируются пропорционально (база ~22px, кнопки ~46px) */
+@media (min-width: 3000px), (min-height: 2000px) {
+  .stand-app { zoom: calc(1.8 * var(--ui-k)); width: calc(100vw / (1.8 * var(--ui-k))); height: calc(100vh / (1.8 * var(--ui-k))); --tbar-h: 32px; }
+}
+
+/* ── Узкие окна: 900–959 (минимальная «продуктовая» ширина) — компактнее.
+       Ниже 900 layout не сжимается (страница браузера скроллится). ── */
+@media (max-width: 959px) {
+  .stand-app { --fs-xs: calc(10.5px * var(--fs-scale)); --fs-sm: calc(11.5px * var(--fs-scale)); --fs-md: calc(12.5px * var(--fs-scale)); --fs-lg: calc(13.5px * var(--fs-scale)); }
+  .stand-content { font-size: var(--fs-sm); }
+  .stand-content .main-area { padding: var(--sp-2) 10px; gap: 6px; }
+  .stand-content .section,
+  .stand-content .card-section { padding: var(--sp-2) 10px; }
+  .stand-content .svc-card { padding: 10px var(--sp-3); }
+  .stand-content .svc-card-icon { width: 38px; height: 38px; }
+  .stand-content .svc-card-name { font-size: var(--fs-md); }
+  .stand-content .mon-stat-val { font-size: 14px; }
+  .stand-content .avail-chip-val { font-size: var(--fs-md); }
+}
+
+/* ── Reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+  .stand-content .card:hover, .stand-content .svc-card:hover,
+  .stand-content .up-panel:hover, .stand-content .dash-card:hover { box-shadow: none; }
+}
+
+/* ══════════════════════════════════════════════════
+   Вкладка «Пользователь» — аккаунт по инвайт-коду:
+   подписка и устройства (по отпечатку системы) в аккаунте
+   ══════════════════════════════════════════════════ */
+
+.us { display:flex; flex-direction:column; gap:12px; min-height:0; flex:1; }
+
+/* Ошибка загрузки профиля: компактная строка с кнопкой «Повторить» */
+.us-error {
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  padding:8px 12px; border:var(--border-w) solid var(--danger); border-radius:var(--radius-md);
+  background:var(--danger-bg); color:var(--danger); font-size:12px; font-weight:500;
+  flex:none;
+}
+
+/* Верхний ряд KPI-карточек — в стиле сервис-карточек дашборда (svc-card):
+   иконка в скруглённом квадрате, заголовок, крупное значение, статус-строка. */
+.us-metric {
+  background:var(--bg-card); border:none; border-radius:var(--radius-lg);
+  padding:12px; min-width:0; box-shadow:var(--shadow-sm);
+  display:flex; align-items:center; gap:12px;
+  transition:box-shadow .18s ease, border-color .18s ease;
+}
+.us-metric:hover { box-shadow:var(--shadow-md); }
+.us-metric-icon {
+  width:42px; height:42px; border-radius:var(--radius-md); flex:none;
+  display:flex; align-items:center; justify-content:center;
+  background:var(--bg-inset); color:var(--text-tertiary);
+  transition:all 180ms ease;
+}
+.us-metric-icon.on { background:var(--success-bg); color:var(--success); }
+.us-metric-icon svg { width:22px; height:22px; }
+.us-metric-body { display:flex; flex-direction:column; gap:2px; flex:1; min-width:0; }
+.us-metric-label { font-size:11px; color:var(--text-secondary); text-transform:uppercase; letter-spacing:.4px; }
+.us-metric-value { font-size:17px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.us-dim { font-size:12px; color:var(--text-tertiary); font-weight:400; }
+.us-metric-sub { font-size:11px; color:var(--text-secondary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+.us-dot {
+  display:inline-block; width:7px; height:7px; border-radius:50%;
+  background:var(--success); flex:none; box-shadow:0 0 4px color-mix(in srgb, var(--success) 50%, transparent);
+}
+.us-dot.warn { background:var(--warning); box-shadow:0 0 4px color-mix(in srgb, var(--warning) 50%, transparent); }
+
+/* Рабочая сетка */
+.us-cols {
+  flex:1; min-height:0;
+  display:grid; gap:12px;
+  grid-template-columns: repeat(2, minmax(0,1fr)) minmax(280px,340px);
+  grid-template-rows: repeat(5, minmax(0,1fr));
+  /* Контейнер для cqw у .us-metric padding/gap: свои cqw у контейнера
+     резолвились бы по вьюпорту (всегда max) — считаем от ширины сетки. */
+  container-type: inline-size;
+  grid-template-areas:
+    'k1   k2   prof'
+    'dev  dev  prof'
+    'dev  dev  prof'
+    'dev  dev  this'
+    'dev  dev  this';
+}
+.us-kpi1 { grid-area:k1; }
+.us-kpi2 { grid-area:k2; }
+.us-prof { grid-area:prof; }
+.us-dev.us-devrows { grid-area:dev; }
+.us-this { grid-area:this; }
+.us-cols > .us-tile, .us-cols > .us-panel { min-height:0; overflow:hidden; }
+.us-cols > .us-tile.us-profile { overflow-y:auto; }
+.us-cols > .us-this { overflow-y:auto; display:flex; flex-direction:column; }
+.us-cols > .us-dev { display:flex; flex-direction:column; }
+.us-cols > .us-dev .us-panel-head { flex:none; justify-content:flex-start; }
+.us-cols > .us-dev .us-list { flex:1; overflow-y:auto; justify-content:flex-start; }
+.us-cols > .us-dev .us-list > .us-dev { width:100%; align-self:stretch; }
+.us-cols > .us-dev .us-empty { margin:0; }
+.us-cols > .us-this .us-dev-name { font-size:15px; }
+.us-cols > .us-this .us-dev-name, .us-cols > .us-this .us-metric-sub { margin-bottom:4px; }
+.us-cols > .us-panel { min-height:0; }
+.us-panel, .us-tile {
+  background:var(--bg-card); border:none; border-radius:var(--radius-md);
+  padding:12px 14px; min-height:0; box-shadow:var(--shadow-sm); transition:box-shadow .18s ease;
+}
+.us-panel:hover, .us-tile:hover { box-shadow:var(--shadow-md); }
+
+.us-panel-title, .us-tile-title { font-size:13px; font-weight:var(--fw-heading); margin-bottom:8px; }
+.us-tile-title { font-size:11px; color:var(--text-secondary); text-transform:uppercase; letter-spacing:.5px; }
+.us-panel-title span { color:var(--text-tertiary); font-weight:400; }
+.us-panel-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:8px; }
+.us-panel-head .us-panel-title { margin-bottom:0; }
+
+/* Чип-статус (компактная телеметрия: «отправлена только что») */
+.us-chip {
+  display:inline-flex; align-items:center; gap:6px; align-self:flex-start;
+  font-size:10.5px; color:var(--text-secondary);
+  background:var(--bg-inset);
+  border-radius:var(--radius-sm); padding:3px 8px; margin-top:8px;
+}
+
+.us-list { display:flex; flex-direction:column; gap:var(--sp-2); flex:1; min-height:0; overflow-y:auto; padding-right:4px; scrollbar-width:thin; min-width:0; }
+.us-list .us-dev .btn { flex-shrink:0; }
+.us-list .us-dev {
+  display:flex; align-items:center; gap:8px; padding:8px 10px; flex:none; min-width:0;
+  background:var(--bg-inset); border-radius:var(--radius-sm);
+}
+.us-dev-info { flex:1; min-width:0; }
+.us-dev-name { font-size:12px; font-weight:600; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.us-dev-meta { font-size:11px; color:var(--text-secondary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.us-empty { font-size:11.5px; color:var(--text-tertiary); padding:10px 2px; }
+.us-limit { cursor:help; }
+
+/* Бейджи */
+.us-badge {
+  display:inline-block; font-size:10px; font-weight:600; padding:2px 8px;
+  border-radius:var(--radius-sm); border:var(--border-w) solid; flex-shrink:0;
+}
+.us-badge.accent { color:var(--accent); border-color:color-mix(in srgb, var(--accent) 40%, transparent); background:var(--accent-soft); }
+.us-badge.ok { color:var(--success); border-color:color-mix(in srgb, var(--success) 40%, transparent); background:var(--success-bg); }
+.us-badge.warn { color:var(--warning); border-color:color-mix(in srgb, var(--warning) 50%, transparent); background:var(--warning-bg); }
+.us-badge.revoked { color:var(--danger); border-color:color-mix(in srgb, var(--danger) 40%, transparent); background:var(--danger-bg); }
+
+/* Профиль */
+.us-pf-head { display:flex; gap:10px; align-items:center; margin-bottom:6px; }
+.us-avatar {
+  width:34px; height:34px; border-radius:var(--radius-sm); background:var(--grad-accent);
+  display:flex; align-items:center; justify-content:center; font-size:15px; font-weight:700; color:#fff; flex:none;
+}
+.us-pf-name { font-size:13px; font-weight:600; display:flex; align-items:center; gap:8px; flex-wrap:wrap; min-width:0; }
+.us-mono { font-family:var(--font-mono); }
+.us-kv {
+  display:flex; justify-content:space-between; align-items:center; gap:10px; font-size:12px;
+  padding:4px 0; border-bottom:var(--border-w) solid var(--border-light);
+}
+.us-kv:last-of-type { border-bottom:none; }
+.us-kv .k { color:var(--text-secondary); flex:none; }
+.us-kv .v { min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-align:right; }
+.us-pf-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
+.us-pf-actions .btn { flex:1; min-width:0; }
+/* Кнопки «Продлить»/«Выйти» — прижаты к низу панели профиля */
+.us-cols > .us-tile.us-profile { display:flex; flex-direction:column; }
+.us-profile .us-pf-actions { margin-top:auto; padding-top:10px; }
+
+/* «Продлить» — мягкий warning-акцент (появляется только при исходящей подписке) */
+.us .btn-warn { background:var(--warning-bg); border-color:color-mix(in srgb, var(--warning) 45%, transparent); color:var(--warning); font-weight:600; }
+.us .btn-warn:hover { background:color-mix(in srgb, var(--warning) 20%, transparent); border-color:var(--warning); color:var(--warning); box-shadow:var(--shadow-sm); }
+
+/* Блок подписки внутри профиля */
+.us-sub-block { margin-top:10px; padding-top:10px; border-top:var(--border-w) solid var(--border-light); }
+.us-sub-title {
+  font-size:11px; font-weight:600; color:var(--text-secondary);
+  text-transform:uppercase; letter-spacing:.5px; margin-bottom:4px;
+}
+
+/* Панель «Это устройство»: подсказка про отпечаток + чип телеметрии */
+.us-this-hint { font-size:10.5px; color:var(--text-tertiary); line-height:1.45; margin:2px 0 4px; }
+.us-cols > .us-this .us-chip { margin-top:auto; }
+.us-cols > .us-this .us-kv:last-of-type { margin-bottom:8px; }
+
+/* ── Вход / Регистрация (состояние «не зарегистрирован») ──
+   Вся вкладка, без карточки-панели: слева брендинг, справа форма;
+   на узких окнах остаётся одна форма по центру. Своего фона у вкладки
+   нет — просвечивает канва/картинка кастомной темы, как у остальных
+   вкладок. */
+.us-auth {
+  flex:1; min-height:0;
+  display:grid; grid-template-columns:repeat(2, minmax(0,1fr));
+  align-items:center; gap:clamp(24px, 5vw, 96px);
+  padding:16px clamp(20px, 6vw, 96px);
+}
+.us-auth-brand {
+  position:relative; z-index:1;
+  justify-self:end; max-width:420px; min-width:0;
+  display:flex; flex-direction:column; gap:8px;
+}
+.us-auth-logo {
+  text-shadow: none;
+  font-size:36px; font-weight:800; letter-spacing:.08em; line-height:1;
+  user-select:none;
+  /* Полный градиент по всей надписи — как логотип в тайтлбаре */
+  background:var(--grad-accent);
+  -webkit-background-clip:text; background-clip:text;
+  -webkit-text-fill-color:transparent; color:transparent;
+}
+.us-auth-tagline { font-size:13px; color:var(--text-secondary); line-height:1.5; }
+.us-auth-points { list-style:none; margin:10px 0 0; padding:0; display:flex; flex-direction:column; gap:10px; }
+.us-auth-points li { display:flex; align-items:flex-start; gap:9px; font-size:12.5px; color:var(--text-secondary); line-height:1.45; }
+.us-auth-points svg { color:var(--accent); flex:none; margin-top:1px; }
+.us-auth-form-col {
+  position:relative; z-index:1;
+  justify-self:start; width:min(400px, 100%); min-width:0;
+}
+.us-auth-form-col > .us-auth-sub { margin:0 0 12px; text-align:center; }
+.us-auth-form {
+  display:flex; flex-direction:column; gap:12px;
+  animation:usActIn 200ms var(--ease-out);
+}
+@keyframes usActIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
+.us-auth-form .form-input { height:32px; font-size:12.5px; }
+.us-field { display:flex; flex-direction:column; }
+.us-field label { font-size:11px; font-weight:500; color:var(--text-secondary); margin-bottom:4px; }
+.us-field .input-error { border-color:var(--danger); }
+.us-field-err { font-size:10.5px; color:var(--danger); margin-top:3px; }
+@media (max-width: 959px) {
+  .us-auth { grid-template-columns:1fr; gap:16px; padding:12px; justify-items:center; }
+  .us-auth-brand { display:none; }
+  .us-auth-form-col { justify-self:center; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .us-auth-form { animation:none; }
+}
+/* Максимальная экономия (body.power-save): конечные UI-анимации выключены */
+body.power-save .us-auth-form { animation:none; }
+
+/* ── Развёрнутый сайдбар: на окнах выше 720px показываем подписи ── */
+.sidebar-nav-label {
+  display:none; min-width:0;
+  font-size:10.5px; font-weight:600; text-transform:uppercase; letter-spacing:0.02em;
+  color:var(--text-secondary); white-space:nowrap;
+}
+/* Рекламный баннер сайдбара: только в развёрнутом режиме (в 48px рейле нет места) */
+.sb-banner {
+  display:none; position:relative; width:100%; box-sizing:border-box;
+  border:var(--border-w) solid var(--border); border-radius:10px;
+  background:var(--bg-card); padding:14px 8px 8px; overflow:hidden;
+}
+.sb-banner-x {
+  position:absolute; top:4px; right:4px; width:20px; height:20px;
+  display:flex; align-items:center; justify-content:center;
+  border:none; border-radius:6px; background:transparent;
+  color:var(--text-tertiary); cursor:pointer;
+}
+.sb-banner-x:hover { color:var(--text-primary); background:var(--bg-hover); }
+.sb-banner-img { display:block; width:100%; height:auto; border-radius:6px; cursor:pointer; }
+.sb-banner-text { font-size:11px; line-height:1.45; color:var(--text-primary); word-break:break-word; white-space:pre-wrap; }
+.sb-banner-html { font-size:11px; line-height:1.45; color:var(--text-primary); word-break:break-word; }
+.sb-banner-link { display:inline-block; margin-top:6px; font-size:10.5px; font-weight:600; color:var(--accent); cursor:pointer; }
+
+/* Свёрнутая панель: иконка-мегафон, баннер — в поповере по наведению */
+.sb-mini { position:relative; width:100%; display:flex; justify-content:center; }
+.sb-mini-btn { width:38px; min-width:38px; justify-content:center; }
+.sb-mini-pop {
+  position:absolute; left:calc(100% + 10px); bottom:-2px;
+  width:252px; z-index:80;
+  animation:docIn .18s ease;
+}
+.sb-mini-pop .sb-banner { display:block; }
+body.power-save .sb-mini-pop { animation:none; }
+
+@media (min-width: 1300px) {
+  .sb-banner { display:block; }
+}
+
+@media (min-width: 1300px) {
+  .stand-app .sidebar { width:186px; min-width:186px; padding:8px 10px; align-items:stretch; }
+  .stand-app .sidebar .sidebar-nav { padding:0; gap:2px; }
+  .stand-app .sidebar .sidebar-logo { width:28px; height:28px; border-radius:9px; margin-bottom:4px; }
+  .sidebar-nav-item { width:100%; height:30px; margin:0; flex-direction:row; justify-content:flex-start; gap:7px; padding:0 8px; }
+  .sidebar-nav-item svg { width:20px; height:20px; }
+  .sidebar-nav-item.active::before { display:none; }
+  .sidebar-nav-item.active .sidebar-nav-label { color:var(--accent); }
+  .sidebar-nav-item svg { width:17px; height:17px; }
+  .sidebar-nav-label { display:inline; }
+  .sidebar-footer-btn { width:100%; height:30px; margin:0; justify-content:flex-start; padding:0 8px; gap:7px; }
+  .sidebar-footer-btn svg { width:17px; height:17px; }
+  .sidebar-divider { width:100%; }
+  .sb-banner { padding:10px 8px 8px; }
+}
+
+/* ══════════════════════════════════════════════════
+   Финальные правила стыков (в конце файла — не
+   перебиваются предыдущими блоками): оболочка
+   БЕСШОВНАЯ — контент вплотную к тайтлбару, сайдбару
+   и футеру, без зазоров и стыковых радиусов.
+   ══════════════════════════════════════════════════ */
+.stand-app .stand-win .stand-frame {
+  background: var(--bg-page);
+}
+.stand-app .stand-win .stand-content {
+  margin: 0;
+  border-radius: 0;
+  background: var(--bg-page);
+}
+
+/* Пользователь: KPI-карточки в стиле дашборда — типографика масштабируется
+   от фактической ширины карточки (container queries); отступы — от ширины
+   .us-cols (сам .us-metric — контейнер для потомков, свои cqw у него
+   резолвились бы по вьюпорту и не сжимались бы никогда). Калибровка клампов:
+   при 1920 (сетка ~1356px, 2 KPI) — максимумы 32/52/13; при 900 (~826px)
+   отступы реально сжимаются (~10/11/9). */
+.stand-app .stand-win .us-cols > .us-metric {
+  height:100%; min-height:0; overflow:hidden; align-self:stretch;
+  padding:clamp(9px, 1.18cqw, 16px) clamp(10px, 1.33cqw, 18px);
+  gap:clamp(8px, 1.03cqw, 14px);
+  container-type: inline-size;
+}
+.stand-app .stand-win .us-cols > .us-metric .us-metric-icon {
+  width:clamp(40px, 12cqw, 52px); height:clamp(40px, 12cqw, 52px);
+}
+.stand-app .stand-win .us-cols > .us-metric .us-metric-icon svg {
+  width:clamp(20px, 6cqw, 26px); height:clamp(20px, 6cqw, 26px);
+}
+.stand-app .stand-win .us-cols > .us-metric .us-metric-label {
+  font-size:clamp(10.5px, 2.9cqw, 13px); font-weight:600; text-transform:uppercase; letter-spacing:0.06em;
+  color:var(--text-tertiary); flex:none;
+}
+.stand-app .stand-win .us-cols > .us-metric .us-metric-value {
+  font-size:clamp(20px, 7cqw, 32px); font-weight:600; line-height:1.05;
+  display:flex; align-items:center; gap:6px; white-space:nowrap; flex:none;
+  margin:2px 0;
+}
+.stand-app .stand-win .us-cols > .us-metric .us-metric-value .us-mono { font-size:0.75em; }
+.stand-app .stand-win .us-cols > .us-metric .us-metric-sub {
+  font-size:clamp(10px, 2.8cqw, 12.5px); color:var(--text-secondary); line-height:1.4;
+  max-width:100%;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.stand-app .stand-win .us-cols > .us-metric .us-dim { font-size:0.55em; font-weight:400; }
+
+/* Пользователь: контент панелей тянется по фактическому размеру клетки */
+.stand-app .stand-win .us-cols > .us-dev .us-panel-head { width:100%; }
+.stand-app .stand-win .us-cols > .us-dev .us-list, .stand-app .stand-win .us-cols > .us-dev .us-list > * { width:100%; min-width:0; }
+.stand-app .stand-win .us-cols > .us-this .us-kv { width:100%; }
+.stand-app .stand-win .us-cols > .us-panel, .stand-app .stand-win .us-cols > .us-tile { width:100%; max-width:none; }
+
+/* Единые внешние/внутренние отступы вкладок */
+.stand-app .stand-win .main-area { padding:10px; }
+.stand-app .stand-win .main-area .db-page,
+.stand-app .stand-win .main-area .mon-page,
+.stand-app .stand-win .main-area .settings-page,
+.stand-app .stand-win .main-area .rpt-page,
+.stand-app .stand-win .main-area .docs-page,
+.stand-app .stand-win .main-area .us { gap:10px; }
+.stand-app .stand-win .mon-grid,
+.stand-app .stand-win .mon-stats-row,
+.stand-app .stand-win .page-grid-2,
+.stand-app .stand-win .page-grid-3 { gap:10px; }
+
+/* Широкие окна (1600+ внутренних): текстовые полотна не растягиваются
+   в бесконечность — строки чтения ограничены (Дизайн-и-типографика §4.3) */
+.stand-app .stand-win .docs-content-body { max-width: 920px; }
+.stand-app .stand-win .rpt-content { max-width: 1000px; }
+
+/* Настройки: кнопки в узких колонках переносятся и не вылезают */
+.stand-app .stand-win .zpset-svc-actions { flex-wrap:wrap; justify-content:flex-end; }
+.stand-app .stand-win .zpset-svc-row,
+.stand-app .stand-win .zpset-danger-zone,
+.stand-app .stand-win .zpset-install-prompt { flex-wrap:wrap; }
+.stand-app .stand-win .zpset-danger-info { min-width:0; }
+.stand-app .stand-win .zpset-svc-actions .btn { flex:none; }
+.stand-app .stand-win .set-theme-row { flex-wrap:wrap; }
+.stand-app .stand-win .set-interval-row { flex-wrap:nowrap; flex-shrink:0; }
+.stand-app .stand-win .set-interval-row .btn-sm { padding:0 9px; }
+.stand-app .stand-win .set-row-bottom { flex-wrap:nowrap; }
+.stand-app .stand-win .set-row-bottom .set-row-info { min-width:0; }
+.stand-app .stand-win .set-row-bottom .set-row-desc { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.stand-app .stand-win .set-row-actions { flex-wrap:wrap; }
+.stand-app .stand-win .upd-actions { flex-wrap:wrap; justify-content:flex-end; }
+.stand-app .stand-win .upd-simple-row { flex-wrap:wrap; min-width:0; }
+.stand-app .stand-win .rpt-toolbar, .stand-app .stand-win .rpt-toolbar-actions { flex-wrap:wrap; }
+.stand-app .stand-win .sync-head-actions, .stand-app .stand-win .sync-peer-actions, .stand-app .stand-win .sync-card-actions { flex-wrap:wrap; }
+.stand-app .stand-win .zp-service-actions { flex-wrap:wrap; justify-content:flex-end; }
+.stand-app .stand-win .zp-filter-bar { flex-wrap:wrap; }
+.stand-app .stand-win .tgp-connect-row { flex-wrap:wrap; }
+.stand-app .stand-win .tgp-connect-row .tgp-connect-main { flex:1 1 220px; }
+.stand-app .stand-win .fa-modal-actions { flex-wrap:wrap; }
+.stand-app .stand-win .avail-head { flex-wrap:wrap; }
+
+/* Диапазон «широко, но невысоко» (1280+, высота <800px):
+   типографика по шкале --fs-* (кегли сведены к 4 ступеням),
+   интерактив и герой-цифры чуть крупнее базовых */
+@media (min-width: 1280px) and (max-height: 799px) {
+  .stand-content { font-size: var(--fs-lg); }
+
+  /* Базовые элементы */
+  .stand-content .btn { height:28px; font-size:var(--fs-md); padding:0 14px; }
+  .stand-content .btn-sm { height:28px; font-size:var(--fs-sm); }
+  .stand-content .btn-xs { height:24px; font-size:var(--fs-sm); }
+  .stand-content .badge { font-size:var(--fs-sm); }
+  .stand-content .section-title, .stand-content .card-section-title { font-size:var(--fs-lg); }
+  .stand-content .section, .stand-content .card-section { padding: var(--sp-3) 14px; }
+  .stand-content .section-desc, .stand-content .page-subtitle { font-size:var(--fs-sm); }
+  .stand-content .form-input, .stand-content .form-select { height:30px; font-size:var(--fs-md); }
+  .stand-content .form-group label { font-size:var(--fs-sm); }
+  .stand-content .form-hint { font-size:var(--fs-xs); }
+  .stand-content .info-row { font-size:var(--fs-md); }
+  .stand-content .info-label { font-size:var(--fs-sm); }
+  .stand-content .switch-label { font-size:var(--fs-md); }
+  .stand-content .switch-state { font-size:var(--fs-sm); }
+  .stand-content .subtab { font-size:var(--fs-md); padding:7px 15px; }
+
+  /* Дашборд */
+  .stand-content .svc-card-name { font-size:var(--fs-lg); }
+  .stand-content .svc-card-state { font-size:var(--fs-md); }
+  .stand-content .svc-card-sub { font-size:var(--fs-sm); }
+  .stand-content .avail-chip-label { font-size:var(--fs-sm); }
+  .stand-content .avail-chip-val { font-size:17px; }
+  .stand-content .avail-chip-count { font-size:var(--fs-sm); }
+  .stand-content .avail-status { font-size:var(--fs-sm); }
+  .stand-content .avail-fail-tag { font-size:var(--fs-sm); }
+  .stand-content .avail-fail-empty { font-size:var(--fs-sm); }
+  .stand-content .yt-banner { font-size:var(--fs-md); }
+
+  /* Zapret */
+  .stand-content .zp-status-text { font-size:var(--fs-sm); }
+  .stand-content .zp-version { font-size:var(--fs-xs); }
+  .stand-content .zp-strat-tab { font-size:var(--fs-md); }
+  .stand-content .strat-card-name { font-size:var(--fs-sm); }
+  .stand-content .strat-card-pct { font-size:var(--fs-xs); }
+  .stand-content .strat-lock-hint { font-size:var(--fs-sm); }
+  .stand-content .zp-filter-bar-label { font-size:var(--fs-xs); }
+  .stand-content .flt2-pill { font-size:var(--fs-xs); padding:4px 11px; }
+  .stand-content .strat-item .strat-name { font-size:var(--fs-md); }
+  .stand-content .zpset-head-title { font-size:var(--fs-sm); }
+  .stand-content .zpset-sub, .stand-content .zp-skip-desc { font-size:var(--fs-sm); }
+  .stand-content .zpset-svc-label { font-size:var(--fs-sm); }
+  .stand-content .zpset-danger-title { font-size:var(--fs-sm); }
+  .stand-content .zpset-danger-desc, .stand-content .zpset-install-desc { font-size:var(--fs-xs); }
+  .stand-content .set-row-title { font-size:var(--fs-lg); }
+  .stand-content .set-row-desc { font-size:var(--fs-sm); }
+  .stand-content .pw-slider-label, .stand-content .pw-slider-val { font-size:var(--fs-sm); }
+  .stand-content .upd-name { font-size:var(--fs-lg); }
+  .stand-content .upd-cur-ver, .stand-content .upd-new-ver { font-size:var(--fs-md); }
+  .stand-content .upd-status { font-size:var(--fs-sm); }
+  .stand-content .upd-btn-check { height:28px; font-size:var(--fs-sm); }
+
+  /* Прокси */
+  .stand-content .proxy-top-title { font-size:var(--fs-lg); }
+  .stand-content .proxy-top-status { font-size:var(--fs-sm); }
+  .stand-content .pts-val { font-size:14px; }
+  .stand-content .pp-subtitle, .stand-content .pp-subtitle-with-icon { font-size:var(--fs-xs); }
+  .stand-content .pp-label { font-size:var(--fs-xs); }
+  .stand-content .pp-input { height:28px; font-size:var(--fs-sm); }
+  .stand-content .pp-row-title { font-size:var(--fs-sm); }
+  .stand-content .pd-host { font-size:var(--fs-sm); }
+  .stand-content .pd-ip { font-size:var(--fs-xs); }
+  .stand-content .pd-latency-val { font-size:var(--fs-sm); }
+  .stand-content .tgp-link, .stand-content .tgp-secret { font-size:var(--fs-sm); }
+  .stand-content .tgp-stats-line { font-size:var(--fs-sm); }
+  .stand-content .tgp-hint { font-size:var(--fs-xs); }
+
+  /* Монитор */
+  .stand-content .mon-chart-val { font-size:var(--fs-lg); }
+  .stand-content .mon-stat-val { font-size:20px; }
+  .stand-content .mon-stat-label { font-size:var(--fs-sm); }
+  .stand-content .mon-stat-sm .mon-stat-val { font-size:16px; }
+  .stand-content .mon-stat-sm .mon-stat-label { font-size:var(--fs-xs); }
+  .stand-content .mon-device-name { font-size:var(--fs-sm); }
+  .stand-content .mon-device-ip { font-size:var(--fs-xs); }
+  .stand-content .mon-device-conns, .stand-content .mon-device-conns-badge { font-size:var(--fs-xs); }
+
+  /* Пользователь (us-*) — кегли метрик заданы выше селекторами
+     .stand-app .stand-win .us-cols > .us-metric … (выше специфичностью) */
+  .stand-content .us-panel-title, .stand-content .us-tile-title { font-size:var(--fs-lg); }
+  .stand-content .us-kv { font-size:14px; }
+  .stand-content .us-kv .k { font-size:var(--fs-sm); }
+  .stand-content .us-kv .v, .stand-content .us-kv .v.us-mono { font-size:14px; }
+  .stand-content .us-dev-name { font-size:14px; }
+  .stand-content .us-dev-meta { font-size:var(--fs-sm); }
+  .stand-content .us-badge { font-size:var(--fs-xs); }
+  .stand-content .us-empty { font-size:var(--fs-sm); }
+  .stand-content .us-pf-name { font-size:var(--fs-lg); }
+
+  /* Отчёты */
+  .stand-content .rpt-toolbar-title { font-size:var(--fs-lg); }
+  .stand-content .rpt-content { font-size:14px; }
+  .stand-content .rpt-table { font-size:var(--fs-sm); }
+  .stand-content .rpt-empty, .stand-content .rpt-loading { font-size:var(--fs-md); }
+
+  /* Документы */
+  .stand-content .docs-rail-item { font-size:var(--fs-md); }
+  .stand-content .docs-content-title { font-size:18px; }
+  .stand-content .docs-lead { font-size:var(--fs-md); }
+  .stand-content .docs-list li, .stand-content .docs-steps li { font-size:var(--fs-md); }
+  .stand-content .docs-h3 { font-size:14px; }
+  .stand-content .docs-callout { font-size:var(--fs-md); }
+
+  /* Модалки (оверлеи монтируются в .stand-win, а не в .stand-content) */
+  .stand-win .modal-title { font-size:var(--fs-lg); }
+  .stand-win .modal-body { font-size:var(--fs-md); }
+  .stand-win .cfm-message { font-size:var(--fs-sm); }
+}
+
+/* ── Звуки интерфейса (Настройки → Общие + редактор тем) ── */
+.set-sounds { flex-wrap:wrap; }
+.set-sounds-ctl { display:flex; align-items:center; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
+.set-sounds-ic { color:var(--text-tertiary); flex-shrink:0; }
+.set-sounds-schemes { display:flex; gap:3px; align-items:center; }
+.set-sounds-vol { width:88px; flex:none; }
+.te-sound-preview { display:grid; grid-template-columns:repeat(3,1fr); gap:5px; padding:2px 0; }
+.te-sound-btn { justify-content:center; gap:5px; padding-inline:6px; }
+.te-sound-btn svg { opacity:.7; }

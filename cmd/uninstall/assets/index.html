@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Удаление ZPUI</title>
+<style>
+/* Дизайн-система ZPUI (Документы/Дизайн-заметки.md §5, тёмная тема) */
+:root{
+  --bg-page:#141418; --bg-card:#20202a; --bg-inset:#16161e;
+  --bg-hover:rgba(255,255,255,0.06); --bg-active:rgba(107,163,255,0.10);
+  --border:#2e2e38; --border-light:#262630;
+  --text-primary:#e5e5ed; --text-secondary:#9ea3b3; --text-tertiary:#8a8fa0;
+  --accent:#6ba3ff; --accent-hover:#82b3ff;
+  --accent-soft:rgba(107,163,255,0.12); --accent-text:#fff;
+  --grad-accent:linear-gradient(135deg,var(--accent),#9b6df2);
+  --success:#34d058; --success-bg:rgba(52,208,88,0.12);
+  --danger:#f55e5e; --danger-bg:rgba(245,94,94,0.10);
+  --radius-sm:6px; --radius-md:10px; --radius-lg:14px;
+  --font:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+  --font-mono:'JetBrains Mono','Cascadia Code','Consolas',monospace;
+  --ease-out:cubic-bezier(0.16,1,0.3,1);
+  --dur-fast:120ms; --dur-base:180ms;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:680px;height:360px;overflow:hidden}
+body{font-family:var(--font);font-size:13.5px;line-height:1.5;background:var(--bg-page);color:var(--text-primary);user-select:none;cursor:default}
+
+.win{display:flex;flex-direction:column;width:100%;height:100%;position:relative;overflow:hidden;background:var(--bg-page)}
+
+/* ── Тайтлбар как в приложении ── */
+.tbar{flex:none;height:34px;display:flex;align-items:center;gap:10px;padding:0 0 0 14px;background:var(--bg-page);position:relative;z-index:2}
+.tbar-logo{font-size:17px;font-weight:800;letter-spacing:1px;line-height:34px;background:var(--grad-accent);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent}
+.tbar-ver{font-family:var(--font-mono);font-size:11px;color:var(--text-tertiary)}
+.tbar-sp{flex:1}
+.tbar-cap{width:46px;height:34px;display:flex;align-items:center;justify-content:center;border:none;border-radius:var(--radius-sm);background:transparent;color:var(--text-secondary);cursor:pointer;transition:background var(--dur-fast) ease,color var(--dur-fast) ease}
+.tbar-cap:hover{background:var(--bg-hover);color:var(--text-primary)}
+.tbar-cap:active{background:var(--bg-active)}
+.tbar-cap.close:hover{color:var(--danger)}
+.tbar-cap svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+
+/* ── Фирменный фон окон (пятна чуть глуше — окно опасное) ── */
+.bgfx{position:absolute;inset:34px 0 0 0;z-index:0;pointer-events:none;background:
+  radial-gradient(560px 340px at 15% 15%, rgba(91,140,255,.11), transparent 60%),
+  radial-gradient(620px 320px at 88% 90%, rgba(245,94,94,.07), transparent 62%)}
+.bgfx::after{content:"";position:absolute;inset:0;
+  background-image:linear-gradient(var(--border-light) 1px,transparent 1px),linear-gradient(90deg,var(--border-light) 1px,transparent 1px);
+  background-size:32px 32px;opacity:.25}
+
+.content{flex:1;min-height:0;display:flex;flex-direction:column;position:relative;z-index:1;padding:22px 44px 16px}
+
+.h{font-size:17px;font-weight:600;letter-spacing:-0.2px;color:var(--text-primary)}
+.hs{font-size:13px;color:var(--text-secondary);margin-top:4px}
+.caps{font-size:10.5px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:var(--text-tertiary)}
+.mono{font-family:var(--font-mono)}
+
+/* Кнопки */
+.btn{min-width:104px;height:34px;padding:0 18px;border-radius:var(--radius-sm);
+  border:1px solid var(--border);background:var(--bg-card);color:var(--text-primary);
+  font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer;
+  display:inline-flex;align-items:center;justify-content:center;
+  transition:all var(--dur-fast) var(--ease-out)}
+.btn:hover{background:var(--bg-hover);border-color:var(--text-tertiary)}
+.btn:active{transform:scale(0.96)}
+.btn:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.btn.danger{background:var(--danger-bg);border-color:transparent;color:var(--danger);font-weight:600}
+.btn.danger:hover{background:var(--danger);border-color:var(--danger);color:#fff;transform:translateY(-1px);box-shadow:0 2px 8px var(--danger-bg)}
+.btn.danger:active{transform:scale(0.96)}
+.btn.done{background:var(--success-bg);border-color:transparent;color:var(--success);font-weight:600}
+.btn.done:hover{background:var(--success);border-color:var(--success);color:#fff;transform:translateY(-1px);box-shadow:0 2px 8px var(--success-bg)}
+.btn.done:active{transform:scale(0.96)}
+.btn[disabled]{opacity:.5;cursor:default;pointer-events:none}
+
+/* Чекбокс: включён = опасное действие (красный, как кнопка) */
+.chk{display:flex;gap:10px;align-items:center;font-size:12.5px;color:var(--text-primary);cursor:pointer}
+.cbx{width:18px;height:18px;border-radius:5px;border:1px solid var(--border);background:var(--bg-inset);
+  display:inline-flex;align-items:center;justify-content:center;flex:none;cursor:pointer;
+  transition:all var(--dur-fast) var(--ease-out)}
+.cbx:hover{border-color:var(--text-tertiary)}
+.cbx.on{background:var(--danger);border-color:var(--danger)}
+.cbx svg{width:11px;height:11px;stroke:#fff;fill:none;stroke-width:3.2;stroke-linecap:round;stroke-linejoin:round}
+
+/* Путь установки */
+.pathrow{display:flex;align-items:center;gap:10px;margin-top:14px}
+.path{font-family:var(--font-mono);font-size:11.5px;color:var(--text-secondary);
+  background:var(--bg-inset);border-radius:var(--radius-md);padding:7px 12px;user-select:text}
+
+/* Журнал */
+.log{display:none;margin-top:12px;padding:9px 14px;font-family:var(--font-mono);font-size:11.5px;line-height:1.85;max-height:96px;overflow:hidden}
+.log.on{display:block}
+.log .ok{color:var(--success)} .log .run{color:var(--accent)} .log .err{color:var(--danger)}
+
+/* Футер */
+.footer{flex:none;height:50px;display:flex;align-items:center;gap:8px;padding:0 16px;
+  background:var(--bg-page);border-top:1px solid var(--border-light);position:relative;z-index:2}
+.brand{margin-right:auto;font-size:11px;color:var(--text-tertiary)}
+
+@media (prefers-reduced-motion: reduce){*{animation:none !important;transition:none !important}}
+</style>
+</head>
+<body>
+<div class="win">
+  <div class="tbar" style="--wails-draggable: drag">
+    <span class="tbar-logo">ZPUI</span>
+    <span class="tbar-ver" id="ttver"></span>
+    <span class="tbar-sp"></span>
+    <button class="tbar-cap close" id="btnClose" style="--wails-draggable: nodrag" aria-label="Закрыть"><svg viewBox="0 0 24 24"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg></button>
+  </div>
+
+  <div class="bgfx"></div>
+
+  <div class="content">
+    <div class="h">Удалить ZPUI?</div>
+    <div class="hs">Приложение будет закрыто, файлы, ярлыки и записи реестра удалены — вместе с движком запрета и драйвером туннеля.</div>
+    <div class="pathrow">
+      <span class="caps">Папка</span>
+      <span class="path" id="dir">…</span>
+    </div>
+    <div class="chk" id="rowData" role="checkbox" aria-checked="true" tabindex="0" style="margin-top:12px">
+      <span class="cbx on" id="cbxData"></span><span>Удалить также настройки, базу и логи</span>
+    </div>
+    <div class="log inset" id="log"></div>
+  </div>
+
+  <div class="footer">
+    <span class="brand" id="brand">ZPUI · zpui-life.ru</span>
+    <button class="btn" id="btnCancel">Отмена</button>
+    <button class="btn danger" id="btnDelete">Удалить</button>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const CHECK = '<svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>';
+
+let started = false, finished = false, keepData = true;
+
+window.go.main.App.Info().then(i => {
+  $('dir').textContent = i.dir || 'C:\\Program Files\\ZPUI';
+  $('ttver').textContent = i.ver ? 'v' + i.ver : '';
+  $('brand').textContent = 'ZPUI ' + (i.ver || '') + ' · zpui-life.ru';
+});
+
+function addLine(text, cls) {
+  const log = $('log');
+  const d = document.createElement('div');
+  d.className = cls || '';
+  d.textContent = text;
+  log.appendChild(d);
+}
+
+window.runtime.EventsOn('pkg:step', data => {
+  if (!data) return;
+  if (data.phase) addLine(data.phase, 'run');
+});
+
+window.runtime.EventsOn('pkg:done', data => {
+  finished = true;
+  addLine('Удаление завершено.', 'ok');
+  $('btnDelete').textContent = 'Готово';
+  $('btnDelete').classList.remove('danger');
+  $('btnDelete').classList.add('done');
+  $('btnDelete').removeAttribute('disabled');
+  $('btnCancel').style.display = 'none';
+  $('btnClose').onclick = () => window.go.main.App.Finish();
+  $('btnDelete').onclick = () => window.go.main.App.Finish();
+});
+
+$('btnDelete').onclick = () => {
+  if (started) return;
+  started = true;
+  $('log').classList.add('on');
+  $('btnDelete').setAttribute('disabled', '');
+  $('btnCancel').setAttribute('disabled', '');
+  window.go.main.App.Start(keepData);
+};
+$('btnCancel').onclick = () => window.go.main.App.Close();
+$('btnClose').onclick = () => window.go.main.App.Close();
+
+const rowData = $('rowData');
+const toggleData = () => {
+  keepData = !keepData;
+  $('cbxData').classList.toggle('on', keepData);
+  $('cbxData').innerHTML = keepData ? CHECK : '';
+  rowData.setAttribute('aria-checked', keepData);
+};
+rowData.onclick = toggleData;
+rowData.onkeydown = e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); toggleData(); } };
+</script>
+</body>
+</html>

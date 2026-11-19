@@ -1,0 +1,486 @@
+/* ── Confirm Dialog ───────────────────────
+   Small-вариант стандарта (420px): шапка с иконкой по типу
+   (danger/warning/info), заголовок, текст, футер справа. */
+.cfm-message { font-size:var(--fs-md); color:var(--text-secondary); line-height:1.5; }
+
+/* ── Fail-action mini modal (дашборд, общий каркас) ── */
+.fa-modal-reason { font-size:var(--fs-md); color:var(--text-secondary); line-height:1.5; }
+
+/* ── Monitor v2 enhancements ────────────── */
+.mon-chart-dl { color:var(--accent); }
+.mon-chart-ul { color:var(--success); }
+.mon-stat-dl { color:var(--accent); }
+.mon-stat-ul { color:var(--success); }
+.mon-stat-split { display:flex; flex-direction:column; gap:3px; }
+.mon-stat-split-item { display:flex; align-items:center; gap:5px; font-size:12px; }
+.mon-stat-split-tag {
+  font-size:8.5px; font-weight:700; padding:1px 5px; border-radius:4px;
+  text-transform:uppercase; letter-spacing:0.5px;
+}
+.mon-stat-split-tag.dl { background:var(--accent-soft); color:var(--accent); }
+.mon-stat-split-tag.ul { background:var(--success-bg); color:var(--success); }
+
+/* avail-fail-tag as button */
+.avail-fail-tag { cursor:pointer; transition:all 120ms; border:none; }
+.avail-fail-tag:hover { filter:brightness(1.15); box-shadow:var(--shadow-sm); }
+
+/* ══════════════════════════════════════════════════
+   Strategy tab toolbar: hide-untested toggle + hidden counter
+   ══════════════════════════════════════════════════ */
+.zp-strat-toolbar {
+  display:flex; align-items:center; justify-content:space-between; gap:8px;
+  flex-shrink:0; margin-bottom:8px; min-height:24px;
+}
+.zp-strat-toolbar .strat-lock-hint { padding:3px 10px; margin-bottom:0; flex:1; min-width:0; }
+/* Отступ справа = ширина скроллбара strat-grid: контролы не должны
+   нависать над зоной прокрутки, иначе подпись выглядит обрезанной. */
+.zp-strat-toolbar-right { display:flex; align-items:center; gap:10px; flex-shrink:0; margin-left:auto; padding-right:14px; }
+.zp-strat-hidden {
+  font-size:10px; color:var(--text-tertiary); cursor:help;
+  padding:2px 8px; border-radius:10px; background:var(--bg-inset);
+}
+.zp-strat-hide-ctl { display:inline-flex; align-items:center; gap:7px; }
+.zp-strat-hide-label { font-size:11px; font-weight:500; color:var(--text-secondary); white-space:nowrap; cursor:pointer; }
+
+/* ── Strategy card tier letter (без фона, цветом по тиру) ── */
+.strat-card-tier {
+  font-size:15px; font-weight:800; font-family:var(--font-mono);
+  line-height:1; flex-shrink:0; min-width:18px; text-align:center;
+  letter-spacing:0.02em; cursor:help;
+}
+.strat-card-tier.t-S { color:var(--success); }
+.strat-card-tier.t-A { color:var(--accent); }
+.strat-card-tier.t-B { color:color-mix(in srgb, var(--accent) 62%, var(--text-primary)); }
+.strat-card-tier.t-C { color:var(--warning); }
+.strat-card-tier.t-D { color:var(--danger); }
+
+/* ══════════════════════════════════════════════════
+   AutoSwitch toggle + gear menu
+   ══════════════════════════════════════════════════ */
+.zp-autoswitch {
+  display:inline-flex; align-items:center; gap:6px;
+  margin-left:8px; padding-left:8px;
+  border-left:var(--border-w) solid var(--border);
+}
+.zp-autoswitch-gear { position:relative; }
+.zp-gear-btn {
+  width:28px; height:28px; border-radius:var(--radius-sm);
+  border:var(--border-w) solid var(--border); background:transparent;
+  color:var(--text-secondary); cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  transition:all 150ms;
+}
+.zp-gear-btn:hover { background:var(--accent-soft); color:var(--accent); border-color:var(--accent); }
+.zp-autoswitch-menu {
+  position:absolute; top:calc(100% + 6px); right:0; z-index:50;
+  background:var(--bg-card); border:var(--border-w) solid var(--border);
+  border-radius:var(--radius-md); box-shadow:var(--shadow-lg);
+  padding:0; min-width:240px;
+  display:flex; flex-direction:column; overflow:hidden;
+  transform-origin:top right;
+  animation:menuIn 220ms var(--ease-soft);
+}
+/* Выход дропдауна: вызывающий код держит узел на 150мс с .is-closing
+   (useDelayedUnmount), затем размонтирует. */
+.zp-autoswitch-menu.is-closing { animation:menuOut 150ms var(--ease-standard) forwards; }
+.zp-autoswitch-menu-header {
+  padding:8px 12px; font-size:11px; font-weight:600; color:var(--text-primary);
+  border-bottom:var(--border-w) solid var(--border); background:var(--bg-inset);
+}
+/* Индикатор надёжности пароля в формах авторизации */
+.pw-strength { display:flex; align-items:center; gap:8px; }
+.pw-strength .pb { flex:1; }
+.pw-strength-label { font-size:10.5px; font-weight:600; white-space:nowrap; }
+.pw-strength-label.danger { color:var(--danger); }
+.pw-strength-label.warning { color:var(--warning); }
+.pw-strength-label.success { color:var(--success); }
+
+/* Скрытие стратегий: кнопка «⋯» + меню выбора порога тира */
+.strat-hide-wrap { position:relative; display:inline-flex; }
+.strat-hide-menu { min-width:190px; padding:4px 0; }
+.strat-hide-opt {
+  display:flex; align-items:center; justify-content:space-between; gap:8px; width:100%;
+  padding:7px 12px; border:0; background:transparent; cursor:pointer;
+  font-family:var(--font); font-size:12px; color:var(--text-secondary);
+  text-align:left; transition:background var(--dur-fast) ease;
+}
+.strat-hide-opt:hover { background:var(--bg-hover); color:var(--text-primary); }
+.zp-autoswitch-menu-row {
+  display:flex; flex-direction:column; gap:6px; padding:10px 12px;
+}
+.zp-autoswitch-menu-label-row {
+  display:flex; align-items:center; justify-content:space-between;
+}
+.zp-autoswitch-menu-label {
+  font-size:10px; font-weight:600; color:var(--text-secondary);
+  text-transform:uppercase; letter-spacing:0.03em;
+}
+.zp-autoswitch-menu-row input[type="range"].slider-ui { width:100%; flex:none; }
+.zp-autoswitch-menu-val {
+  font-size:12px; font-weight:700; color:var(--accent);
+  font-family:var(--font-mono);
+}
+.zp-autoswitch-menu-hint {
+  font-size:10px; line-height:1.5; color:var(--text-tertiary);
+}
+
+/* ── Log table ───────────────────────────
+   Плотность строк 28px (фиксированная — контент не прыгает при смене
+   табов/уровней), моно-время одной строкой, модуль бейджем, сообщение
+   обычным шрифтом; ERROR-строки на --danger-bg, зебра, липкая шапка. */
+.lg-table-wrap {
+  display:flex; flex-direction:column; height:100%; min-height:0;
+  font-size:var(--fs-xs);
+}
+.lg-table-header {
+  display:flex; align-items:center; gap:10px; height:24px;
+  padding:0 10px; border-bottom:var(--border-w) solid var(--border);
+  background:var(--bg-section); flex-shrink:0;
+  position:sticky; top:0; z-index:1;
+  /* Тот же gutter, что у скроллящегося тела — колонки шапки не уезжают
+     относительно строк при появлении вертикального скроллбара. */
+  scrollbar-gutter:stable;
+}
+.lg-th { font-size:9px; font-weight:600; color:var(--text-tertiary); text-transform:uppercase; letter-spacing:0.3px; }
+.lg-th-code { width:56px; min-width:56px; }
+.lg-th-time { width:124px; min-width:124px; }
+.lg-th-mod { width:100px; min-width:100px; }
+.lg-th-msg { flex:1; min-width:0; }
+.lg-table-body { flex:1; overflow-y:auto; min-height:0; user-select:text; -webkit-user-select:text; scrollbar-gutter:stable; }
+.lg-tr {
+  display:flex; align-items:center; gap:10px; height:28px; flex:none;
+  padding:0 10px; border-bottom:var(--border-w) solid var(--border-light);
+  transition:background 120ms;
+}
+.lg-tr:nth-child(even) { background:color-mix(in srgb, var(--bg-hover) 45%, transparent); }
+.lg-tr:hover { background:var(--bg-hover); }
+.lg-tr.error { background:var(--danger-bg); }
+.lg-tr.error:hover { background:color-mix(in srgb, var(--danger-bg) 72%, var(--bg-hover)); }
+.lg-tr.highlight {
+  background:var(--accent-soft);
+  border-left:var(--border-w-strong) solid var(--accent);
+  animation:lg-pulse 1s ease 3;
+}
+@keyframes lg-pulse {
+  0%,100% { background:var(--accent-soft); }
+  50% { background:var(--bg-active); }
+}
+.lg-td { line-height:1.4; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.lg-td-code {
+  width:56px; min-width:56px; flex-shrink:0;
+  display:flex; align-items:center;
+  overflow:visible;
+}
+.lg-td-code.error .lg-code-badge {
+  color:var(--danger); font-weight:700; font-size:10px;
+}
+.lg-td-code .lg-code-badge {
+  color:var(--accent); font-weight:600;
+  font-family:var(--font-mono); font-size:10px;
+}
+.lg-td-code .lg-level-label {
+  font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:0.3px;
+  padding:1px 5px; border-radius:4px; color:var(--text-tertiary); background:var(--bg-inset);
+}
+.lg-td-code .lg-lv-error { color:var(--danger); background:var(--danger-bg); }
+.lg-td-code .lg-lv-warn { color:var(--warning); background:var(--warning-bg); }
+.lg-td-code .lg-lv-info { color:var(--accent); background:var(--accent-soft); }
+.lg-td-time {
+  width:124px; min-width:124px; flex-shrink:0;
+  color:var(--text-tertiary); font-size:10px; line-height:1.3;
+  font-family:var(--font-mono); font-variant-numeric:tabular-nums;
+}
+.lg-td-mod {
+  width:100px; min-width:100px; flex-shrink:0;
+  display:flex; align-items:center;
+  overflow:hidden;
+}
+.lg-mod-badge {
+  font-family:var(--font-mono); font-size:9px; font-weight:600;
+  color:var(--text-secondary); background:var(--bg-inset);
+  border-radius:var(--radius-sm);
+  padding:1px 6px; line-height:1.4;
+  max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.lg-tr.error .lg-mod-badge { background:transparent; }
+.lg-td-msg {
+  flex:1; min-width:0; color:var(--text-secondary);
+}
+.lg-tr.error .lg-td-msg { color:var(--text-primary); }
+
+/* Футер панели: счётчик строк + размер БД чипами (как в статус-баре оболочки).
+   Подложка чипов — bg-inset: панель журнала сама красится bg-card, и чипы из
+   того же цвета на ней растворялись — текст выглядел «висячими кусками». */
+.lg-foot {
+  display:flex; align-items:center; justify-content:space-between; gap:6px;
+  padding:6px 10px; border-top:var(--border-w) solid var(--border); flex-shrink:0;
+}
+.lg-foot-chips { display:flex; align-items:center; gap:6px; min-width:0; overflow:hidden; }
+.lg-foot .ft-chip {
+  height:22px; padding:0 10px; gap:7px;
+  background:var(--bg-inset);
+  box-shadow:none;
+}
+.lg-foot .ft-chip .ft-label { font-size:10.5px; }
+.lg-foot .ft-chip .ft-val { font-size:11px; }
+.ft-chip .ft-val.err { color:var(--danger); }
+
+/* Тонкий скроллбар внутри панели (drawer живёт в .stand-win, а не в
+   .stand-content — общее правило стенда на него не действует) */
+.lg-drawer ::-webkit-scrollbar { width:6px; height:6px; }
+.lg-drawer ::-webkit-scrollbar-track { background:transparent; }
+.lg-drawer ::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+.lg-drawer ::-webkit-scrollbar-thumb:hover { background:var(--text-tertiary); }
+.lg-head-tabs {
+  display:flex; gap:1px; padding:4px 6px; margin-left:4px; flex-shrink:0;
+  background:var(--bg-section); border-radius:6px; border-bottom:var(--border-w) solid var(--border);
+  overflow-x:auto; overflow-y:hidden; scrollbar-width:none;
+}
+.lg-head-tabs::-webkit-scrollbar { display:none; }
+.lg-tab {
+  background:transparent; border:none; border-radius:5px;
+  padding:3px 10px; font-size:10.5px; font-weight:600; color:var(--text-tertiary);
+  cursor:pointer; font-family:var(--font); transition:all 150ms;
+  display:flex; align-items:center; gap:4px; white-space:nowrap; flex-shrink:0;
+}
+.lg-tab:hover { color:var(--text-secondary); }
+.lg-tab.on { background:var(--bg-card); color:var(--text-primary); box-shadow:0 1px 2px rgba(0,0,0,0.08); }
+.lg-tab-badge {
+  min-width:14px; height:13px;
+  color:var(--text-tertiary); font-size:8.5px; font-weight:600;
+  display:flex; align-items:center; justify-content:center; padding:0 2px;
+  font-variant-numeric:tabular-nums;
+}
+.toast-clickable { cursor:pointer; }
+.toast-clickable:hover { border-color:var(--accent); }
+.toast-error-code {
+  display:inline-block; background:var(--danger-bg); color:var(--danger);
+  font-weight:700; font-size:11px; font-family:var(--font-mono);
+  padding:0 6px; border-radius:3px; margin-right:6px;
+}
+.toast-progress-bar-wrap {
+  margin-top:6px; height:4px; background:var(--bg-section);
+  border-radius:2px; overflow:hidden;
+}
+.toast-progress-bar {
+  height:100%; background:var(--accent); border-radius:2px;
+  transition:width 200ms ease;
+}
+.toast-download .toast-icon { color:var(--accent); }
+.toast-warning .toast-icon { color:var(--warning); }
+
+/* ══════════════════════════════════════════════════
+   Recovery (модальное окно восстановления, общий каркас)
+   ══════════════════════════════════════════════════ */
+.rcv-modal-sub { font-size:var(--fs-md); color:var(--text-secondary); line-height:1.5; }
+.rcv-step-fail { font-size:10px; color:var(--danger); font-weight:700; }
+.rcv-steps { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:3px; }
+.rcv-step {
+  display:flex; align-items:center; gap:6px;
+  font-size:11px; color:var(--text-secondary); padding:2px 0;
+}
+.rcv-step-icon { flex-shrink:0; display:flex; align-items:center; width:14px; justify-content:center; }
+.rcv-step.is-done .rcv-step-icon { color:var(--success); }
+.rcv-step.is-failed .rcv-step-icon { color:var(--danger); }
+.rcv-step.is-start .rcv-step-icon { color:var(--accent); }
+.rcv-step-msg { flex:1; }
+
+/* ══════════════════════════════════════════════════
+   Recovery Failed Modal — общий каркас .modal, контент в секциях
+   ══════════════════════════════════════════════════ */
+.rcv-fail-intro { font-size:var(--fs-md); color:var(--text-secondary); line-height:1.5; margin-bottom:10px; }
+.rcv-fail-code-row {
+  display:flex; align-items:center; gap:8px;
+  padding:8px 10px; background:var(--bg-inset);
+  border-radius:var(--radius-sm); margin-bottom:10px;
+}
+.rcv-fail-code-label { font-size:10px; font-weight:600; color:var(--text-tertiary); text-transform:uppercase; }
+.rcv-fail-code {
+  font-size:12px; font-weight:700; color:var(--danger);
+  font-family:var(--font-mono); letter-spacing:0.5px;
+}
+.rcv-fail-section { padding:0 0 10px; margin-bottom:10px; border-bottom:var(--border-w) solid var(--border-light); }
+.rcv-fail-section:last-of-type { border-bottom:none; padding-bottom:0; margin-bottom:0; }
+.rcv-fail-section-title {
+  font-size:10px; font-weight:600; color:var(--text-tertiary);
+  text-transform:uppercase; margin-bottom:6px;
+}
+.rcv-fail-steps { list-style:none; margin:0; padding:0; }
+.rcv-fail-steps li {
+  display:flex; align-items:center; gap:6px;
+  font-size:11px; color:var(--text-secondary); padding:2px 0;
+}
+.rcv-fail-steps li.is-done { color:var(--success); }
+.rcv-fail-steps li.is-failed { color:var(--danger); }
+.rcv-fail-step-mark { flex-shrink:0; width:14px; display:flex; justify-content:center; }
+.rcv-fail-step-key {
+  font-family:var(--font-mono); font-size:10px; font-weight:600;
+  color:var(--text-tertiary); min-width:50px;
+}
+.rcv-fail-step-msg { flex:1; }
+.rcv-fail-diag { list-style:none; margin:0; padding:0; }
+.rcv-fail-diag li {
+  font-size:11px; color:var(--text-secondary); padding:2px 0;
+}
+.rcv-fail-diag li strong { color:var(--text-primary); }
+.rcv-fail-pre {
+  font-family:var(--font-mono); font-size:10px; color:var(--text-secondary);
+  background:var(--bg-inset); border:var(--border-w) solid var(--border);
+  border-radius:var(--radius-sm); padding:8px; margin:0;
+  max-height:120px; overflow-y:auto; white-space:pre-wrap; word-break:break-all;
+}
+@keyframes syncCardIn {
+  from { opacity:0; transform:translateY(6px) scale(0.98); }
+  to   { opacity:1; transform:none; }
+}
+
+/* Модалка проверки одной стратегии (ПКМ) */
+.sst-modal { display:flex; flex-direction:column; gap:10px; min-width:320px; }
+.sst-name {
+  font-size:12.5px; font-weight:600; color:var(--text-primary);
+  font-family:var(--font-mono); word-break:break-all;
+}
+.sst-state {
+  display:flex; align-items:center; gap:10px; padding:12px 13px;
+  border-radius:var(--radius-md); font-size:12px; font-weight:500;
+}
+.sst-state.running { background:var(--accent-soft); color:var(--accent); }
+.sst-state.passed { background:var(--success-bg); color:var(--success); }
+.sst-state.failed { background:var(--warning-bg); color:var(--warning); }
+.sst-state.error { background:var(--danger-bg); color:var(--danger); }
+.sst-detail { font-size:11px; color:var(--text-secondary); }
+.sst-kv { color:var(--text-primary); }
+.sst-actions { display:flex; gap:8px; justify-content:flex-end; }
+.sst-note { font-size:10.5px; color:var(--text-tertiary); line-height:1.45; }
+
+/* Выбор режима автоподбора */
+
+/* Строка провайдера — на интро, в шаге выбора стратегий и на прогрессе */
+.asm2-provider {
+  display:inline-flex; align-items:center; gap:5px;
+  font-size:11px; color:var(--text-tertiary);
+}
+.asm2-provider svg { color:var(--text-tertiary); flex-shrink:0; }
+.asm2-provider strong { color:var(--text-secondary); font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+.asm2-mode-pick { display:flex; flex-direction:column; gap:7px; }
+.asm2-mode-opt {
+  display:flex; align-items:center; gap:11px; text-align:left;
+  padding:10px 12px; border-radius:var(--radius-md);
+  border:var(--border-w) solid var(--border); background:var(--bg-inset);
+  cursor:pointer; font-family:var(--font);
+  transition:border-color var(--dur-fast) ease, background var(--dur-fast) ease, transform var(--dur-fast) ease;
+}
+.asm2-mode-opt:hover { border-color:var(--accent); background:var(--accent-soft); transform:translateY(-1px); }
+.asm2-mode-opt-ic {
+  flex:none; width:34px; height:34px; border-radius:11px;
+  display:inline-flex; align-items:center; justify-content:center;
+  background:var(--accent-soft); color:var(--accent);
+  transition:background var(--dur-fast) ease, color var(--dur-fast) ease;
+}
+.asm2-mode-opt:hover .asm2-mode-opt-ic { background:var(--accent); color:var(--accent-text); }
+.asm2-mode-opt-body { display:flex; flex-direction:column; gap:2px; min-width:0; }
+.asm2-mode-opt-title { display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:var(--text-primary); }
+.asm2-mode-opt-desc { font-size:10.5px; color:var(--text-tertiary); line-height:1.4; }
+
+/* Игровой подбор: шаг выбора стратегий чекбоксами */
+.asm2-gamepick { display:flex; flex-direction:column; gap:8px; }
+.asm2-gamepick-head { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.asm2-gamepick-title {
+  display:inline-flex; align-items:center; gap:6px;
+  font-size:12.5px; font-weight:600; color:var(--text-primary);
+}
+.asm2-gamepick-title svg { color:var(--accent); flex-shrink:0; }
+.asm2-gamepick-count {
+  font-size:10.5px; color:var(--text-secondary); font-family:var(--font-mono);
+  background:var(--bg-inset); border-radius:10px; padding:2px 9px;
+}
+.asm2-gamepick-links { display:inline-flex; gap:10px; margin-left:auto; }
+.asm2-linkbtn {
+  border:none; background:none; padding:0; cursor:pointer;
+  font-family:var(--font); font-size:11px; color:var(--accent);
+}
+.asm2-linkbtn:hover { color:var(--accent-hover); }
+.asm2-linkbtn:disabled { color:var(--text-tertiary); cursor:default; }
+.asm2-strat-list {
+  display:flex; flex-direction:column; gap:2px; max-height:220px; overflow-y:auto;
+  padding:6px; background:var(--bg-inset); border-radius:var(--radius-md);
+  border:var(--border-w) solid var(--border);
+}
+.asm2-strat-item {
+  display:flex; align-items:center; gap:8px; padding:5px 8px;
+  border-radius:var(--radius-sm); border:var(--border-w) solid transparent;
+  cursor:pointer; font-size:12px; color:var(--text-primary);
+  transition:border-color var(--dur-fast) ease, background var(--dur-fast) ease;
+}
+.asm2-strat-item:hover { background:var(--bg-hover); }
+.asm2-strat-item.on { border-color:var(--accent); background:var(--accent-soft); }
+.asm2-strat-input {
+  position:absolute; width:1px; height:1px; margin:-1px; padding:0;
+  overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0;
+}
+.asm2-strat-item:focus-within { outline:2px solid var(--accent); outline-offset:1px; }
+.asm2-check {
+  width:15px; height:15px; border-radius:5px; flex-shrink:0;
+  display:inline-flex; align-items:center; justify-content:center;
+  border:var(--border-w) solid var(--border); background:var(--bg-card);
+  color:transparent;
+  transition:background var(--dur-fast) ease, border-color var(--dur-fast) ease, color var(--dur-fast) ease;
+}
+.asm2-strat-item.on .asm2-check { background:var(--accent); border-color:var(--accent); color:var(--accent-text); }
+.asm2-strat-name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.asm2-strat-empty {
+  display:flex; align-items:center; justify-content:center; gap:8px;
+  padding:14px 8px; font-size:11.5px; color:var(--text-tertiary);
+}
+.asm2-strat-actions { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+
+/* Этапы проверки стратегии */
+.sst-phase-steps { display:flex; align-items:center; gap:14px; padding:4px 0; }
+.sst-phase-step {
+  display:inline-flex; align-items:center; gap:5px;
+  font-size:11px; color:var(--text-tertiary);
+}
+.sst-phase-step.active { color:var(--accent); font-weight:600; }
+.sst-phase-step.done { color:var(--success); }
+
+/* Live-список стратегий в автоподборе */
+.asm2-live-list {
+  display:flex; flex-direction:column; gap:4px; max-height:200px; overflow-y:auto;
+  padding:8px; background:var(--bg-inset); border-radius:var(--radius-md); margin:8px 0;
+  border:var(--border-w) solid var(--border);
+}
+.asm2-live-item {
+  display:flex; align-items:center; gap:8px; padding:6px 10px;
+  border-radius:8px; border:var(--border-w) solid transparent;
+  background:var(--bg-card); font-size:11px;
+  animation:syncCardIn 200ms var(--ease-out);
+}
+.asm2-live-item.current { border-color:var(--accent); background:var(--accent-soft); }
+.asm2-live-item.pending { opacity:0.6; }
+.asm2-live-item.best { border-color:var(--success); }
+.asm2-live-item.err .asm2-r-name { text-decoration:line-through; opacity:0.6; }
+.asm2-live-spin { margin-left:auto; }
+.spinner { display:inline-flex; flex:none; color:#fff; }
+.spinner svg { width:100%; height:100%; display:block; animation:spin 1.4s linear infinite; }
+/* Indeterminate-дуга Material: дуга растёт-сжимается (ease-in-out) поверх
+   равномерного вращения. Сплошной белый, без точки и градиента. */
+.spinner-arc {
+  stroke:currentColor;
+  stroke-dasharray:1,200; stroke-dashoffset:0;
+  animation:sp-dash 1.4s ease-in-out infinite;
+}
+@keyframes sp-dash {
+  0% { stroke-dasharray:1,200; stroke-dashoffset:0; }
+  50% { stroke-dasharray:89,200; stroke-dashoffset:-35; }
+  100% { stroke-dasharray:89,200; stroke-dashoffset:-124; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .spinner svg, .spinner-arc { animation:none; stroke-dasharray:60,140; stroke-dashoffset:-10; }
+}
+.spin-inline { display:inline-block; margin-right:4px; vertical-align:middle; }
+.asm2-r-pct { font-family:var(--font-mono); font-weight:600; }
+.asm2-r-pct.pct-green { color:var(--success); }
+.asm2-r-pct.pct-yellow { color:var(--warning); }
+.asm2-r-pct.pct-red { color:var(--danger); }
+.asm2-r-n { font-family:var(--font-mono); font-size:10px; color:var(--text-tertiary); }

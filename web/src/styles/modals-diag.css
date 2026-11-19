@@ -1,0 +1,175 @@
+/* ── AutoSelectModal v2 (общий каркас .modal) ── */
+/* Решение владельца 14.11: модалка заметно уже прежних 820px (был size="xl"). */
+.modal.asm2-modal { max-width:470px; }
+.asm2-content { display:flex; flex-direction:column; gap:10px; min-width:0; }
+.asm2-right-group { display:flex; align-items:center; gap:10px; min-width:0; }
+.asm2-pct-big {
+  font-family:var(--font-mono); font-size:20px; font-weight:600;
+  color:var(--accent); font-variant-numeric:tabular-nums; line-height:1;
+}
+.asm2-pct-sign { font-size:13px; color:var(--accent); margin-left:1px; }
+.asm2-progress-bar {
+  height:10px; background:var(--bg-inset); border-radius:5px; overflow:hidden;
+}
+.asm2-progress-fill {
+  height:100%; background:var(--grad-accent); border-radius:5px;
+  box-shadow:0 0 14px -3px var(--accent-soft);
+  transition:width 300ms var(--ease-out);
+}
+.asm2-status {
+  font-size:11px; color:var(--text-secondary); line-height:1.4;
+  min-height:18px;
+}
+.asm2-status-row {
+  display:flex; align-items:center; justify-content:space-between; gap:8px;
+  min-height:26px;
+}
+.asm2-eta {
+  font-size:11px; font-weight:600; color:var(--accent);
+  font-family:var(--font-mono); white-space:nowrap; flex-shrink:0;
+}
+/* Текущая фаза подбора: спиннер + текст на soft-подложке */
+.asm2-phase-row {
+  display:flex; align-items:flex-start; gap:7px;
+  padding:7px 10px; border-radius:var(--radius-md);
+  background:var(--accent-soft);
+}
+.asm2-phase-row .spin-ring { margin-top:2px; }
+.asm2-phase-row .asm2-status { min-height:0; }
+
+.asm2-result-banner {
+  display:flex; align-items:center; gap:11px;
+  padding:13px 14px; border-radius:var(--radius-md); font-size:12px; font-weight:500;
+}
+.asm2-rb-icon {
+  flex:none; width:32px; height:32px; border-radius:10px;
+  display:inline-flex; align-items:center; justify-content:center;
+  color:#fff;
+}
+.asm2-rb-text { flex:1; min-width:0; line-height:1.45; }
+.asm2-result-banner.success {
+  background:var(--success-bg); border:var(--border-w) solid var(--success); color:var(--success);
+}
+.asm2-result-banner.success .asm2-rb-icon { background:var(--success); }
+.asm2-result-banner.error {
+  background:var(--danger-bg); border:var(--border-w) solid var(--danger); color:var(--danger);
+}
+.asm2-result-banner.error .asm2-rb-icon { background:var(--danger); }
+/* «Подбор остановлен» — нейтральный баннер, не ошибка */
+.asm2-result-banner.neutral {
+  background:var(--bg-inset); border:var(--border-w) solid var(--border); color:var(--text-secondary);
+}
+.asm2-result-banner.neutral .asm2-rb-icon { background:var(--border); color:var(--text-secondary); }
+.asm2-best-stats {
+  display:flex; gap:6px; flex-wrap:wrap; align-items:center;
+  padding:2px 0;
+}
+.asm2-best-stats > * {
+  background:var(--bg-inset); border-radius:10px; padding:7px 10px;
+}
+.asm2-stat { font-size:18px; font-weight:600; color:var(--accent); font-family:var(--font-mono); font-variant-numeric:tabular-nums; line-height:1; }
+.asm2-stat-ms { font-size:11px; color:var(--text-secondary); font-family:var(--font-mono); }
+
+.asm2-r-name { color:var(--text-primary); font-weight:500; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.asm2-r-err { color:var(--danger); font-size:10px; }
+
+/* Скелетон под размер тумблера/строки — пока стартовые статусы грузятся */
+.switch-skel { display:inline-block; width:34px; height:18px; border-radius:6px;
+  background:linear-gradient(90deg, var(--border) 25%, var(--border-light) 50%, var(--border) 75%);
+  background-size:200% 100%; animation:shimmer 1.5s infinite; }
+
+/* ── AutoSelectModal intro screen ───────── */
+.asm2-intro {
+  text-align:center; padding:16px 12px 8px;
+  font-size:12px; color:var(--text-secondary); line-height:1.6;
+}
+.zapret-head { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.zapret-head-actions { display:flex; align-items:center; gap:4px; }
+
+.zapret-skipped-banner {
+  display:flex; align-items:center; gap:14px;
+  padding:16px 18px; margin-top:12px;
+  background:var(--bg-card); border:var(--border-w) solid var(--warning);
+  border-radius:var(--radius-lg);
+}
+.zapret-skipped-banner svg { flex-shrink:0; }
+.zapret-skipped-text { flex:1; display:flex; flex-direction:column; gap:3px; }
+.zapret-skipped-text strong { font-size:13px; color:var(--text-primary); }
+.zapret-skipped-text p { font-size:11px; color:var(--text-tertiary); margin:0; }
+
+/* ── Diagnostics Modal v2 ────────────────── */
+.diag2-banner {
+  display:flex; align-items:center; gap:10px;
+  padding:10px 14px; border-radius:var(--radius-md); margin-bottom:10px;
+  font-size:12px;
+}
+.diag2-banner.ok { background:var(--success-bg); color:var(--success); }
+.diag2-banner.warn { background:var(--warning-bg); color:var(--warning); }
+.diag2-banner.error { background:var(--danger-bg); color:var(--danger); }
+.diag2-banner-counts { display:flex; gap:6px; }
+.diag2-count {
+  display:inline-flex; align-items:center; gap:3px;
+  font-size:11px; font-weight:700; padding:2px 8px; border-radius:8px;
+  background:var(--bg-card);
+}
+.diag2-count.ok { color:var(--success); }
+.diag2-count.warn { color:var(--warning); }
+.diag2-count.error { color:var(--danger); }
+.diag2-banner-text { flex:1; font-weight:600; }
+.diag2-rerun { flex-shrink:0; }
+
+.diag2-list { display:flex; flex-direction:column; gap:4px; }
+.diag2-item {
+  display:flex; align-items:center; gap:10px; padding:8px 10px;
+  border-radius:var(--radius-sm); background:var(--bg-inset);
+  transition:background 120ms;
+}
+.diag2-item:hover { background:var(--bg-hover); }
+.diag2-item-body { display:flex; flex-direction:column; gap:1px; flex:1; min-width:0; }
+.diag2-item-label { font-size:12px; font-weight:500; color:var(--text-primary); }
+.diag2-item-detail { font-size:10px; color:var(--text-tertiary); }
+.diag2-clear-btn { flex-shrink:0; gap:4px; }
+.diag2-icon {
+  width:22px; height:22px; border-radius:7px; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+}
+.diag2-skeleton {
+  height:38px; border-radius:var(--radius-sm);
+  background:var(--bg-inset); animation:diag2Sk 1.2s ease infinite;
+}
+@keyframes diag2Sk { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
+.diag2-cache { margin-top:12px; padding-top:10px; border-top:var(--border-w) solid var(--border); }
+.diag2-cache-title {
+  display:flex; align-items:center; gap:6px;
+  font-size:12px; font-weight:600; color:var(--text-primary); margin-bottom:8px;
+}
+.diag2-cache-btns { display:flex; gap:6px; flex-wrap:wrap; }
+.diag2-cache-panel {
+  display:flex; align-items:center; gap:10px; padding:7px 10px;
+  border-radius:var(--radius-sm); background:var(--bg-inset);
+}
+.diag2-cache-clear { flex-shrink:0; min-width:74px; }
+.diag2-cache-panel .diag2-item-body { flex:1; min-width:0; }
+.diag2-cleared {
+  margin-top:8px; padding:6px 10px; border-radius:var(--radius-sm);
+  background:var(--success-bg); color:var(--success);
+  font-size:11px; font-weight:500;
+}
+.diag2-cleared-lines {
+  margin-top:8px; display:flex; flex-direction:column; gap:2px;
+  max-height:140px; overflow-y:auto;
+}
+.diag2-cleared-line {
+  font-size:10.5px; color:var(--text-secondary);
+  padding:3px 8px; border-radius:var(--radius-sm); background:var(--bg-inset);
+}
+
+/* ── Legacy diag (kept for compatibility) ── */
+.diag-pill {
+  font-size:10px; font-weight:600; padding:2px 8px; border-radius:8px;
+  display:inline-flex; align-items:center; gap:3px;
+}
+.diag-pill.ok { background:var(--success-bg); color:var(--success); }
+.diag-pill.warn { background:var(--warning-bg); color:var(--warning); }
+.diag-pill.error { background:var(--danger-bg); color:var(--danger); }
