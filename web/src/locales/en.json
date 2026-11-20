@@ -1669,6 +1669,8 @@
     "fromSource": "Source: {source}",
     "doneTitle": "{component} updated",
     "doneBody": "Done — version {version} is installed.",
+    "noUpdate": "You have the latest version",
+    "noUpdateTitle": "No update needed",
     "errorTitle": "Update error",
     "errorBody": "The update could not be completed.",
     "retry": "Retry",

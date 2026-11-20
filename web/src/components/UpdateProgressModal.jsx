@@ -24,7 +24,7 @@ export default function UpdateProgressModal() {
       case 'downloaded': return t('update.downloadComplete');
       case 'installing': return t('update.installingTitle', { component: componentName });
       case 'launching': return t('update.launchingTitle');
-      case 'done': return t('update.doneTitle', { component: componentName, version: fmtVer(flow.version) });
+      case 'done': return flow.noUpdate ? t('update.noUpdateTitle') : t('update.doneTitle', { component: componentName, version: fmtVer(flow.version) });
       case 'error': return t('update.errorTitle');
       default: return '';
     }
@@ -97,7 +97,7 @@ export default function UpdateProgressModal() {
     body = (
       <div className="upd-flow-body">
         <CheckCircle2 size={30} strokeWidth={1.8} className="upd-flow-icon ok" />
-        <p className="upd-flow-text">{t('update.doneBody', { version: fmtVer(flow.version) })}</p>
+        <p className="upd-flow-text">{flow.noUpdate ? t('update.noUpdate') : t('update.doneBody', { version: fmtVer(flow.version) })}</p>
       </div>
     );
     footer = (

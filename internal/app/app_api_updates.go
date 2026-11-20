@@ -102,10 +102,17 @@ func (a *App) zpuiSourcePlans(mode string) (plans []zpuiPlan, lastErr string, no
 		case "server":
 			m, reachable := a.fetchServerZPUIManifest()
 			if !reachable {
+				a.log.Warn("updater", "server: unreachable")
 				lastErr = "сервер управления недоступен"
 				continue
 			}
-			if m == nil || !updater.IsNewer(a.version, m.Version) {
+			if m == nil {
+				a.log.Info("updater", "server: no update in manifest")
+				return plans, "", true
+			}
+			newer := updater.IsNewer(a.version, m.Version)
+			a.log.Info("updater", fmt.Sprintf("server: manifest v%s (newer=%v)", m.Version, newer))
+			if !newer {
 				return plans, "", true
 			}
 			name := strings.TrimSpace(m.File)
@@ -125,10 +132,13 @@ func (a *App) zpuiSourcePlans(mode string) (plans []zpuiPlan, lastErr string, no
 		case "yandex":
 			info, err := updater.CheckZPUISetupUpdate(a.version)
 			if err != nil {
+				a.log.Warn("updater", "yandex: "+err.Error())
 				lastErr = err.Error()
 				continue
 			}
-			if !updater.IsNewer(a.version, info.Version) {
+			newer := updater.IsNewer(a.version, info.Version)
+			a.log.Info("updater", fmt.Sprintf("yandex: v%s (newer=%v)", info.Version, newer))
+			if !newer {
 				return plans, "", true
 			}
 			dest := filepath.Join(os.TempDir(), updater.ZPUISetupFileName(info.Version))
@@ -144,10 +154,13 @@ func (a *App) zpuiSourcePlans(mode string) (plans []zpuiPlan, lastErr string, no
 		case "github", "ghproxy":
 			info, err := updater.CheckZPUIGithubRelease(a.version)
 			if err != nil {
+				a.log.Warn("updater", src+": "+err.Error())
 				lastErr = err.Error()
 				continue
 			}
-			if !updater.IsNewer(a.version, info.Version) {
+			newer := updater.IsNewer(a.version, info.Version)
+			a.log.Info("updater", fmt.Sprintf("%s: v%s (newer=%v)", src, info.Version, newer))
+			if !newer {
 				return plans, "", true
 			}
 			dest := filepath.Join(os.TempDir(), updater.ZPUISetupFileName(info.Version))
@@ -258,12 +271,34 @@ func (a *App) DownloadZPUISetup() map[string]interface{} {
 	if !downloadMu.TryLock() {
 		return errResp("Загрузка уже идёт")
 	}
+	a.log.Info("updater", "manual download requested (source="+a.cfg.GetUpdatesSource()+")")
 	updateFlagsSet(func() {
 		updateState.downloadActive = true
 		updateState.setupReady = false
 	})
 
 	plans, lastErr, noUpdate := a.zpuiSourcePlans(a.cfg.GetUpdatesSource())
+	if noUpdate || len(plans) == 0 {
+		// Живые источники не дали плана: достраиваем из кэша манифеста
+		// стартовой проверки — иначе сбой живого опроса фальшиво превращается
+		// в «обновлений нет» (спека 2026-11-20-update-download-fix-212).
+		if a.zpuiManifestCacheNewer(a.version) {
+			v, u, s := a.zpuiServerManifestCached()
+			a.log.Info("updater", "live sources inconclusive — using cached server manifest from startup check (v" + v + ")")
+			name := updater.ZPUISetupFileName(v)
+			dest := filepath.Join(os.TempDir(), name)
+			m := &serverZPUIManifest{Version: v, URL: u, SHA256: s, File: name}
+			plans = append(plans, zpuiPlan{
+				source:  "server",
+				version: v,
+				dest:    dest,
+				run: func(cb func(int, int64, int64)) (*updater.DownloadResult, error) {
+					return a.downloadServerSetup(m, dest, cb)
+				},
+			})
+			noUpdate = false
+		}
+	}
 	if noUpdate {
 		downloadMu.Unlock()
 		updateFlagsSet(func() { updateState.downloadActive = false })
@@ -274,6 +309,9 @@ func (a *App) DownloadZPUISetup() map[string]interface{} {
 		updateFlagsSet(func() { updateState.downloadActive = false })
 		if lastErr == "" {
 			lastErr = "источники обновлений недоступны"
+		}
+		if cached := a.zpuiLatestCached(); cached != "" {
+			lastErr += "; последняя известная версия: " + cached
 		}
 		return errResp(lastErr)
 	}

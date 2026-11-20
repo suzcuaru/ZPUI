@@ -17,6 +17,7 @@ let _flow = {
   step: '',
   source: '',
   version: null,
+  noUpdate: false,
   error: null,
 };
 const subs = new Set();
@@ -41,13 +42,15 @@ export function openUpdateModal(component) {
     total: 0,
     step: '',
     source: '',
+    version: null,
+    noUpdate: false,
     error: null,
   });
   const route = component === 'ZPUI' ? '/api/updates/download' : '/api/updates/download-zapret';
   api('POST', route).then((d) => {
     if (!d) return;
-    if (d.error) set({ phase: 'error', error: d.error });
-    else if (d.status === 'no_update') set({ phase: 'done', version: d.version });
+    if (d.error) set({ phase: 'error', error: d.error, noUpdate: false });
+    else if (d.status === 'no_update') set({ phase: 'done', noUpdate: true });
     else if (d.version) set({ version: d.version, ...(d.source ? { source: d.source } : {}) });
   });
 }
@@ -103,24 +106,25 @@ export function initUpdateEvents() {
       percent: d.percent || 0,
       downloaded: d.downloaded || 0,
       total: d.total || 0,
+      noUpdate: false,
     });
   });
   subscribeEvent('update:download-done', (d) => {
     if (!d?.component) return;
     if (d.ok) {
-      set({ phase: 'downloaded', percent: 100, version: d.version || _flow.version, source: d.source || _flow.source });
+      set({ phase: 'downloaded', percent: 100, version: d.version || _flow.version, source: d.source || _flow.source, noUpdate: false });
     } else {
-      set({ phase: 'error', error: d.error || '' });
+      set({ phase: 'error', error: d.error || '', noUpdate: false });
     }
   });
   subscribeEvent('update:install', (d) => {
     if (!d) return;
-    set({ open: true, component: d.component || 'zapret', phase: 'installing', step: d.step || '', percent: d.percent || 0 });
+    set({ open: true, component: d.component || 'zapret', phase: 'installing', step: d.step || '', percent: d.percent || 0, noUpdate: false });
   });
   subscribeEvent('update:install-done', (d) => {
     if (!d) return;
     if (d.ok) {
-      set({ phase: 'done', percent: 100, version: d.version || _flow.version });
+      set({ phase: 'done', percent: 100, version: d.version || _flow.version, noUpdate: false });
       // После установки запрета сбрасываем закэшированный «доступно обновление»,
       // иначе кнопка «Скачать» остаётся до перезапуска приложения.
       if (d.component === 'zapret') {
@@ -129,7 +133,7 @@ export function initUpdateEvents() {
         window.dispatchEvent(new CustomEvent('zpui:zapret-installed'));
       }
     } else {
-      set({ phase: 'error', error: d.error || '' });
+      set({ phase: 'error', error: d.error || '', noUpdate: false });
     }
   });
   subscribeEvent('update:open-modal', (d) => {

@@ -19,6 +19,9 @@ type updateFlags struct {
 	zpuiChecked     bool
 	zpuiAvailable   bool
 	zpuiLatest      string
+	zpuiSrvVersion  string
+	zpuiSrvURL      string
+	zpuiSrvSHA      string
 	zapretChecked   bool
 	zapretAvailable bool
 	zapretCurrent   string
@@ -34,6 +37,30 @@ func (a *App) setZPUIUpdateAvailable(latest string) {
 	updFlags.zpuiAvailable = latest != ""
 	updFlags.zpuiLatest = latest
 	updFlags.mu.Unlock()
+}
+
+// setZPUIServerManifest — кэш манифеста обновления ZPUI с сервера из последней
+// проверки: ручное скачивание достраивает из него план, когда живые источники
+// недоступны или противоречивы. Пустая версия очищает запись целиком.
+func (a *App) setZPUIServerManifest(version, url, sha string) {
+	if version == "" {
+		url, sha = "", ""
+	}
+	updFlags.mu.Lock()
+	updFlags.zpuiSrvVersion, updFlags.zpuiSrvURL, updFlags.zpuiSrvSHA = version, url, sha
+	updFlags.mu.Unlock()
+}
+
+func (a *App) zpuiServerManifestCached() (version, url, sha string) {
+	updFlags.mu.Lock()
+	defer updFlags.mu.Unlock()
+	return updFlags.zpuiSrvVersion, updFlags.zpuiSrvURL, updFlags.zpuiSrvSHA
+}
+
+// zpuiManifestCacheNewer — в кэше есть манифест сервера и он новее current.
+func (a *App) zpuiManifestCacheNewer(current string) bool {
+	v, _, _ := a.zpuiServerManifestCached()
+	return v != "" && updater.IsNewer(current, v)
 }
 
 func (a *App) setZapretUpdateAvailable(current, latest, source string) {

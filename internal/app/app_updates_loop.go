@@ -61,6 +61,13 @@ func (a *App) runUpdateCheck() {
 	if zpuiLatest != "" || srvReachable {
 		needed := zpuiLatest != "" && updater.IsNewer(a.version, zpuiLatest)
 		if needed {
+			// Кэш манифеста — только при обновлении именно с сервера; при
+			// фолбэке на Яндекс/GitHub и при «не новее» запись протухшая — чистим.
+			if srv != nil {
+				a.setZPUIServerManifest(srv.Version, srv.URL, srv.SHA256)
+			} else {
+				a.setZPUIServerManifest("", "", "")
+			}
 			a.setZPUIUpdateAvailable(zpuiLatest)
 			// Windows-тост об обновлении убран (решение владельца 14.11):
 			// обновление видно в панели «Обновления» и в бейдже тайтлбара.
@@ -77,7 +84,11 @@ func (a *App) runUpdateCheck() {
 			}
 		} else {
 			a.setZPUIUpdateAvailable("")
+			a.setZPUIServerManifest("", "", "")
 		}
+	} else {
+		// Вся цепочка недоступна (сервер в том числе) — кэш манифеста сброс.
+		a.setZPUIServerManifest("", "", "")
 	}
 
 	// --- Zapret ---

@@ -197,6 +197,13 @@ func extractOne(f *zip.File, dst string) error {
 }
 
 func extractOnce(f *zip.File, dst string) error {
+	// Запись каталога («dir/», size 0) должна создавать каталог, а не нулевой
+	// файл: иначе дочерние записи падают в MkdirAll («предок — файл»).
+	// Суффикс проверяем по ToSlash-имени: payload может хранить записи с
+	// бэкслэшами («x64\skills\») — тогда ни IsDir(), ни "/"-суффикс не сработают.
+	if f.FileInfo().IsDir() || strings.HasSuffix(filepath.ToSlash(f.Name), "/") {
+		return os.MkdirAll(dst, 0o755)
+	}
 	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
 		return err
 	}
@@ -488,6 +495,7 @@ func UpdateExisting(p *Payload, dir, newVer string, step Step) error {
 	writeInstallRegistry(dir, newVer)
 	writePendingZapretBackup(dir, step)
 	registerService(dir, step)
+	CleanupUpdateLeftovers(dir)
 	return nil
 }
 
@@ -580,6 +588,7 @@ func InstallFresh(p *Payload, dir, ver string, clean, desktop, startMenu bool, s
 	writeUninstallRegistry(dir, ver)
 	writePendingZapretBackup(dir, step)
 	registerService(dir, step)
+	CleanupUpdateLeftovers(dir)
 	return nil
 }
 

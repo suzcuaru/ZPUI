@@ -1669,6 +1669,8 @@
     "fromSource": "Источник: {source}",
     "doneTitle": "{component} обновлён",
     "doneBody": "Готово — установлена версия {version}.",
+    "noUpdate": "У вас последняя версия",
+    "noUpdateTitle": "Обновление не требуется",
     "errorTitle": "Ошибка обновления",
     "errorBody": "Не удалось выполнить обновление.",
     "retry": "Повторить",

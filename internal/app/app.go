@@ -19,6 +19,7 @@ import (
 	"zpui/internal/mcpserver"
 	"zpui/internal/monitor"
 	"zpui/internal/notify"
+	"zpui/internal/pkginst"
 	"zpui/internal/proxy"
 	"zpui/internal/syncclient"
 	"zpui/internal/tgproxy"
@@ -428,6 +429,12 @@ func (a *App) Startup(ctx context.Context) {
 	a.supRegistry()
 
 	a.supervisedGo("startup-cleanup", a.runStartupCleanup)
+	// Остатки обновлений (%TEMP%\ZPUI-Setup-*.exe и пр.) — отложенно, чтобы не
+	// конкурировать со стартовыми загрузками и не задерживать запуск.
+	a.safeGo(func() {
+		time.Sleep(2 * time.Minute)
+		pkginst.CleanupUpdateLeftovers(a.exeDir)
+	})
 	// Автозапуск (миграция схемы, запросы к schtasks — секунды) и служба ZPUI:
 	// в фоне и ПОСЛЕДОВАТЕЛЬНО (hello службе передаёт актуальное состояние
 	// автозапуска), чтобы IPC/SCM/schtasks не задерживали отзывчивость окна.
