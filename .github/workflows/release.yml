@@ -49,10 +49,10 @@ jobs:
         run: |
           V="${{ steps.version.outputs.VERSION }}"
           : > release/checksums.sha256
-          for f in "ZPUI-Setup-${V}.exe" "ZPUI-${V}-portable.zip"; do
+          for f in "ZPUI-Setup-${V}.exe" "release/ZPUI-${V}-portable.zip"; do
             h=$(sha256sum "$f" | awk '{print $1}')
             s=$(stat -c%s "$f")
-            echo "$h  $f ($s bytes)" >> release/checksums.sha256
+            echo "$h  $(basename "$f") ($s bytes)" >> release/checksums.sha256
           done
 
       - name: Generate release notes from CHANGELOG.md
