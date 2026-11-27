@@ -331,6 +331,7 @@ func (a *App) GetSyncInfo() map[string]interface{} {
 		"server":      ServerURL,
 		"sections":    sections,
 		"recommended": map[string]interface{}{},
+		"auth_state":  "ok", // ok | auth_required (проблема паспорта устройства) | relogin (сессия истекла, нужен вход)
 	}
 	if r := a.syncRunnerRef(); r != nil {
 		st := r.Status()
@@ -339,6 +340,9 @@ func (a *App) GetSyncInfo() map[string]interface{} {
 		out["rtt_ms"] = st.RTTms
 		out["last_error"] = st.LastError
 		out["next_after"] = st.NextAfter
+		if st.AuthState != "" {
+			out["auth_state"] = st.AuthState
+		}
 		if st.TicketOp != "" {
 			out["ticket_op"] = st.TicketOp
 		}

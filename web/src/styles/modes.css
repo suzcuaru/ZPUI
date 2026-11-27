@@ -180,7 +180,9 @@ input[type="range"].slider-ui:disabled::-webkit-slider-thumb { transform:none; b
 .upd-modal-ver.new { color:var(--accent); font-size:19px; }
 .upd-modal-arrow { color:var(--accent); align-self:center; display:flex; }
 .upd-modal-arrow svg { display:block; }
-.upd-modal-text { font-size:var(--fs-md); line-height:1.5; color:var(--text-secondary); text-align:center; margin:0; }
+/* Текст статуса в модалках обновления (общий у upd-modal и upd-flow) */
+.upd-modal-text,
+.upd-flow-text { font-size:var(--fs-md); line-height:1.5; color:var(--text-secondary); text-align:center; margin:0; }
 .upd-notes {
   display:flex; flex-direction:column; gap:6px; padding:10px 12px;
   background:var(--bg-inset); border-radius:var(--radius-md);
@@ -223,7 +225,6 @@ input[type="range"].slider-ui:disabled::-webkit-slider-thumb { transform:none; b
   font-family:var(--font-mono); font-size:var(--fs-sm); color:var(--text-tertiary);
   font-variant-numeric:tabular-nums;
 }
-.upd-flow-text { font-size:var(--fs-md); line-height:1.5; color:var(--text-secondary); text-align:center; margin:0; }
 .upd-flow-text.err { color:var(--danger); }
 .upd-flow-source { font-size:var(--fs-sm); color:var(--text-tertiary); }
 
@@ -273,8 +274,11 @@ input[type="range"].slider-ui:disabled::-webkit-slider-thumb { transform:none; b
 }
 .zpset-danger-info { display:flex; align-items:flex-start; gap:8px; }
 .zpset-danger-icon { color:var(--danger); flex-shrink:0; margin-top:1px; }
-.zpset-danger-title { display:block; font-size:11px; font-weight:600; color:var(--text-primary); }
-.zpset-danger-desc { display:block; font-size:10px; color:var(--text-secondary); }
+/* Заголовок/описание блоков-предупреждений (danger и install — один формат) */
+.zpset-danger-title,
+.zpset-install-title { display:block; font-size:11px; font-weight:600; color:var(--text-primary); }
+.zpset-danger-desc,
+.zpset-install-desc { display:block; font-size:10px; color:var(--text-secondary); }
 
 .zpset-install-prompt {
   display:flex; align-items:center; justify-content:space-between; gap:10px;
@@ -283,8 +287,6 @@ input[type="range"].slider-ui:disabled::-webkit-slider-thumb { transform:none; b
 }
 .zpset-install-info { display:flex; align-items:flex-start; gap:8px; }
 .zpset-install-icon { color:var(--accent); flex-shrink:0; margin-top:1px; }
-.zpset-install-title { display:block; font-size:11px; font-weight:600; color:var(--text-primary); }
-.zpset-install-desc { display:block; font-size:10px; color:var(--text-secondary); }
 
 .lists-skip-section { margin-top:8px; }
 .zp-skip-desc, .zp-lists-hint { font-size:10px; color:var(--text-tertiary); margin-bottom:6px; }
@@ -309,3 +311,9 @@ input[type="range"].slider-ui:disabled::-webkit-slider-thumb { transform:none; b
 .mon-chart-skeleton { display:flex; align-items:center; padding:0; }
 .mon-chart-skeleton .skeleton-line { flex:1; height:64%; margin:0; }
 .mon-devices-skeleton { display:flex; flex-direction:column; gap:2px; padding:4px 0; }
+/* Итог установки плагина браузера: куда поставили и что включить */
+.upd-flow-note {
+  display: flex; flex-direction: column; gap: 4px; width: 100%;
+  padding: 8px 10px; border-radius: var(--radius-md); background: var(--warning-bg);
+}
+.upd-flow-note span { color: var(--text-secondary); font-size: var(--fs-sm); line-height: 1.45; text-align: center; }

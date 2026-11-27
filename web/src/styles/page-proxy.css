@@ -2,10 +2,13 @@
 /* Прокси/Туннель — вёрстка как на DNS: герой с тумблером + сетка карточек
    (.section). Прокруток на вкладках нет: контент обязан вмещаться целиком. */
 /* Страница скроллится сама: доп. настройки моста выше одного экрана,
-   а .main-area держит overflow:hidden — без этого хвост обрезается. */
+   а .main-area держит overflow:hidden — без этого хвост обрезается.
+   scrollbar-gutter здесь НЕ нужен: стабильный гаттер сдвигал правый край
+   вкладки на ширину скроллбара относительно соседних вкладок (фидбек
+   владельца 22.11) — полоса появляется только при раскрытых доп. настройках. */
 .proxy-page {
   display:flex; flex-direction:column; gap:8px; flex:1; min-height:0; height:100%;
-  overflow-y:auto; scrollbar-gutter:stable;
+  overflow-y:auto;
 }
 .proxy-top-stats { display:flex; align-items:center; gap:10px; flex-shrink:0; }
 .pts { display:flex; align-items:baseline; gap:3px; }
@@ -116,7 +119,9 @@
 .pp-row-desc { font-size:9.5px; color:var(--text-tertiary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 
 /* Telegram MTProto — компактные элементы */
-.tgp-link-box {
+/* Общая подложка строк «значение + копирование» (ссылки и secret) */
+.tgp-link-box,
+.tgp-secret-row {
   display:flex; align-items:center; gap:6px; padding:4px 8px;
   border-radius:var(--radius-sm); background:var(--bg-inset);
 }
@@ -155,10 +160,6 @@
 .tgp-lan.ok { background:var(--success-bg); color:var(--success); }
 .tgp-lan.off { background:var(--warning-bg); color:var(--warning); }
 .tgp-lan span { flex:1; min-width:0; line-height:1.4; }
-.tgp-secret-row {
-  display:flex; align-items:center; gap:6px; padding:4px 8px;
-  border-radius:var(--radius-sm); background:var(--bg-inset);
-}
 .tgp-secret {
   flex:1; min-width:0; font-family:var(--font-mono); font-size:10.5px;
   color:var(--text-primary); overflow:hidden; text-overflow:ellipsis;
@@ -233,6 +234,8 @@
 .upd-status.available { background:var(--warning-bg); color:var(--warning); }
 .upd-status.checking { background:var(--accent-soft); color:var(--accent); }
 .upd-status.error { background:var(--danger-bg); color:var(--danger); }
+/* «Не установлен» / «Сервер недоступен» в ряду «Плагин браузера»: без заливки, просто приглушённый текст */
+.upd-status.none { background:none; color:var(--text-tertiary); padding:3px 0; }
 .upd-btn-check { gap:4px; flex-shrink:0; }
 .upd-btn-check:hover { border-color:var(--accent); color:var(--accent); }
 .upd-dl { display:flex; align-items:center; gap:8px; margin-top:6px; width:100%; }

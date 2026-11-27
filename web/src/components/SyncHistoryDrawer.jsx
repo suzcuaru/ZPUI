@@ -125,11 +125,11 @@ export default function SyncHistoryDrawer({ open, onClose }) {
 
         <div className="lg-body">
           <div className="lg-table-wrap">
-            <div className="lg-table-header">
-              <span className="lg-th sh-th-date">{t('syncd.hist.date')}</span>
-              <span className="lg-th sh-th-time">{t('syncd.hist.time')}</span>
-              <span className="lg-th sh-th-who">{t('syncd.hist.who')}</span>
-              <span className="lg-th sh-th-what">{t('syncd.hist.what')}</span>
+            <div className="lg-table-header sh-grid">
+              <span className="lg-th">{t('syncd.hist.date')}</span>
+              <span className="lg-th">{t('syncd.hist.time')}</span>
+              <span className="lg-th">{t('syncd.hist.who')}</span>
+              <span className="lg-th">{t('syncd.hist.what')}</span>
             </div>
             <div className="lg-table-body" ref={bodyRef}>
               {loading && rows.length === 0 ? (
@@ -143,15 +143,15 @@ export default function SyncHistoryDrawer({ open, onClose }) {
                 </div>
               ) : visible.length > 0 ? (
                 visible.map((r, i) => (
-                  <div key={i} className={'lg-tr' + (r.result ? ' error' : '')}>
-                    <span className="lg-td sh-th-date mono">{fmtDate(r.ts)}</span>
-                    <span className="lg-td sh-th-time mono">{fmtTime(r.ts)}</span>
-                    <span className="lg-td sh-th-who">
+                  <div key={i} className={'lg-tr sh-grid' + (r.result ? ' error' : '')}>
+                    <span className="lg-td mono">{fmtDate(r.ts)}</span>
+                    <span className="lg-td mono">{fmtTime(r.ts)}</span>
+                    <span className="lg-td">
                       <span className={'sh-who-badge' + (r.who === 'server' ? ' server' : '')}>
                         {r.who === 'server' ? t('syncd.hist.whoServer') : t('syncd.hist.whoDevice')}
                       </span>
                     </span>
-                    <span className="lg-td sh-th-what">
+                    <span className="lg-td">
                       {r.who === 'server' ? t('syncd.hist.asked', { what: opLabel(r.op, t) }) : opLabel(r.op, t)}
                       {r.result ? <span className="sh-err"> — {t('syncd.hist.fail', { code: r.result })}</span> : ''}
                     </span>

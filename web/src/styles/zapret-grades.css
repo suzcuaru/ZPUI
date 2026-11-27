@@ -21,29 +21,6 @@
 .asm2-r-game.low { color:var(--danger); }
 .asm2-live-item .asm2-r-game { margin-left:0; }
 .asm2-stat-score { display:inline-flex; align-items:center; gap:6px; font-weight:800; font-size:15px; }
-/* Рейка фаз внутри модалки — ступени: точка сверху, полная подпись под ней,
-   линия между центрами соседних точек. Подписи не обрезаются и не распирают
-   модалку: каждая фаза — гибкая колонка. */
-.asm2-rail { margin-bottom:12px; gap:0; min-width:0; }
-.asm2-rail .startup-stage {
-  flex:1 1 0; min-width:0; position:relative;
-  flex-direction:column; gap:6px; justify-content:flex-start;
-}
-.asm2-rail .startup-stage-dot {
-  width:22px; height:22px; font-size:11px;
-  background:var(--bg-inset);
-}
-.asm2-rail .startup-stage-label { font-size:10px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.asm2-rail .startup-stage-line {
-  position:absolute; top:10px; left:calc(50% + 15px);
-  width:calc(100% - 30px); flex:none;
-}
-.asm2-rail .startup-stage:first-child .startup-stage-line { display:none; }
-.asm2-rail.sst-rail { margin-bottom:2px; }
-.asm2-rail.sst-rail .startup-stage { flex:none; padding:0 18px; }
-.asm2-rail.sst-rail .startup-stage-line { left:calc(100% - 7px); width:36px; }
-.asm2-rail.sst-rail .startup-stage:first-child { padding-left:0; }
-.asm2-rail.sst-rail .startup-stage:last-child { padding-right:0; }
 /* Строки результатов не шире модалки: имя стратегии сжимается, чипы фиксированы. */
 .asm2-live-item { min-width:0; }
 .asm2-r-err { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }

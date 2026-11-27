@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { AlertTriangle } from 'lucide-react';
-import { openExternal, api } from '../../api';
 import { useT } from '../../i18n';
 import { sound } from '../../sound';
 
@@ -32,7 +31,7 @@ function IconBug() {
   return <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>;
 }
 
-function ToastItem({ toast, onRemove, version, onOpenLogs }) {
+function ToastItem({ toast, onRemove, version, onOpenLogs, onReportBug }) {
   const { t } = useT();
   const [exiting, setExiting] = useState(false);
   const [progress, setProgress] = useState(toast.progress !== undefined ? toast.progress : 100);
@@ -86,11 +85,10 @@ function ToastItem({ toast, onRemove, version, onOpenLogs }) {
     try { await navigator.clipboard.writeText(toast.msg); } catch {}
   };
 
+  // «Сообщить о проблеме» — модалка баг-репорта с JSON-диагностикой на
+  // сервер (как в 1С). GitHub-issue больше не открываем.
   const reportBug = () => {
-    const v = version || '—';
-    const title = encodeURIComponent('Error in ZPUI');
-    const body = encodeURIComponent(`**Error description:**\n\`\`\`\n${toast.msg}\n\`\`\`\n\n**Version:** ${v}\n**OS:** Windows`);
-    openExternal(`https://github.com/suzcuaru/ZPUI/issues/new?title=${title}&body=${body}`);
+    if (onReportBug) onReportBug({ code: toast.code || '', error: toast.msg });
   };
 
   const handleErrorClick = () => {
@@ -146,12 +144,12 @@ function ToastItem({ toast, onRemove, version, onOpenLogs }) {
   );
 }
 
-export default function Toast({ toasts, onRemove, version, onOpenLogs }) {
+export default function Toast({ toasts, onRemove, version, onOpenLogs, onReportBug }) {
   const visible = toasts.slice(-MAX_VISIBLE);
   return (
     <div className="toast-container" role="status" aria-live="polite">
       {visible.map(t => (
-        <ToastItem key={t.id} toast={t} onRemove={onRemove} version={version} onOpenLogs={onOpenLogs} />
+        <ToastItem key={t.id} toast={t} onRemove={onRemove} version={version} onOpenLogs={onOpenLogs} onReportBug={onReportBug} />
       ))}
     </div>
   );

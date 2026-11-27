@@ -88,18 +88,33 @@ export default function Footer({ status, authEnabled }) {
     ? String(Math.round(yandex.ping_ms))
     : null;
 
-  // Точка канала: online → зелёная, канал включён, но связи нет → красная,
-  // канал выключен → нейтральная. Пока данных нет — пульс.
+  // Точка канала: online → зелёная, требуется вход/проверка канала → жёлтая,
+  // канал включён, но связи нет → красная, выключен → нейтральная. Пока
+  // данных нет — пульс. auth_state приходит с /api/sync/info (ok/auth_required/
+  // relogin): клиент больше не штормит 401-ами, статусы честные.
   const syncOnline = !!sync && sync.online === true;
   const syncOff = !!sync && sync.enabled === false;
-  const syncDotCls = !sync ? '' : syncOnline ? ' ok' : syncOff ? '' : ' err';
+  const syncRelogin = !!sync && sync.auth_state === 'relogin';
+  const syncAuthReq = !!sync && sync.auth_state === 'auth_required';
+  const syncDotCls = !sync
+    ? ''
+    : (syncRelogin || syncAuthReq)
+      ? ' warn'
+      : syncOnline ? ' ok' : syncOff ? '' : ' err';
+  const syncLabel = syncRelogin
+    ? t('sync.stateRelogin')
+    : syncAuthReq
+      ? t('sync.stateAuthRequired')
+      : t('footer.server');
   const syncTip = !sync
     ? t('footer.serverChecking')
-    : syncOnline
-      ? t('footer.serverOk')
-      : syncOff
-        ? t('footer.serverOff')
-        : t('footer.serverErr');
+    : (syncRelogin || syncAuthReq)
+      ? syncLabel
+      : syncOnline
+        ? t('footer.serverOk')
+        : syncOff
+          ? t('footer.serverOff')
+          : t('footer.serverErr');
 
   const zRun = status?.zapret?.status === 'running';
   const strategy = status?.zapret?.strategy || '—';
@@ -231,7 +246,7 @@ export default function Footer({ status, authEnabled }) {
         {authEnabled && (
           <div className="ft-chip" ref={chipRef('server')} data-tooltip={syncTip} data-tooltip-pos="left">
             <span className={'ft-dot' + syncDotCls} />
-            <span className="ft-label">{t('footer.server')}</span>
+            <span className="ft-label">{syncLabel}</span>
           </div>
         )}
       </div>

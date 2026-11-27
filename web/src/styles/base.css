@@ -165,7 +165,8 @@ input, textarea { user-select:text; -webkit-user-select:text; }
  .release-body,
  .lg-body,
  .dash-fail-list,
- .lists-sys-section,
+ .lists-user-scroll,
+ .lists-sys-scroll,
 
 .pp-devices,
  .upd-notes,

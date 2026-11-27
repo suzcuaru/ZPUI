@@ -9,7 +9,7 @@ import { ArrowRight, Trash2, RefreshCw, Download, AlertTriangle, Power, HardDriv
 import { usePolling } from '../hooks/usePolling';
 import { useDebouncedSave } from '../hooks/useDebouncedSave';
 import { useUpdateCheck } from '../hooks/useUpdateCheck';
-import { openUpdateModal, showUpdateModal, useUpdateFlow } from '../hooks/useUpdateFlow';
+import { openUpdateModal, showUpdateModal, startExtensionUpdate, useUpdateFlow } from '../hooks/useUpdateFlow';
 import ThemeEditorTab from '../components/ThemeEditorTab';
 import { useConfirm } from '../components/ui/ConfirmDialog';
 import { rangePct } from '../utils';
@@ -25,6 +25,7 @@ import Select from '../components/ui/Select';
 // (0 = «всегда», -1 = «от АКБ», далее 50..10 % с шагом 5).
 const POWER_LEVEL_KEYS = ['settings.powerLow', 'settings.powerMedium', 'settings.powerMax'];
 const POWER_THRESHOLDS = [0, -1, 50, 45, 40, 35, 30, 25, 20, 15, 10];
+const EXT_INFO_ROUTE = '/api/extension/info';
 
 function thresholdLabel(threshold, t) {
   if (threshold === 0) return t('settings.powerThresholdAlways');
@@ -100,6 +101,7 @@ export default function SettingsPage({ status, onOpenLogs }) {
   const [zapretVerPanel, setZapretVerPanel] = useState(null);
   const [syncInfo, setSyncInfo] = useState(null); // канал ZPUI Sync: recommended для карточки ZAPRET
   const [updSource, setUpdSource] = useState(null); // источник обновлений: auto/server/yandex/github/ghproxy
+  const [extInfo, setExtInfo] = useState(null); // браузерный плагин: пакет, версии, обновление (/api/extension/info)
   // Оптимистичные оверлеи тумблера автозапуска и режима службы: сами значения
   // приходят из /api/status мгновенно (конфиг и кэш бэкенда), оверлей держится
   // до подтверждения очередным тиком статуса — скелетоны не нужны.
@@ -149,12 +151,24 @@ export default function SettingsPage({ status, onOpenLogs }) {
     if (d && !d.error && d.source) setUpdSource(d.source);
   };
 
+  const loadExtInfo = async () => {
+    // SWR-кэш, как у панели службы: мгновенный отклик при возврате на вкладку
+    const cached = apiCacheGet(EXT_INFO_ROUTE);
+    if (cached) setExtInfo(cached);
+    const r = await api('GET', EXT_INFO_ROUTE);
+    if (r && !r.error) {
+      apiCachePut(EXT_INFO_ROUTE, r);
+      setExtInfo(r);
+    }
+  };
+
   useEffect(() => {
     loadConfig();
     loadVerPanel();
     loadZapretVerPanel();
     loadSyncInfo();
     loadUpdSource();
+    loadExtInfo();
   }, []);
   usePolling(loadVersions, 60000);
   usePolling(loadSyncInfo, 60000);
@@ -170,6 +184,7 @@ export default function SettingsPage({ status, onOpenLogs }) {
   }, [status, autostartOpt, svcOpt]);
   usePolling(loadVerPanel, 30000);
   usePolling(loadZapretVerPanel, 30000);
+  usePolling(loadExtInfo, 30000);
 
   // Состояние автозапуска службы запрета — из SCM, читаем один раз при входе
   // на вкладку (дальше им управляет тумблер локально).
@@ -421,6 +436,24 @@ export default function SettingsPage({ status, onOpenLogs }) {
     openUpdateModal(component);
   }, [flow.component, flow.phase]);
 
+  // Плагин браузера: кнопка ряда качает выпуск с сервера и ставит его тихо
+  // (установщик запускается в фоне); после ok перечитываем инфо — там
+  // подъедет свежая версия пакета.
+  // Плагин браузера: та же модалка прогресса, что у ZPUI/ZAPRET (скачивание →
+  // установка в фоновых событиях); итог — событие zpui:extension-installed.
+  const extUpdating = !!extInfo?.updating
+    || (flow.open && flow.component === 'extension'
+      && (flow.phase === 'downloading' || flow.phase === 'installing'));
+  useEffect(() => {
+    const onInstalled = () => loadExtInfo();
+    window.addEventListener('zpui:extension-installed', onInstalled);
+    return () => window.removeEventListener('zpui:extension-installed', onInstalled);
+  }, []);
+  const updateExtension = useCallback(() => {
+    if (extUpdating) return;
+    startExtensionUpdate([]);
+  }, [extUpdating]);
+
   // Смена источника обновлений: оптимистично, откат при ошибке сохранения.
   const changeUpdSource = async (next) => {
     const prev = updSource || 'auto';
@@ -615,6 +648,13 @@ export default function SettingsPage({ status, onOpenLogs }) {
             downloaded={flow.component === 'zapret' && flow.phase === 'downloaded'}
             onStartUpdate={() => startUpdate('zapret')}
             onShowRelease={(ver) => setZapretReleaseVer(ver)}
+            t={t}
+          />
+
+          <ExtensionUpdateCard
+            info={extInfo}
+            busy={extUpdating}
+            onStart={updateExtension}
             t={t}
           />
 
@@ -891,6 +931,61 @@ function SimpleUpdateCard({ name, current, latest, checkState, updateNeeded, dow
           </button>
         ) : (
           <span className="upd-status latest">{t('status.upToDate')}</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ExtensionUpdateCard — ряд «Плагин браузера» в панели обновлений: версия
+// пакета, пилюля «актуально», кнопка «Обновить»/«Установить» (POST
+// /api/extension/update — установщик с сервера ставится тихо в фоне),
+// приглушённая подсказка при недоступном сервере. Раскладка и стили —
+// те же, что у карточек ZPUI/ZAPRET выше (upd-card).
+function ExtensionUpdateCard({ info, busy, onStart, t }) {
+  const fmtVer = (v) => (v ? (v.startsWith('v') ? v : 'v' + v) : '—');
+  const installed = !!(info && info.version);
+  const updateReady = !!(info && info.update_ready);
+  const serverOffline = !!(info && info.server_error && !info.latest);
+
+  return (
+    <div className="upd-card">
+      <div className="upd-info">
+        <div className="upd-simple-row">
+          <span className="upd-name">{t('extension.title')}</span>
+          {installed && <span className="upd-cur-ver">{fmtVer(info.version)}</span>}
+          {updateReady && installed && info.latest && (
+            <>
+              <ArrowRight size={11} strokeWidth={2.5} style={{ color: 'var(--text-tertiary)', flexShrink: 0 }} />
+              <span className="upd-new-ver">{fmtVer(info.latest)}</span>
+            </>
+          )}
+        </div>
+      </div>
+      <div className="upd-actions">
+        {!info ? (
+          <span className="upd-status checking">
+            <Spinner size={10} className="spin-inline" />
+            {t('settings.checkingUpdates')}
+          </span>
+        ) : busy ? (
+          <span className="upd-status checking">
+            <Spinner size={10} className="spin-inline" />
+            {t('extension.updating')}
+          </span>
+        ) : updateReady ? (
+          <button type="button" className="btn btn-sm upd-btn-check" onClick={onStart}>
+            {installed
+              ? <Download size={11} strokeWidth={2.2} />
+              : <HardDriveDownload size={11} strokeWidth={2.2} />}
+            {installed ? t('extension.update') : t('extension.install')}
+          </button>
+        ) : installed ? (
+          <span className="upd-status latest">{t('status.upToDate')}</span>
+        ) : (
+          <span className="upd-status none">
+            {serverOffline ? t('settings.ext.serverOffline') : t('settings.ext.notInstalled')}
+          </span>
         )}
       </div>
     </div>

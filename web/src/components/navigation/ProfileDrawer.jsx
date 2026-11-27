@@ -459,10 +459,10 @@ function BannerCard() {
 // SubsCard — тарифы: подписки с устройствами, описанием и ссылкой Boosty;
 // оплата по-прежнему происходит на Boosty, привязку делает CRM. Скрытые
 // тарифы сервера (is_hidden — системный/базовый план) в списке не показываются,
-// в блоке «Текущий тариф» выше их отображение сохранено. Текущий тариф не
-// помечается (решение владельца 14.11.2026): у каждого тарифа — количество
-// устройств и описание.
-function SubsCard() {
+// в блоке «Текущий тариф» выше их отображение сохранено. Активный тариф тоже
+// в списке не показывается (решение владельца 22.11.2026) — сравнение по id
+// плана, не по имени; если после фильтра пусто, секция скрывается целиком.
+function SubsCard({ currentPlanId }) {
   const { t } = useT();
   const [subs, setSubs] = useState(null);
   useEffect(() => {
@@ -470,7 +470,10 @@ function SubsCard() {
       setSubs(r && !r.error && Array.isArray(r.subs) ? r.subs : []);
     }).catch(() => setSubs([]));
   }, []);
-  const visible = subs ? subs.filter((s) => !(s.is_hidden === true || s.hidden === true)) : null;
+  const visible = subs
+    ? subs.filter((s) => !(s.is_hidden === true || s.hidden === true)
+        && !(currentPlanId != null && Number(s.id) === Number(currentPlanId)))
+    : null;
   if (!visible || visible.length === 0) return null;
   return (
     <SecCard title={t('profile.secPlans')}>
@@ -498,7 +501,13 @@ function SubsCard() {
                 </span>
               </div>
               {s.description && <p className="pf-sub-desc">{s.description}</p>}
-              <button className="btn btn-accent pf-sub-btn" onClick={() => openExternal(s.boosty_url || BOOSTY_URL)}>
+              {/* Кнопка активна только при ссылке от сервера (boosty_url):
+                  нет ссылки — тариф оформить нельзя, кнопка заблокирована */}
+              <button
+                className="btn btn-accent pf-sub-btn"
+                onClick={() => s.boosty_url && openExternal(s.boosty_url)}
+                disabled={!s.boosty_url}
+              >
                 {t('profile.boostyBtn')}
               </button>
             </div>
@@ -646,7 +655,8 @@ export default function ProfileDrawer({ open, onClose, me, arch, onAuthed, onLog
                 {tb.id === 'sub' && (
                   <>
                     <SubscriptionCard me={me} />
-                    <SubsCard />
+                    {/* id активного тарифа: список ниже его не показывает */}
+                    <SubsCard currentPlanId={me.subscription && me.subscription.active ? me.subscription.id : null} />
                   </>
                 )}
                 {tb.id === 'promo' && (

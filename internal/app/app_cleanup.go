@@ -31,6 +31,9 @@ var knownComponents = map[string][]string{
 	// Мост Telegram (дочерний exe из tg-ws-proxy): чистка 31.10 стирала его
 	// сразу после установки — «tgproxy component not installed».
 	"tgproxy": {"ZPUI-TgProxy.exe", "version.txt"},
+	// Браузерное расширение: подписанный пакет (без exe), чистильщик не должен
+	// его стирать как «неизвестный» — иначе установка в браузеры ломалась.
+	"extension": {"zpui-extension.crx"},
 }
 
 // versionFolderRe — имя папки-версии вида «1.6.3» (остатки старого бага

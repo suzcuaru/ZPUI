@@ -12,8 +12,9 @@ import (
 
 func newTestServer() *Server {
 	return New(Options{
-		Version: "2.1.0-test",
-		Key:     func() string { return "aabbcc" },
+		Version:     "2.1.0-test",
+		ExtensionID: "abcdefghijklmnop",
+		Key:         func() string { return "aabbcc" },
 		Tools: func() []Tool {
 			return []Tool{{Name: "echo", Description: "эхо", InputSchema: map[string]interface{}{"type": "object"}}}
 		},
@@ -66,6 +67,31 @@ func TestAuth(t *testing.T) {
 	}
 	if rr := post(s, "aabbcc", body, map[string]string{"Origin": "http://127.0.0.1:5173"}); rr.Code != http.StatusOK {
 		t.Fatalf("local origin: want 200, got %d", rr.Code)
+	}
+	// Origin расширения Chromium (Chrome/Яндекс/Opera/Edge) — допуск по ключу.
+	if rr := post(s, "aabbcc", body, map[string]string{"Origin": "chrome-extension://abcdefghijklmnop"}); rr.Code != http.StatusOK {
+		t.Fatalf("extension origin: want 200, got %d", rr.Code)
+	}
+	// Своё расширение (точный ID) — без ключа.
+	rrOwn := post(s, "", body, map[string]string{"Origin": "chrome-extension://abcdefghijklmnop"})
+	if rrOwn.Code != http.StatusOK {
+		t.Fatalf("own extension without key: want 200, got %d", rrOwn.Code)
+	}
+	if got := rrOwn.Header().Get("Access-Control-Allow-Origin"); got != "chrome-extension://abcdefghijklmnop" {
+		t.Fatalf("own extension: want CORS origin for extension, got %q", got)
+	}
+	// Чужое расширение без ключа не проходит: ID подделать нельзя.
+	if rr := post(s, "", body, map[string]string{"Origin": "chrome-extension://zzzzzzzzzzzzzzzz"}); rr.Code != http.StatusUnauthorized {
+		t.Fatalf("other extension without key: want 401, got %d", rr.Code)
+	}
+	// Префлайт своего расширения закрыт.
+	req := httptest.NewRequest(http.MethodOptions, "/mcp", nil)
+	req.Header.Set("Origin", "chrome-extension://abcdefghijklmnop")
+	req.Header.Set("Access-Control-Request-Method", "POST")
+	rr0 := httptest.NewRecorder()
+	s.handleMCP(rr0, req)
+	if rr0.Code != http.StatusNoContent || rr0.Header().Get("Access-Control-Allow-Private-Network") != "true" {
+		t.Fatalf("extension preflight: want 204 + private network, got %d %q", rr0.Code, rr0.Header().Get("Access-Control-Allow-Private-Network"))
 	}
 	if rr := post(s, "aabbcc", body, nil); rr.Code != http.StatusOK {
 		t.Fatalf("valid key: want 200, got %d", rr.Code)

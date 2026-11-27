@@ -18,67 +18,7 @@
 @import './misc-panels.css';
 @import './smart-select.css';
 
-/* ── Lua-вкладка запрета ── */
-.lua-fn-chips { display:inline-flex; flex-wrap:wrap; gap:4px; }
-.lua-fn-chips code {
-  font-family:var(--font-mono); font-size:10px;
-  color:var(--accent); background:var(--accent-soft);
-  border-radius:4px; padding:1px 5px;
-}
-
-.lua-help { display:flex; flex-direction:column; gap:12px; max-width:760px; }
-.lua-intro p { font-size:11px; color:var(--text-secondary); line-height:1.55; margin:0 0 8px; }
-.lua-intro .lua-editor-hint { color:var(--text-tertiary); }
-.lua-sample {
-  font-family:var(--font-mono); font-size:10px; line-height:1.6;
-  color:var(--text-primary); background:var(--bg-inset);
-  border:var(--border-w) solid var(--border); border-radius:var(--radius-sm);
-  padding:10px 12px; margin:0 0 10px; overflow-x:auto; white-space:pre;
-}
-.lua-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:8px; }
-.lua-card {
-  display:flex; flex-direction:column; gap:6px;
-  padding:10px 12px; border-radius:var(--radius-sm);
-  background:var(--bg-inset); border:var(--border-w) solid var(--border);
-}
-.lua-card-head { display:flex; align-items:center; justify-content:space-between; gap:6px; }
-.lua-fn { font-family:var(--font-mono); font-size:12px; font-weight:600; color:var(--accent); }
-.lua-copy { padding:3px 6px; }
-.lua-card-desc { font-size:10px; color:var(--text-secondary); line-height:1.5; }
-.lua-example {
-  font-family:var(--font-mono); font-size:9px; color:var(--text-tertiary);
-  overflow-x:auto; white-space:nowrap;
-}
-.lua-docs { font-size:10px; color:var(--text-tertiary); }
-.lua-docs a { color:var(--accent); text-decoration:none; }
-.lua-docs a:hover { text-decoration:underline; }
-
-.strategy-editor { display:flex; flex-direction:column; gap:8px; }
-.strategy-editor-meta { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
-.strategy-editor-fn { font-family:var(--font-mono); font-size:11px; color:var(--text-secondary); }
-.strategy-editor-ta {
-  font-family:var(--font-mono); font-size:10px; line-height:1.6;
-  color:var(--text-primary); background:var(--bg-inset);
-  border:var(--border-w) solid var(--border); border-radius:var(--radius-sm);
-  padding:10px 12px; resize:vertical; min-height:220px; outline:none;
-  white-space:pre; overflow:auto;
-}
-.strategy-editor-ta:focus { border-color:var(--accent); }
-.strategy-editor-check { font-size:10px; border-radius:var(--radius-sm); padding:6px 10px; }
-.strategy-editor-check.ok { color:var(--success); background:color-mix(in srgb, var(--success) 10%, transparent); }
-.strategy-editor-check.err { color:var(--danger); background:color-mix(in srgb, var(--danger) 10%, transparent); }
-.strategy-editor-hint { font-size:10px; color:var(--text-tertiary); line-height:1.5; }
-
 .zapret-versions-engine { margin-top:6px; font-size:10px; color:var(--text-tertiary); text-align:center; }
-
-/* ── Lua-редактор (подвкладка «Lua» в стиле «Списков») ── */
-.lua-lib-item { cursor:pointer; text-align:left; width:100%; background:none; border:none; }
-.lua-lib-item:hover { background:var(--bg-card); }
-.lua-lib-item.active { background:var(--accent-soft); }
-.lua-editor textarea { min-height:300px; }
-.lua-editor-actions { display:flex; gap:6px; margin-top:6px; }
-.lua-ref-section { margin-top:10px; }
-.lua-ref-section .lua-help { margin-top:8px; }
 
 /* ── Стратегии: чипы Lua-функций на карточке ── */
 /* Вторая строка карточки: карточка переносит, чипы занимают всю ширину */
@@ -97,37 +37,3 @@
   font-family:var(--font-mono); font-size:9px;
   color:var(--text-tertiary); white-space:nowrap;
 }
-
-/* ── Интерактивный тултип функций стратегии: тумблеры + проверка движком ── */
-.stip-int { pointer-events:auto; }
-.stip-toggles { display:flex; flex-direction:column; gap:4px; }
-.stip-toggle { display:flex; align-items:center; justify-content:space-between; gap:8px; }
-.stip-toggle-name {
-  font-family:var(--font-mono); font-size:10px;
-  color:var(--tooltip-text); opacity:0.92;
-  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-}
-.stip-toggle.off .stip-toggle-name { opacity:0.55; }
-.stip-toggle-skel { border-radius:4px; }
-.stip-btn {
-  display:inline-flex; align-items:center; justify-content:center; gap:5px;
-  align-self:flex-start; padding:4px 9px;
-  font-size:10px; font-weight:600; color:var(--accent);
-  background:rgba(255,255,255,0.07);
-  border:var(--border-w) solid var(--accent); border-radius:6px; cursor:pointer;
-  transition:background var(--dur-fast) var(--ease-out);
-}
-.stip-btn:hover { background:rgba(255,255,255,0.14); }
-.stip-btn:disabled { opacity:0.55; cursor:default; }
-.stip-check { display:flex; flex-direction:column; gap:3px; font-size:10px; line-height:1.35; }
-.stip-check.ok { color:var(--success); }
-.stip-check.err { color:var(--danger-strong); }
-.stip-check code {
-  font-family:var(--font-mono); font-size:9px; line-height:1.4;
-  color:var(--tooltip-text); opacity:0.8;
-  display:block; max-height:40px; overflow:hidden;
-  word-break:break-all; white-space:pre-wrap;
-}
-/* Тумблер на тёмной подложке тултипа: читаемая рамка/дорожка в обеих темах */
-.stip .switch-track { background:rgba(255,255,255,0.1); border-color:rgba(255,255,255,0.22); }
-.stip .switch-track[aria-checked="true"] { background:var(--accent); border-color:var(--accent); }

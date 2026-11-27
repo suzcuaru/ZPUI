@@ -9,7 +9,6 @@ import AutoSwitchToggle from '../components/zapret/AutoSwitchToggle';
 import StrategiesTab from '../components/zapret/StrategiesTab';
 import ListsTab from '../components/zapret/ListsTab';
 import FiltersPanel from '../components/zapret/FiltersPanel';
-import { LuaTab } from '../components/zapret/LuaTab';
 
 export default function ZapretPage({ status, onOpenDiagnostics, zapretLoading, onZapretToggle }) {
   const showToast = useToast();
@@ -112,14 +111,12 @@ export default function ZapretPage({ status, onOpenDiagnostics, zapretLoading, o
       <div className="subtabs">
         <button className={'subtab' + (subtab === 'strategies' ? ' active' : '')} onClick={() => setSubtab('strategies')}>{t('zapret.strategies')}</button>
         <button className={'subtab' + (subtab === 'lists' ? ' active' : '')} onClick={() => setSubtab('lists')}>{t('zapret.lists')}</button>
-        <button className={'subtab' + (subtab === 'lua' ? ' active' : '')} onClick={() => setSubtab('lua')}>{t('zapret.luaTab')}</button>
         <span id="strat-hide-slot" className="subtabs-right" />
       </div>
 
       <div className="zp-tab-body">
         {subtab === 'strategies' && <StrategiesTab status={status} zRun={zRun} />}
         {subtab === 'lists' && <ListsTab />}
-        {subtab === 'lua' && <LuaTab showToast={showToast} />}
       </div>
 
       {/* Полоса фильтров прижата книзу вкладки и живёт на обеих подвкладках

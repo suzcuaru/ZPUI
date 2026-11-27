@@ -74,8 +74,9 @@ func (a *App) startResourceMonitor() {
 		case <-time.After(wait):
 			// Такт на время подбора стратегий откладывается на следующий
 			// интервал: параллельный плановый спидтест ломает замеры подбора
-			// (и получает искажённые сам).
-			if a.zapret.IsAutoTestRunning() {
+			// (и получает искажённые сам). Запись всё равно молчала бы —
+			// такт лучше просто отложить.
+			if a.selectionRunning.Load() || a.zapret.IsAutoTestRunning() {
 				continue
 			}
 			a.doResourceCheckAndSave()
@@ -201,8 +202,11 @@ func (a *App) doResourceCheckAndSave() {
 
 	// Замер Интернетметра (скорость+пинг) едет параллельно с проверкой
 	// ресурсов: один цикл — один сэмпл и для графика доступности,
-	// и для графиков мониторинга.
-	go a.measureNetIfDue()
+	// и для графиков мониторинга. Подбор/автотест — мимо: чужой спидтест
+	// искажает их замеры и сам получает искажённые.
+	if !a.historyWritesBlocked() {
+		go a.measureNetIfDue()
+	}
 
 	report := a.getResourceStatusForced()
 	if report == nil {
@@ -219,6 +223,28 @@ func (a *App) doResourceCheckAndSave() {
 
 	all := append(report.Default, report.User...)
 	if len(all) == 0 {
+		return
+	}
+
+	a.persistResourceTick(report, all)
+}
+
+// historyWritesBlocked — запись истории доступности глушится на время подбора
+// стратегий и автотеста: замер под промежуточным кандидатом или поверх
+// переустановки службы не соответствует никакой реальной стратегии —
+// такие такты портят график, баллы и живой балл активной стратегии.
+func (a *App) historyWritesBlocked() bool {
+	return a.selectionRunning.Load() || a.zapret.IsAutoTestRunning()
+}
+
+// persistResourceTick — единственная точка записи такта доступности:
+// resource_availability + availability_history (по группам standard/user),
+// детект мёртвых доменов и хуки (автосмена, живой балл). Вызов во время
+// подбора (ручной refresh, хвост подбора) доходит сюда и молча выходит —
+// отчёт остаётся в кэше UI, история и лог не пишутся.
+func (a *App) persistResourceTick(report *blockcheck.BulkReport, all []blockcheck.BulkResult) {
+	if a.historyWritesBlocked() {
+		a.log.Info("availability", "подбор/автотест идёт — такт не пишется в историю (только кэш UI)")
 		return
 	}
 
@@ -296,12 +322,48 @@ func (a *App) doResourceCheckAndSave() {
 
 	// Автосмена по доступности: 2 такта подряд ниже порога — смена на лучшую.
 	autoOK := 0
+	keyOK, keyTotal := 0, 0
+	keySeen := make(map[string]bool, 8)
 	for _, r := range all {
 		if r.OK {
 			autoOK++
 		}
+		// Ключевые — цели листов, чей хост матчится с основными ресурсами;
+		// дедуп по хосту: запись листа и её каноничная строка не считаются
+		// дважды.
+		if zapret.IsKeyTarget(r.Name, r.URL) {
+			if h := zapret.KeyTargetHost(r.Name, r.URL); !keySeen[h] {
+				keySeen[h] = true
+				keyTotal++
+				if r.OK {
+					keyOK++
+				}
+			}
+		}
 	}
 	a.autoSwitchTick(autoOK, len(all))
+	a.liveScoreTick(autoOK, len(all), keyOK, keyTotal)
+}
+
+// liveScoreTick — хук после такта проверки ресурсов: живой балл активной
+// стратегии в operator_strategies (панель стратегий видит текущую доступность,
+// а не замер последнего прогона автоподбора). Гард как у autoSwitchTick:
+// движок работает и не занят подбором/проверкой стратегий — при переборе
+// замер ложился бы на промежуточные стратегии.
+func (a *App) liveScoreTick(ok, total, keyOk, keyTotal int) {
+	if total <= 0 {
+		return
+	}
+	if a.selectionRunning.Load() || a.zapret.IsAutoTestRunning() || a.zapret.GetStatus() != zapret.StatusRunning {
+		return
+	}
+	strategy := a.cfg.GetCurrentStrategy()
+	if strategy == "" {
+		return
+	}
+	if err := a.zapret.UpdateLiveScore(strategy, ok, total, keyOk, keyTotal); err != nil {
+		a.log.Warn("availability", "live score: "+err.Error())
+	}
 }
 
 func (a *App) getResourceStatusForced() *blockcheck.BulkReport {
@@ -581,6 +643,19 @@ func (a *App) startISPMonitor() {
 		// Старые записи БД (эра zapret2) хранят имена с припиской «ZP2 »:
 		// движку нужен чистый имя файла, иначе автосмена падает на stat.
 		saved = strings.TrimPrefix(saved, "ZP2 ")
+
+		// Движок остановлен пользователем вручную: автосмена стратегии и
+		// авто-подбор не запускаем — они переустанавливают/запускают службу
+		// и молча поднимали остановленный движок. Только фиксируем оператора.
+		if !a.zapretExpected.Load() {
+			a.log.Info("isp", "engine stopped manually — recording operator without strategy switch")
+			if change.OldKey != "" {
+				database.SetCurrentOperator(change.NewKey, change.NewName, saved)
+			}
+			a.syncStrategiesForOperator()
+			return
+		}
+
 		if saved != "" && !a.zapret.IsAutoTestRunning() && !a.selectionRunning.Load() {
 			if saved == a.cfg.GetCurrentStrategy() {
 				// Для «нового» оператора сохранена та же стратегия, что уже

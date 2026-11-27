@@ -15,8 +15,8 @@ import (
 const mcpProtocolVersion = "2025-06-18"
 
 const (
-	errParse    = -32700
-	errNoMethod = -32601
+	errParse     = -32700
+	errNoMethod  = -32601
 	errBadParams = -32602
 	errInternal  = -32603
 )
@@ -56,6 +56,13 @@ type callParams struct {
 }
 
 func (s *Server) handleMCP(w http.ResponseWriter, r *http.Request) {
+	if s.isOwnExtension(r) {
+		s.corsExtension(w)
+	}
+	if r.Method == http.MethodOptions && s.isOwnExtension(r) {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
 	switch r.Method {
 	case http.MethodPost:
 	case http.MethodGet, http.MethodDelete:

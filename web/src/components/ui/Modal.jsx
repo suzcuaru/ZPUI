@@ -24,6 +24,7 @@ export function OverlayPortal({ children }) {
 // на оверлее (CSS MOTION LAYER), затем размонтируется.
 export default function Modal({
   title,
+  titleExtra,
   icon,
   tone = 'accent',
   size,
@@ -95,7 +96,12 @@ export default function Modal({
         {(title || icon) && (
           <div className="modal-header">
             {icon && <span className={'modal-icon tone-' + tone}>{icon}</span>}
-            {title && <span className="modal-title">{title}</span>}
+            {title && (
+              <span className="modal-title">
+                {title}
+                {titleExtra && <span className="modal-title-extra">{titleExtra}</span>}
+              </span>
+            )}
             {closable && (
               <button className="modal-close" data-sound="off" onClick={onClose} aria-label={t('common.close')}>
                 <X size={16} strokeWidth={1.5} />

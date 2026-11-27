@@ -3,7 +3,7 @@ import Modal from './ui/Modal';
 import { api } from '../api';
 import { useT } from '../i18n';
 import { useToast } from '../context/ToastContext';
-import { Check, X as XIcon, AlertTriangle, Ban, FlaskConical, Gamepad2 } from 'lucide-react';
+import { Check, X as XIcon, AlertTriangle, Ban, FlaskConical, Gamepad2, Activity } from 'lucide-react';
 import Spinner from './ui/Spinner';
 
 const POLL_INTERVAL = 2000;
@@ -152,7 +152,7 @@ export default function SingleStrategyTestModal({ open, filename, game, onClose,
       onClose={running ? undefined : onClose}
       open={open}
       closable={!running}
-      size="sm"
+      className="sst-frame"
       icon={game ? <Gamepad2 size={18} strokeWidth={2} /> : <FlaskConical size={18} strokeWidth={2} />}
       tone={headTone}
       footer={footer}
@@ -162,21 +162,22 @@ export default function SingleStrategyTestModal({ open, filename, game, onClose,
 
         {running && (
           <>
-            <div className="sst-state running">
-              <Spinner size={18} />
-              <span>{phase === 'check' ? t('zapret.sstChecking') : t('zapret.sstApplying')}</span>
+            {/* Этапы — чипы конвейера, как в модалке автоподбора (asm2) */}
+            <div className="asm2-steps">
+              <span className={'asm2-step' + (phase !== 'apply' ? ' done' : ' active')}>
+                {phase !== 'apply' ? <Check size={10} strokeWidth={3} /> : <Spinner size={9} className="asm2-step-spin" />}
+                {t('zapret.sstStepApply')}
+              </span>
+              <span className={'asm2-step' + (phase === 'check' ? ' active' : '')}>
+                {phase === 'check' ? <Spinner size={9} className="asm2-step-spin" /> : <span className="asm2-step-n">2</span>}
+                {t('zapret.sstStepCheck')}
+              </span>
             </div>
-            {/* Этапы — тем же степпером, что и фазы автоподбора */}
-            <div className="startup-rail asm2-rail sst-rail" aria-hidden="true">
-              <div className={'startup-stage ' + (phase !== 'apply' ? 'is-done' : 'is-active')}>
-                <span className="startup-stage-dot">{phase !== 'apply' ? '✓' : ''}</span>
-                <span className="startup-stage-label">{t('zapret.sstStepApply')}</span>
-                <span className="startup-stage-line" />
-              </div>
-              <div className={'startup-stage ' + (phase === 'check' ? 'is-active' : '')}>
-                <span className="startup-stage-dot" />
-                <span className="startup-stage-label">{t('zapret.sstStepCheck')}</span>
-              </div>
+            {/* Статус — строка «сейчас», как в модалке автоподбора */}
+            <div className="asm2-now">
+              <span className="asm2-now-name mono">{cleanName}</span>
+              <span className="asm2-now-sp" />
+              <span className="asm2-now-count">{phase === 'check' ? t('zapret.sstChecking') : t('zapret.sstApplying')}</span>
             </div>
           </>
         )}
@@ -184,9 +185,9 @@ export default function SingleStrategyTestModal({ open, filename, game, onClose,
         {!running && result && result.game && (
           <>
             {result.cancelled || result.error ? (
-              <div className="sst-state error" role="alert">
-                <AlertTriangle size={18} />
-                <span>{result.error || t('common.cancelled')}</span>
+              <div className="asm2-result-banner error" role="alert">
+                <span className="asm2-rb-icon"><AlertTriangle size={16} strokeWidth={2.2} /></span>
+                <span className="asm2-rb-text">{result.error || t('common.cancelled')}</span>
               </div>
             ) : (
               <>
@@ -219,38 +220,41 @@ export default function SingleStrategyTestModal({ open, filename, game, onClose,
         {!running && result && !result.game && (
           <>
             {result.cancelled ? (
-              <div className="sst-state error">
-                <Ban size={18} />
-                <span>{t('common.cancelled')}</span>
+              <div className="asm2-result-banner neutral">
+                <span className="asm2-rb-icon"><Ban size={16} strokeWidth={2.2} /></span>
+                <span className="asm2-rb-text">{t('common.cancelled')}</span>
               </div>
             ) : result.error ? (
-              <div className="sst-state error" role="alert">
-                <AlertTriangle size={18} />
-                <span>{result.error}</span>
+              <div className="asm2-result-banner error" role="alert">
+                <span className="asm2-rb-icon"><AlertTriangle size={16} strokeWidth={2.2} /></span>
+                <span className="asm2-rb-text">{result.error}</span>
               </div>
             ) : result.passed ? (
-              <div className="sst-state passed">
-                <Check size={18} />
-                <span>{t('zapret.singleTestPassed', { pct: result.pct })}</span>
+              <div className="asm2-result-banner success">
+                <span className="asm2-rb-icon"><Check size={16} strokeWidth={2.2} /></span>
+                <span className="asm2-rb-text">{t('zapret.singleTestPassed', { pct: result.pct })}</span>
               </div>
             ) : (
-              <div className="sst-state failed">
-                <XIcon size={18} />
-                <span>{t('zapret.singleTestFailed', { pct: result.pct })}</span>
+              <div className="asm2-result-banner error">
+                <span className="asm2-rb-icon"><XIcon size={16} strokeWidth={2.2} /></span>
+                <span className="asm2-rb-text">{t('zapret.singleTestFailed', { pct: result.pct })}</span>
               </div>
             )}
             {!result.cancelled && !result.error && (
-              <div className="sst-detail">
-                {t('zapret.singleTestDetail', { ok: result.ok, total: result.total })}
-                {result.score > 0 && (
-                  <span className="sst-kv mono"> · {t('zapret.sstScore', { score: Math.round(result.score), grade: result.grade })}</span>
-                )}
-                {result.speed > 0 && (
-                  <span className="sst-kv mono"> · {result.speed.toFixed(1)} {t('monitor.mbps')}</span>
-                )}
-                {result.ping > 0 && (
-                  <span className="sst-kv mono"> · ping {result.ping}{t('common.ms')}</span>
-                )}
+              <div className="asm2-algo-line">
+                <Activity size={11} strokeWidth={2.2} />
+                <span>
+                  {t('zapret.singleTestDetail', { ok: result.ok, total: result.total })}
+                  {result.score > 0 && (
+                    <span className="sst-kv mono"> · {t('zapret.sstScore', { score: Math.round(result.score), grade: result.grade })}</span>
+                  )}
+                  {result.speed > 0 && (
+                    <span className="sst-kv mono"> · {result.speed.toFixed(1)} {t('monitor.mbps')}</span>
+                  )}
+                  {result.ping > 0 && (
+                    <span className="sst-kv mono"> · ping {result.ping}{t('common.ms')}</span>
+                  )}
+                </span>
               </div>
             )}
           </>

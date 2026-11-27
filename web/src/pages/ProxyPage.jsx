@@ -8,11 +8,26 @@ import { useDebouncedSave } from '../hooks/useDebouncedSave';
 import { errorText } from '../errors';
 import { formatBytes } from '../utils';
 import { useToast } from '../context/ToastContext';
-import { Send, Copy, Check, RefreshCw, Settings2, QrCode, Wifi, WifiOff, Cable, Link2, ChevronDown } from 'lucide-react';
+import { Send, RefreshCw, Settings2, QrCode, Wifi, WifiOff, Cable, Link2, ChevronDown } from 'lucide-react';
 import Spinner from '../components/ui/Spinner';
+import StatusHero from '../components/ui/StatusHero';
+import CopyIconButton from '../components/ui/CopyIconButton';
 
 const PENDING_TIMEOUT = 20000;
 const PENDING_POLL = 700;
+
+// Строка «значение + копирование»: ссылка моста, EE-вариант, SOCKS-адрес.
+function LinkBox({ value, copied, onCopy, copyLabel, tag }) {
+  return (
+    <div className="tgp-link-box">
+      <code className="tgp-link" data-tooltip={value} data-tooltip-pos="bottom">{value || '—'}</code>
+      <div className="tgp-link-actions">
+        <CopyIconButton copied={copied} onCopy={onCopy} label={copyLabel} disabled={!value} />
+      </div>
+      {tag}
+    </div>
+  );
+}
 
 // Прокси = только Telegram MTProto через локальный мост: мост поднимается
 // на этом компьютере, телефон подключается из ЛВС или по ссылке/QR.
@@ -311,31 +326,27 @@ export default function ProxyPage({ status }) {
   return (
     <div className="proxy-page stagger">
       {/* Герой: Telegram MTProto — свой сервис, отдельный от SOCKS5 ниже */}
-      <div className={'dns-hero' + (tgRun ? ' on' : '')}>
-        <div className="dns-hero-left">
-          <div className={'dns-hero-icon' + (tgRun ? ' on' : '')}>
-            <Send size={24} strokeWidth={2} />
+      <StatusHero
+        on={tgRun}
+        icon={<Send size={24} strokeWidth={2} />}
+        title={t('tgproxy.title')}
+        desc={
+          <>
+            {!tgRun && tgStatus && tgStatus.installed === false
+              ? t('tgproxy.notInstalled')
+              : (tgRun ? <>mtproto://{tgHost}:{tgPort}</> : t('tgproxy.stopped'))}
+            {tgStatus?.version ? ` · v${tgStatus.version}` : ''}
+          </>
+        }
+      >
+        {tgRun && (
+          <div className="proxy-top-stats">
+            <div className="pts"><span className="pts-val">{tgStats.active ?? 0}</span><span className="pts-label">{t('proxy.sessionsSuffix')}</span></div>
+            <div className="pts"><span className="pts-val">{formatBytes(tgStats.bytes_out || 0)}</span><span className="mon-stat-split-tag ul">UL</span></div>
           </div>
-          <div className="dns-hero-info">
-            <span className="dns-hero-title">{t('tgproxy.title')}</span>
-            <span className={'dns-hero-desc' + (tgRun ? ' on' : '')}>
-              {!tgRun && tgStatus && tgStatus.installed === false
-                ? t('tgproxy.notInstalled')
-                : (tgRun ? <>mtproto://{tgHost}:{tgPort}</> : t('tgproxy.stopped'))}
-              {tgStatus?.version ? ` · v${tgStatus.version}` : ''}
-            </span>
-          </div>
-        </div>
-        <div className="dns-hero-state">
-          {tgRun && (
-            <div className="proxy-top-stats">
-              <div className="pts"><span className="pts-val">{tgStats.active ?? 0}</span><span className="pts-label">{t('proxy.sessionsSuffix')}</span></div>
-              <div className="pts"><span className="pts-val">{formatBytes(tgStats.bytes_out || 0)}</span><span className="mon-stat-split-tag ul">UL</span></div>
-            </div>
-          )}
-          <Switch size="lg" checked={tgRun} onChange={toggleTg} loading={tgPending} hideState flash={tgFlash} />
-        </div>
-      </div>
+        )}
+        <Switch size="lg" checked={tgRun} onChange={toggleTg} loading={tgPending} hideState flash={tgFlash} />
+      </StatusHero>
 
       <div className="svc-grid">
         <div className="section">
@@ -354,34 +365,21 @@ export default function ProxyPage({ status }) {
             {tgConnecting ? <Spinner size={14} /> : <Send size={13} strokeWidth={2.2} />}
             {tgConnecting ? t('tgproxy.connecting') : t('tgproxy.connectInTelegram')}
           </button>
-          <div className="tgp-link-box">
-            <code className="tgp-link" data-tooltip={tgStatus?.link} data-tooltip-pos="bottom">{tgStatus?.link || '—'}</code>
-            <div className="tgp-link-actions">
-              <button className="btn btn-icon" onClick={() => copyText(tgStatus?.link || '', 'link')} disabled={!tgStatus?.link}
-                data-tooltip={t('tgproxy.copyLink')} aria-label={t('tgproxy.copyLink')} data-tooltip-pos="bottom">
-                {copied === 'link' ? <Check size={12} strokeWidth={2.5} /> : <Copy size={12} strokeWidth={2} />}
-              </button>
-            </div>
-            {fakeTLSDomain && linkEE && <span className="tgp-link-tag">{t('tgproxy.eeTls')}</span>}
-          </div>
+          <LinkBox
+            value={tgStatus?.link}
+            copied={copied === 'link'}
+            onCopy={() => copyText(tgStatus?.link || '', 'link')}
+            copyLabel={t('tgproxy.copyLink')}
+            tag={fakeTLSDomain && linkEE && <span className="tgp-link-tag">{t('tgproxy.eeTls')}</span>}
+          />
           {fakeTLSDomain && linkEE && (
-            <div className="tgp-link-box">
-              <code className="tgp-link" data-tooltip={linkEE} data-tooltip-pos="bottom">{linkEE}</code>
-              <div className="tgp-link-actions">
-                <button className="btn btn-icon" onClick={() => copyText(linkEE, 'link_ee')} disabled={!linkEE}
-                  data-tooltip={t('tgproxy.copyLink')} aria-label={t('tgproxy.copyLink')} data-tooltip-pos="bottom">
-                  {copied === 'link_ee' ? <Check size={12} strokeWidth={2.5} /> : <Copy size={12} strokeWidth={2} />}
-                </button>
-              </div>
-            </div>
+            <LinkBox value={linkEE} copied={copied === 'link_ee'} onCopy={() => copyText(linkEE, 'link_ee')} copyLabel={t('tgproxy.copyLink')} />
           )}
           <div className="tgp-secret-row">
             <span className="tgp-secret-label">secret</span>
             <code className="tgp-secret">{tgConfig?.secret || '—'}</code>
-            <button className="btn btn-icon" onClick={() => copyText(tgConfig?.secret || '', 'secret')}
-              disabled={!tgConfig?.secret} data-tooltip={t('common.copy')} aria-label={t('common.copy')} data-tooltip-pos="bottom">
-              {copied === 'secret' ? <Check size={12} strokeWidth={2.5} /> : <Copy size={12} strokeWidth={2} />}
-            </button>
+            <CopyIconButton copied={copied === 'secret'} onCopy={() => copyText(tgConfig?.secret || '', 'secret')}
+              label={t('common.copy')} disabled={!tgConfig?.secret} />
             <button className="btn btn-icon" onClick={regenSecret} disabled={tgBusy}
               data-tooltip={t('tgproxy.regenerateSecret')} aria-label={t('tgproxy.regenerateSecret')} data-tooltip-pos="bottom">
               {tgBusy ? <Spinner size={14} /> : <RefreshCw size={12} strokeWidth={2} />}
@@ -501,34 +499,23 @@ export default function ProxyPage({ status }) {
       {/* SOCKS5 — самостоятельный прокси домашней сети (к Telegram отношения
           не имеет): герой в общем стиле вкладки, ниже — адрес и порт;
           статический IP настраивается на вкладке DNS. */}
-      <div className={'dns-hero' + (socksOn ? ' on' : '')}>
-        <div className="dns-hero-left">
-          <div className={'dns-hero-icon' + (socksOn ? ' on' : '')}>
-            <Cable size={24} strokeWidth={2} />
-          </div>
-          <div className="dns-hero-info">
-            <span className="dns-hero-title">{t('socks.title')}</span>
-            <span className={'dns-hero-desc' + (socksOn ? ' on' : '')}>
-              {socksOn && socksRunning && socksAddr ? <>socks5://{socksAddr}</> : socksDesc}
-            </span>
-          </div>
-        </div>
-        <div className="dns-hero-state">
-          <Switch size="lg" checked={socksOn} onChange={toggleSocks} loading={socksPending} hideState flash={socksFlash} />
-        </div>
-      </div>
+      <StatusHero
+        on={socksOn}
+        icon={<Cable size={24} strokeWidth={2} />}
+        title={t('socks.title')}
+        desc={socksOn && socksRunning && socksAddr ? <>socks5://{socksAddr}</> : socksDesc}
+      >
+        <Switch size="lg" checked={socksOn} onChange={toggleSocks} loading={socksPending} hideState flash={socksFlash} />
+      </StatusHero>
 
       <div className="section socks">
-        <div className="tgp-link-box">
-          <code className="tgp-link" data-tooltip={socksAddr} data-tooltip-pos="bottom">{socksAddr || '—'}</code>
-          <div className="tgp-link-actions">
-            <button className="btn btn-icon" onClick={() => copyText(socksAddr, 'socks')} disabled={!socksAddr}
-              data-tooltip={t('common.copy')} aria-label={t('common.copy')} data-tooltip-pos="bottom">
-              {copied === 'socks' ? <Check size={12} strokeWidth={2.5} /> : <Copy size={12} strokeWidth={2} />}
-            </button>
-          </div>
-          <span className="tgp-link-tag">{t('socks.phoneTag')}</span>
-        </div>
+        <LinkBox
+          value={socksAddr}
+          copied={copied === 'socks'}
+          onCopy={() => copyText(socksAddr, 'socks')}
+          copyLabel={t('common.copy')}
+          tag={<span className="tgp-link-tag">{t('socks.phoneTag')}</span>}
+        />
         <div className="pp-row">
           <span className="pp-row-title">{t('socks.port')}</span>
           <input type="number" className={'pp-input' + (socksPortInvalid ? ' input-error' : '')} value={socksPortValue} min="1" max="65535"

@@ -54,7 +54,15 @@ func (a *App) GetAllLogs(level string, limit, offset int) map[string]interface{}
 	// Каждая таблица отдала свои «последние N» независимо: без общей
 	// сортировки по времени наверху оказывались только логи приложения,
 	// а ошибки zapret/tgproxy оставались за лимитом и не показывались.
-	sort.Slice(all, func(i, j int) bool { return all[i].ID > all[j].ID })
+	// ВАЖНО: сортировка по ID не годится — автоинкремент у каждой таблицы
+	// свой, и записи zapret_logs (ID ~сотни) всегда проигрывали app_logs
+	// (ID ~тысячи) и целиком срезались лимитом. Сортируем по времени.
+	sort.Slice(all, func(i, j int) bool {
+		if all[i].Timestamp != all[j].Timestamp {
+			return all[i].Timestamp > all[j].Timestamp
+		}
+		return all[i].ID > all[j].ID
+	})
 
 	if len(all) > limit {
 		all = all[:limit]

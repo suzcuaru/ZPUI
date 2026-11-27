@@ -17,9 +17,25 @@ function formatEta(seconds) {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
+// Версия набора подбора — unix-timestamp публикации (секунды или миллисекунды).
+// Человекочитаемый вид «дд.мм чч:мм»; малые целые (не timestamp) — как есть.
+function formatCfgVersion(v) {
+  const n = Number(v);
+  if (!isFinite(n) || n <= 0) return '';
+  const ms = n >= 1e12 ? n : n >= 1e8 ? n * 1000 : null;
+  if (ms == null) return String(v);
+  const d = new Date(ms);
+  if (isNaN(d.getTime())) return String(v);
+  const p = (x) => String(x).padStart(2, '0');
+  return `${p(d.getDate())}.${p(d.getMonth() + 1)} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
 // Пороги грейдов S/A/B/C/D и фильтра ключевых — серверный набор алгоритма
 // подбора (CRM → «Подбор», GET /api/autoselect/cfg); дефолт = константы клиента.
 const CFG_DEFAULTS = { grade_s: 90, grade_a: 80, grade_b: 70, grade_c: 60, key_pct: 70, acceptable: 70, version: 0 };
+
+// sessionStorage-ключ развёрнутости списка плана (сессия WebView)
+const PLAN_OPEN_KEY = 'zpui-asm2-plan-open';
 
 const pctOf = (r) => (r.resources_n > 0 ? Math.round(((r.resources_ok ?? 0) * 100) / r.resources_n) : 0);
 
@@ -560,10 +576,21 @@ export default function AutoSelectModal({ open, onClose, autoStart = false }) {
     return formatEta((total - current) * avg);
   })();
 
-  useEffect(() => {
-    if (running) setListOpen(false);
-  }, [running]);
-  const [listOpen, setListOpen] = useState(false);
+  // Список плана свёрнут по умолчанию: компактная строка-тоггл «План (N)»,
+  // выбор пользователя живёт всю сессию (sessionStorage, решение 22.11.2026).
+  const [listOpen, setListOpen] = useState(() => {
+    try { return sessionStorage.getItem(PLAN_OPEN_KEY) === '1'; } catch { return false; }
+  });
+  const togglePlanList = useCallback(() => {
+    setListOpen(prev => {
+      const next = !prev;
+      try {
+        if (next) sessionStorage.setItem(PLAN_OPEN_KEY, '1');
+        else sessionStorage.removeItem(PLAN_OPEN_KEY);
+      } catch {}
+      return next;
+    });
+  }, []);
 
   const sortedResults = [...results].sort((a, b) => {
     if (a.error && !b.error) return 1;
@@ -646,17 +673,27 @@ export default function AutoSelectModal({ open, onClose, autoStart = false }) {
 
   const intro = !running && !cancelled && !finalState && !gamePick;
 
-  // План-строки: план + статусы. Порядок: результаты полного теста сверху,
-  // затем фильтр-статусы, затем pending в порядке плана.
-  const planRows = results.map(r => ({
+  // План-строки: план + статусы. Порядок: результаты полного теста по
+  // баллу, затем фильтр-статусы, затем pending в порядке плана.
+  // oi — индекс в плане: от него считается --ri входной анимации строки,
+  // чтобы live-пересортировка по баллу не перезапускала её.
+  const planRows = results.map((r, oi) => ({
     r,
+    oi,
     item: planItems[r.strategy],
     keyRes: keyRes[r.strategy]?.n > 0 ? keyRes[r.strategy] : null,
     filtering: keyRes[r.strategy]?.total > 0 && !keyRes[r.strategy]?.n && progress?.strategy === r.strategy && phase === 'filter',
   }));
   const hasFull = (p) => !p.r.pending && ((p.r.score ?? 0) > 0 || !!p.r.error);
+  // Измеренные строки полного теста — по текущему баллу: лучший сверху.
+  // Ошибки без балла ниже проверенных; сортировка стабильна — при равном
+  // балле сохраняется порядок плана, неизмеренные остаются внизу как были.
+  const fullByScore = planRows.filter(hasFull).sort((a, b) => {
+    if (!!a.r.error !== !!b.r.error) return a.r.error ? 1 : -1;
+    return (b.r.score ?? 0) - (a.r.score ?? 0);
+  });
   const orderedPlanRows = [
-    ...planRows.filter(hasFull),
+    ...fullByScore,
     ...planRows.filter(p => !hasFull(p) && p.keyRes && !p.filtering),
     ...planRows.filter(p => !hasFull(p) && (!p.keyRes || p.filtering)),
   ];
@@ -689,6 +726,14 @@ export default function AutoSelectModal({ open, onClose, autoStart = false }) {
       open={open}
       onClose={onClose}
       title={t('zapret.autoSelect')}
+      titleExtra={cfg.version > 0 && (
+        <span
+          className={'asm2-cfg-chip' + (cfg.custom ? ' is-custom' : '')}
+          data-tooltip={cfg.custom ? t('zapret.autoCfgCustomTip', { v: formatCfgVersion(cfg.version) }) : t('zapret.autoCfgDefaultTip')}
+        >
+          {t('zapret.autoCfgBadge', { v: formatCfgVersion(cfg.version) })}
+        </span>
+      )}
       icon={headIcon}
       tone={headTone}
       className="asm2-modal"
@@ -710,9 +755,6 @@ export default function AutoSelectModal({ open, onClose, autoStart = false }) {
               )}
               <span className="asm2-topbar-sp" />
               {providerRow}
-              <span className={'asm2-cfg-chip' + (cfg.custom ? ' is-custom' : '')} data-tooltip={cfg.custom ? t('zapret.autoCfgCustomTip') : t('zapret.autoCfgDefaultTip')}>
-                {t('zapret.autoCfgBadge', { v: cfg.version || 0 })}
-              </span>
             </div>
 
             {/* Конвейер: чипы этапов с галочками (в полном прогоне этапов нет) */}
@@ -728,10 +770,23 @@ export default function AutoSelectModal({ open, onClose, autoStart = false }) {
             )}
             {scenarioLabel && <div className="asm2-scenario">{scenarioLabel}</div>}
 
-            {/* Список плана: все строки, бейджи источников, статусы */}
+            {/* План: свёрнут по умолчанию — компактный тоггл, список по желанию */}
             {orderedPlanRows.length > 0 && (
+              <button
+                type="button"
+                className="asm2-plan-toggle"
+                onClick={togglePlanList}
+                aria-expanded={listOpen}
+              >
+                <span className={'asm2-plan-toggle-chev' + (listOpen ? ' open' : '')}>
+                  <ChevronDown size={12} strokeWidth={2.2} />
+                </span>
+                {t('zapret.asmPlanToggle', { n: orderedPlanRows.length })}
+              </button>
+            )}
+            {orderedPlanRows.length > 0 && listOpen && (
               <div className="asm2-plan-list" ref={planListRef}>
-                {orderedPlanRows.map((p, ri) => (
+                {orderedPlanRows.map((p) => (
                   <PlanRow
                     key={p.r.strategy}
                     r={p.r}
@@ -740,7 +795,7 @@ export default function AutoSelectModal({ open, onClose, autoStart = false }) {
                     filtering={p.filtering}
                     phase={phase}
                     testing={phase === 'final' && progress?.strategy === p.r.strategy && !hasFull(p)}
-                    ri={ri}
+                    ri={p.oi}
                   />
                 ))}
               </div>

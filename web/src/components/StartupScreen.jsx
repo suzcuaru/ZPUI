@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { AlertTriangle } from 'lucide-react';
 import HvciFixButton from './HvciFixButton';
 import { api, createStream } from '../api';
 import { useT } from '../i18n';
@@ -31,6 +32,13 @@ export default function StartupScreen({ onComplete }) {
   const [currentStep, setCurrentStep] = useState('connect');
   const [stepDone, setStepDone] = useState(false);
   const [progress, setProgress] = useState(2);
+  // Отображаемый процент: медленно ползёт к CAP между реальными чекпоинтами,
+  // чтобы бар не «замирал» на долгих шагах (см. эффект creep ниже).
+  const [displayed, setDisplayed] = useState(2);
+  // Неблокирующая ошибка шага (шаг продолжается/пропускается) — строка
+  // под баром, не модалка.
+  const [softError, setSoftError] = useState(null);
+  const softErrTimerRef = useRef(null);
   const [error, setError] = useState(null);
   const [errCode, setErrCode] = useState(null);
   const [errorTitle, setErrorTitle] = useState('');
@@ -75,6 +83,14 @@ export default function StartupScreen({ onComplete }) {
   }, []);
 
   const sleep = useCallback(ms => new Promise(r => setTimeout(r, ms)), []);
+
+  // Софт-ошибка: шаг не удался, но процесс продолжается (пропуск/ретрай).
+  // Висит под баром до следующей ошибки или 12 секунд.
+  const showSoftError = useCallback((msg) => {
+    setSoftError(msg);
+    if (softErrTimerRef.current) clearTimeout(softErrTimerRef.current);
+    softErrTimerRef.current = setTimeout(() => setSoftError(null), 12000);
+  }, []);
 
   const resolveEnv = useCallback((action) => {
     const resolve = envResolveRef.current;
@@ -237,6 +253,7 @@ export default function StartupScreen({ onComplete }) {
           if (r?.error) {
             await api('POST', '/api/config', { zapret_skipped: true }).catch(() => null);
             userSkipped = true;
+            showSoftError(tRef.current('startup.soft.removeService'));
           }
           setStepDone(true);
         }
@@ -306,6 +323,7 @@ export default function StartupScreen({ onComplete }) {
         if (startErr) {
           // Движок не запустился: собираем детали и завершаем старт —
           // модалку с рекомендацией покажет интерфейс.
+          showSoftError(tRef.current('startup.errors.zapretFailed', { error: startErr }));
           const [eng, hvci, st] = await Promise.all([
             api('GET', '/api/zapret/engine').catch(() => null),
             api('GET', '/api/system/hvci').catch(() => null),
@@ -322,14 +340,13 @@ export default function StartupScreen({ onComplete }) {
           if (aliveRef.current) onComplete({ firstRun: firstRunRef.current });
           return;
         }
-        setProgress(STEP_PROGRESS['auto-select'] - 2);
 
         // 7. Стартовый автоподбор — ускоренная проверка 3 лучших «по мнению
         // устройства» (бэк вернёт skipped, если данных нет вообще).
         {
           if (!await go('auto-select', async () => {
             autoSelectCountRef.current = 0;
-            setAutoSelect({ current: 0, total: 0, phase: 'operator' });
+            setAutoSelect({ current: 0, total: 0, phase: 'operator', strategy: '' });
 
             // Умный подбор: топ стратегий своего оператора (с сервера, при
             // недоступности — по локальным данным устройства).
@@ -362,12 +379,16 @@ export default function StartupScreen({ onComplete }) {
                     ...prev,
                     current: d.current || 0,
                     total: d.total || 0,
+                    phase: d.phase || prev.phase,
+                    strategy: d.strategy ? d.strategy.replace(/\.bat$/i, '') : prev.strategy,
                   }));
                 } else if (d.type === 'keyprogress') {
                   setAutoSelect(prev => ({
                     ...prev,
                     current: d.current || prev.current,
                     total: d.total || prev.total,
+                    phase: 'filter',
+                    strategy: d.strategy ? d.strategy.replace(/\.bat$/i, '') : prev.strategy,
                   }));
                 } else if (d.type === 'result') {
                   if (d.strategy) {
@@ -383,11 +404,18 @@ export default function StartupScreen({ onComplete }) {
                       ...prev,
                       total,
                       current: stageChanged ? 0 : prev.current,
+                      phase: d.phase || prev.phase,
+                      strategy: d.phase && d.phase !== prev.phase ? '' : prev.strategy,
                     };
                   });
                 }
               };
-              es.onerror = () => { finish(); };
+              es.onerror = () => {
+                // Стрим оборвался (сеть/перезапуск бэка): как и раньше
+                // продолжаем старт, но факт показываем под баром.
+                showSoftError(tRef.current('zapret.autoSelectFailed'));
+                finish();
+              };
             });
 
             await api('POST', '/api/config', { first_run_done: true }).catch(() => null);
@@ -436,7 +464,7 @@ export default function StartupScreen({ onComplete }) {
 
     await sleep(200);
     if (aliveRef.current) onComplete({ firstRun: firstRunRef.current });
-  }, [go, sleep, onComplete, autoInstallZapret]);
+  }, [go, sleep, onComplete, autoInstallZapret, showSoftError]);
 
   const resolveDiag = () => {
     setCriticalIssues(null);
@@ -471,13 +499,19 @@ export default function StartupScreen({ onComplete }) {
         api('POST', '/api/strategy/cancel').catch(() => null);
       }
       clearTimeout(kickoff);
+      if (softErrTimerRef.current) { clearTimeout(softErrTimerRef.current); softErrTimerRef.current = null; }
       if (eventsCleanupRef.current) { eventsCleanupRef.current(); eventsCleanupRef.current = null; }
     };
   }, [run]);
 
-  // Проценты бара: авто-подбор и скачивание движка интерполируются внутри
-  // своих диапазонов, чтобы бар не «стоял» на длинных шагах.
-  const pct = (() => {
+  // Блокирующие диалоги (вопрос окружения, критичные ошибки) — процесс
+  // стоит и ждать решения: ползучий процент на паузу.
+  const modalOpen = !!(envQuestion || serviceCritical || criticalIssues || error);
+
+  // Реальный целевой процент: авто-подбор и скачивание движка
+  // интерполируются внутри своих диапазонов, чтобы бар не «стоял» на
+  // длинных шагах.
+  const targetPct = (() => {
     if (currentStep === 'auto-select' && autoSelect && autoSelect.total > 0 && autoSelect.current > 0) {
       const base = STEP_PROGRESS['install-service'];
       const target = STEP_PROGRESS['auto-select'];
@@ -492,6 +526,45 @@ export default function StartupScreen({ onComplete }) {
     }
     return Math.round(progress);
   })();
+
+  // CAP ползучего процента: 95% пути от текущего чекпоинта до следующего
+  // этапа. displayed никогда не пересекает реальное значение следующего
+  // этапа — при его наступлении бар мгновенно прыгает к targetPct.
+  const creepCap = (() => {
+    const floor = Math.round(progress);
+    const next = Object.values(STEP_PROGRESS).filter(v => v > floor).sort((a, b) => a - b)[0];
+    if (next === undefined) return 99;
+    return Math.floor(floor + (next - floor) * 0.95);
+  })();
+
+  const targetRef = useRef(targetPct);
+  targetRef.current = targetPct;
+  const capRef = useRef(creepCap);
+  capRef.current = creepCap;
+
+  // Смена этапа — мгновенный прыжок к реальному значению (вперёд).
+  useEffect(() => {
+    setDisplayed(prev => (targetPct > prev ? targetPct : prev));
+  }, [targetPct]);
+
+  // Ползучий процент: пока реальный прогресс не меняется, displayed раз в
+  // секунду подтягивается к CAP: displayed += (cap - displayed) * k + шаг.
+  // Живое значение — таймер по образцу useNow (setInterval в эффекте).
+  useEffect(() => {
+    if (modalOpen) return undefined;
+    const iv = setInterval(() => {
+      setDisplayed(prev => {
+        const target = targetRef.current;
+        if (target > prev) return target;
+        const cap = capRef.current;
+        if (prev >= cap) return prev;
+        return Math.min(cap, prev + (cap - prev) * 0.08 + 0.2);
+      });
+    }, 1000);
+    return () => clearInterval(iv);
+  }, [modalOpen]);
+
+  const pct = Math.round(displayed);
 
   const applyThemeAtStart = () => {
     const saved = localStorage.getItem('zpui-theme');
@@ -512,22 +585,56 @@ export default function StartupScreen({ onComplete }) {
   }, [error, errorTitle, errorLog, t]);
 
   // Текст под баром — только про реальный шаг; на 0–15% пусто.
-  const modalOpen = !!(envQuestion || serviceCritical || criticalIssues || error);
   const statusKey = modalOpen ? '' : (STEP_STATUS[currentStep] || '');
   const statusText = statusKey ? t('startup.rotating.' + statusKey) : '\u00A0';
+
+  // Живая строка автоподбора: текущий этап конвейера + проверяемая
+  // стратегия + счётчик. Ключи фаз — из модалки подбора.
+  const AS_PHASES = ['operator', 'server', 'local', 'analyze', 'select', 'startup-last'];
+  const asPhaseKey = autoSelect && AS_PHASES.includes(autoSelect.phase) ? autoSelect.phase : 'testing';
+  const asPhaseText = t('zapret.autoSelectPhase.' + asPhaseKey);
 
   return (
     <div className="startup-overlay">
       <div className="startup-card startup-card-slim">
         <div className="startup-title">ZPUI</div>
 
-        <div className="startup-brow">
-          <ProgressBar value={pct} striped className="startup-bar" />
-          <div className="startup-pct mono">{pct}%</div>
+        {/* Контейнер 1: бар + название этапа. Оба слота присутствуют всегда
+            с жёсткой высотой — смена текста не меняет layout, бар и проценты
+            не смещаются никогда (правило владельца). */}
+        <div className="startup-progress">
+          <div className="startup-brow">
+            <ProgressBar value={pct} striped className="startup-bar" />
+            <div className="startup-pct mono">{pct}%</div>
+          </div>
+          <div className="startup-status">
+            <span className="startup-status-msg" key={statusKey || 'hold'}>{statusText}</span>
+          </div>
         </div>
 
-        <div className="startup-status">
-          <span className="startup-status-msg" key={statusKey || 'hold'}>{statusText}</span>
+        {/* Контейнер 2: дополнительные подробности + софт-ошибка. Слоты
+            зарезервированы (мин-высота под 2 строки / 1 строку) и живут
+            в DOM постоянно — появление/исчезновение строк не двигает бар. */}
+        <div className="startup-details">
+          <div className="startup-live">
+            {currentStep === 'auto-select' && autoSelect && !modalOpen && (
+              <>
+                <span className="startup-live-phase">{asPhaseText}</span>
+                {autoSelect.strategy && <span className="startup-live-strat mono">{autoSelect.strategy}</span>}
+                {autoSelect.total > 0 && (
+                  <span className="startup-live-count mono">{autoSelect.current}/{autoSelect.total}</span>
+                )}
+              </>
+            )}
+          </div>
+          <div className="startup-status-err" role="alert">
+            {softError && (
+              <>
+                <AlertTriangle size={12} strokeWidth={2.2} />
+                <span>{softError}</span>
+              </>
+            )}
+          </div>
         </div>
       </div>
 

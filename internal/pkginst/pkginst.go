@@ -25,6 +25,7 @@ import (
 	"golang.org/x/sys/windows"
 	"golang.org/x/sys/windows/registry"
 
+	"zpui/internal/extension"
 	"zpui/internal/updater"
 	"zpui/internal/zapret"
 	"zpui/internal/zsvc"
@@ -251,6 +252,11 @@ func payloadTree(p *Payload, archPrefix string) (main, wintun, service, tgproxy,
 			if strings.HasPrefix(rel, "components/tgproxy/") && !f.FileInfo().IsDir() {
 				tgproxy = append(tgproxy, f)
 			}
+			// extension — пакет браузерного плагина и его установщик: те же
+			// обычные файлы компонента, что и tgproxy (распаковка best-effort).
+			if strings.HasPrefix(rel, "components/extension/") && !f.FileInfo().IsDir() {
+				tgproxy = append(tgproxy, f)
+			}
 		case rel == "zapret" || strings.HasPrefix(rel, "zapret/"):
 			if !f.FileInfo().IsDir() {
 				zapret = append(zapret, f)
@@ -262,6 +268,29 @@ func payloadTree(p *Payload, archPrefix string) (main, wintun, service, tgproxy,
 		}
 	}
 	return main, wintun, service, tgproxy, zapret, root, nil
+}
+
+// keepCRX — оставить уже установленный пакет плагина: пакет из установщика
+// не новее лежащего на диске.
+func keepCRX(dst string, f *zip.File) bool {
+	have, err := extension.ReadVersion(dst)
+	if err != nil || have == "" {
+		return false
+	}
+	rc, err := f.Open()
+	if err != nil {
+		return false
+	}
+	defer rc.Close()
+	data, err := io.ReadAll(io.LimitReader(rc, 64<<20))
+	if err != nil {
+		return false
+	}
+	want, err := extension.ReadVersionBytes(data)
+	if err != nil || want == "" {
+		return false
+	}
+	return updater.CompareVersions(want, have) < 0
 }
 
 // relPath возвращает путь записи архива относительно dir; "" — если запись
@@ -381,12 +410,24 @@ func extractTree(p *Payload, dir string, step Step, uninstallExe, withZapret boo
 		step("", -1, "файл службы занят, пропущен — обновит приложение")
 	}
 
-	// Мост Telegram: обычно не запущен в момент установки (KillApps), но
-	// если файл занят — не ломаем установку, обновит приложение.
+	// Мост Telegram и браузерный плагин: обычно не запущены в момент
+	// установки (KillApps), но если файл занят — не ломаем установку,
+	// обновит приложение.
 	for _, f := range tgproxyFiles {
 		rel := relPath(f, prefix)
 		if rel == "" {
 			continue
+		}
+		// Даунгрейд пакета плагина недопустим: пользователь мог обновить
+		// его в приложении до версии новее комплектной.
+		if filepath.ToSlash(rel) == "components/extension/"+extension.File {
+			if keepCRX(filepath.Join(dir, filepath.FromSlash(rel)), f) {
+				if step != nil {
+					step("", -1, "плагин браузера оставлен — в пакете версия старее")
+				}
+				done++
+				continue
+			}
 		}
 		if err := extractOne(f, filepath.Join(dir, filepath.FromSlash(rel))); err != nil {
 			if step != nil {

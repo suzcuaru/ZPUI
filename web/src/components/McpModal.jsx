@@ -5,8 +5,9 @@ import { useT } from '../i18n';
 import { useToast } from '../context/ToastContext';
 import { useConfirm } from './ui/ConfirmDialog';
 import { usePolling } from '../hooks/usePolling';
-import { Bot, Check, CircleHelp, Copy, FolderOpen, KeyRound, Waypoints } from 'lucide-react';
+import { AlertTriangle, Bot, Check, CircleHelp, Copy, FolderOpen, KeyRound, Waypoints } from 'lucide-react';
 import Switch from './ui/Switch';
+import StatePill from './ui/StatePill';
 
 const MCP_INFO_ROUTE = '/api/mcp/info';
 
@@ -107,8 +108,8 @@ export default function McpModal({ open, onClose }) {
       onClose={onClose}
       title={t('mcp.title')}
       icon={<Waypoints size={18} strokeWidth={2} />}
-      tone="neutral"
-      size="xl"
+      tone={!info ? 'neutral' : info.last_error ? 'danger' : running ? 'success' : 'neutral'}
+      className="sst-frame"
       footer={<button className="btn btn-sm" onClick={onClose}>{t('common.close')}</button>}
     >
       <div className="mcp-body">
@@ -116,10 +117,7 @@ export default function McpModal({ open, onClose }) {
           <div className="section-title set-section-title">
             <span>{t('mcp.secServer')}</span>
             {stateKey && (
-              <span className={'syncd-pill' + (running ? ' on' : '')}>
-                <span className="syncd-pill-dot" />
-                {t(stateKey)}
-              </span>
+              <StatePill on={running}>{t(stateKey)}</StatePill>
             )}
           </div>
 
@@ -141,7 +139,12 @@ export default function McpModal({ open, onClose }) {
             </span>
           </div>
 
-          {info && !info.enabled && <div className="syncd-hint">{t('mcp.hintOff')}</div>}
+          {info && !info.enabled && (
+            <div className="asm2-result-banner neutral">
+              <span className="asm2-rb-icon"><CircleHelp size={16} strokeWidth={2.2} /></span>
+              <span className="asm2-rb-text">{t('mcp.hintOff')}</span>
+            </div>
+          )}
 
           {info && (
             <>
@@ -158,7 +161,12 @@ export default function McpModal({ open, onClose }) {
                   <span className="set-row-desc mono">{info.port}</span>
                 </div>
               </div>
-              {info.last_error && <div className="mcp-error">{info.last_error}</div>}
+              {info.last_error && (
+                <div className="asm2-result-banner error" role="alert">
+                  <span className="asm2-rb-icon"><AlertTriangle size={16} strokeWidth={2.2} /></span>
+                  <span className="asm2-rb-text">{info.last_error}</span>
+                </div>
+              )}
               <div className="set-row">
                 <div className="set-row-info">
                   <span className="set-row-title">{t('mcp.skillTitle')}</span>

@@ -7,9 +7,11 @@ import { subscribeEvent } from '../events';
 // Фазы: idle (закрыто) → downloading → downloaded → installing (zapret) /
 // launching (ZPUI: закрываем приложение, запускаем установщик) → done | error.
 // В фазах downloading/installing/launching модалку закрыть нельзя.
+// Плагин браузера (component "extension") идёт без фазы downloaded: скачали —
+// сразу ставим, итог приходит теми же событиями update:install*.
 let _flow = {
   open: false,
-  component: null, // 'ZPUI' | 'zapret'
+  component: null, // 'ZPUI' | 'zapret' | 'extension'
   phase: 'idle',
   percent: 0,
   downloaded: 0,
@@ -19,6 +21,7 @@ let _flow = {
   version: null,
   noUpdate: false,
   error: null,
+  browsers: [], // extension: где поставили (имена)
 };
 const subs = new Set();
 const notify = () => subs.forEach((fn) => fn());
@@ -32,6 +35,10 @@ const busyPhase = (phase) => phase === 'downloading' || phase === 'installing' |
 
 // openUpdateModal открывает модалку и сразу запускает скачивание компонента.
 export function openUpdateModal(component) {
+  if (component === 'extension') {
+    startExtensionUpdate(lastExtIds);
+    return;
+  }
   if (_flow.open && busyPhase(_flow.phase)) return;
   set({
     open: true,
@@ -45,6 +52,7 @@ export function openUpdateModal(component) {
     version: null,
     noUpdate: false,
     error: null,
+    browsers: [],
   });
   const route = component === 'ZPUI' ? '/api/updates/download' : '/api/updates/download-zapret';
   api('POST', route).then((d) => {
@@ -52,6 +60,34 @@ export function openUpdateModal(component) {
     if (d.error) set({ phase: 'error', error: d.error, noUpdate: false });
     else if (d.status === 'no_update') set({ phase: 'done', noUpdate: true });
     else if (d.version) set({ version: d.version, ...(d.source ? { source: d.source } : {}) });
+  });
+}
+
+// lastExtIds — браузеры, выбранные пользователем в модалке плагина;
+// «Повторить» после ошибки идёт с тем же списком.
+let lastExtIds = [];
+
+// startExtensionUpdate — скачивание и установка плагина браузера в фоне
+// (POST /api/extension/update); прогресс и итог — событиями update:*.
+export function startExtensionUpdate(ids) {
+  if (_flow.open && busyPhase(_flow.phase)) return;
+  lastExtIds = Array.isArray(ids) ? ids : [];
+  set({
+    open: true,
+    component: 'extension',
+    phase: 'downloading',
+    percent: 0,
+    downloaded: 0,
+    total: 0,
+    step: '',
+    source: '',
+    version: null,
+    noUpdate: false,
+    error: null,
+    browsers: [],
+  });
+  api('POST', '/api/extension/update', { ids: lastExtIds }).then((d) => {
+    if (d && d.error) set({ phase: 'error', error: d.error, noUpdate: false });
   });
 }
 
@@ -112,7 +148,9 @@ export function initUpdateEvents() {
   subscribeEvent('update:download-done', (d) => {
     if (!d?.component) return;
     if (d.ok) {
-      set({ phase: 'downloaded', percent: 100, version: d.version || _flow.version, source: d.source || _flow.source, noUpdate: false });
+      // Плагин ставится сразу после скачивания — кнопки «Установить» у него нет.
+      const phase = d.component === 'extension' ? 'installing' : 'downloaded';
+      set({ phase, percent: d.component === 'extension' ? 0 : 100, version: d.version || _flow.version, source: d.source || _flow.source, noUpdate: false });
     } else {
       set({ phase: 'error', error: d.error || '', noUpdate: false });
     }
@@ -124,13 +162,17 @@ export function initUpdateEvents() {
   subscribeEvent('update:install-done', (d) => {
     if (!d) return;
     if (d.ok) {
-      set({ phase: 'done', percent: 100, version: d.version || _flow.version, noUpdate: false });
+      set({ phase: 'done', percent: 100, version: d.version || _flow.version, noUpdate: false, browsers: d.browsers || [] });
       // После установки запрета сбрасываем закэшированный «доступно обновление»,
       // иначе кнопка «Скачать» остаётся до перезапуска приложения.
       if (d.component === 'zapret') {
         resetZapretCheck();
         checkZapretUpdate().catch(() => {});
         window.dispatchEvent(new CustomEvent('zpui:zapret-installed'));
+      }
+      // Плагин браузера: модалка плагина и карточка в настройках перечитывают инфо.
+      if (d.component === 'extension') {
+        window.dispatchEvent(new CustomEvent('zpui:extension-installed'));
       }
     } else {
       set({ phase: 'error', error: d.error || '', noUpdate: false });
@@ -139,6 +181,13 @@ export function initUpdateEvents() {
   subscribeEvent('update:open-modal', (d) => {
     openUpdateModal(d?.component || 'ZPUI');
   });
+}
+
+// resetUpdateFlowForTests — сброс глобального состояния (только тесты:
+// события бэкенда в тестах не приходят, модалка осталась бы «в полёте»).
+export function resetUpdateFlowForTests() {
+  _flow = { ..._flow, open: false, phase: 'idle', component: null };
+  lastExtIds = [];
 }
 
 export function useUpdateFlow() {

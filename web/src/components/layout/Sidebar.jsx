@@ -6,7 +6,7 @@ import SidebarBanner from '../ui/SidebarBanner';
 import { useEngineFail } from '../../engineFail';
 import {
   LayoutDashboard, ShieldCheck, Globe, Server, Activity, Settings,
-    FileText, ShieldAlert, Gauge, Search, CircleHelp, BatteryCharging, Eraser, TriangleAlert, Waypoints,
+    FileText, ShieldAlert, Gauge, Search, CircleHelp, BatteryCharging, Eraser, TriangleAlert, Waypoints, Puzzle,
 } from 'lucide-react';
 
 const ic = (Comp) => <Comp size={18} strokeWidth={2} />;
@@ -21,7 +21,7 @@ const NAV = [
   { page: 'settings',  label: 'nav.settings',  icon: ic(Settings) },
 ];
 
-export default function Sidebar({ activePage, onNavigate, onOpenChecker, onAutoSelect, onOpenHealth, onOpenHelp, healthWarn, status, onOpenLogs, onOpenCache, onOpenMcp, powerSaving, powerLevel, authEnabled }) {
+export default function Sidebar({ activePage, onNavigate, onOpenChecker, onAutoSelect, onOpenHealth, onOpenHelp, healthWarn, status, onOpenLogs, onOpenCache, onOpenMcp, onOpenExtension, powerSaving, powerLevel, authEnabled }) {
 
   // Размер кеша Discord: переполнен — жёлтый значок предупреждения в панели.
   const [discordCacheMB, setDiscordCacheMB] = useState(0);
@@ -149,6 +149,16 @@ export default function Sidebar({ activePage, onNavigate, onOpenChecker, onAutoS
       >
         <Waypoints size={18} strokeWidth={2} />
         <span className="sidebar-nav-label">{t('mcp.title')}</span>
+      </button>
+      <button
+        className="sidebar-footer-btn"
+        onClick={onOpenExtension}
+        aria-label={t('extension.title')}
+        data-tooltip={t('extension.title')}
+        data-tooltip-pos="right"
+      >
+        <Puzzle size={18} strokeWidth={2} />
+        <span className="sidebar-nav-label">{t('extension.title')}</span>
       </button>
 
       {/* Экономный режим должен быть виден всегда — в том числе когда окно

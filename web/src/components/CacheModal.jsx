@@ -55,14 +55,16 @@ export default function CacheModal({ open, onClose }) {
     load(true);
   };
 
+  const hasWarn = !!items && items.some((it) => it.status === 'warn');
+
   return (
     <Modal
       open={open}
       onClose={onClose}
       title={t('zapret.cacheModalTitle')}
-      wide
+      className="sst-frame"
       icon={<Eraser size={18} strokeWidth={2} />}
-      tone="neutral"
+      tone={!items ? 'neutral' : hasWarn ? 'warning' : 'success'}
       footer={<button className="btn btn-sm" onClick={onClose}>{t('common.close')}</button>}
     >
       <div className="cache-modal-body">
@@ -75,13 +77,6 @@ export default function CacheModal({ open, onClose }) {
             const target = it.key === 'discord' ? 'discord' : it.key === 'webview' ? 'webview' : 'network';
             return (
               <div key={it.key} className={'diag2-cache-panel ' + (it.status || 'ok')}>
-                <button
-                  className="btn btn-xs diag2-cache-clear"
-                  onClick={() => handleClear(target)}
-                  disabled={!!clearing}
-                >
-                  {clearing === target ? <Spinner size={12} /> : t('zapret.cacheClearBtn')}
-                </button>
                 <span className="diag2-icon" style={{ background: cfg.bg, color: cfg.color }}>
                   <Icon size={14} strokeWidth={2.8} />
                 </span>
@@ -89,6 +84,13 @@ export default function CacheModal({ open, onClose }) {
                   <span className="diag2-item-label">{it.label}</span>
                   {it.detail && <span className="diag2-item-detail">{it.detail}</span>}
                 </div>
+                <button
+                  className="btn btn-xs diag2-cache-clear"
+                  onClick={() => handleClear(target)}
+                  disabled={!!clearing}
+                >
+                  {clearing === target ? <Spinner size={12} /> : t('zapret.cacheClearBtn')}
+                </button>
               </div>
             );
           })

@@ -1,7 +1,7 @@
 /* ── AutoSelectModal v2 (общий каркас .modal) ── */
 /* Решение владельца 14.11: модалка заметно уже прежних 820px (был size="xl"). */
 .modal.asm2-modal { max-width:470px; }
-.asm2-content { display:flex; flex-direction:column; gap:10px; min-width:0; }
+.asm2-content { display:flex; flex-direction:column; gap:10px; min-width:0; flex:1 1 auto; min-height:0; }
 .asm2-right-group { display:flex; align-items:center; gap:10px; min-width:0; }
 .asm2-pct-big {
   font-family:var(--font-mono); font-size:20px; font-weight:600;

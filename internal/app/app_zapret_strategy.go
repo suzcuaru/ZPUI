@@ -177,8 +177,6 @@ func (a *App) TestSingleStrategy(filename string, game bool) map[string]interfac
 	if a.zapret.IsAutoTestRunning() {
 		return errResp("автоподбор уже запущен")
 	}
-	// Свежий набор алгоритма подбора до проверки стратегии (дельта по версии).
-	a.RefreshAutoSelectCfg()
 
 	// Состояние проверки — для polling из фронтенда.
 	a.singleTestMu.Lock()
@@ -191,6 +189,11 @@ func (a *App) TestSingleStrategy(filename string, game bool) map[string]interfac
 	})
 
 	go func() {
+		// Свежий набор алгоритма подбора (пороги грейдов результата) —
+		// параллельно проверке: старт проверки не ждёт сеть (на холодном
+		// соединении sync.pull до 20с, модалка висела на «Применение...»).
+		// Применение набора под мьютексом — гонки с подсчётом грейда нет.
+		go a.RefreshAutoSelectCfg()
 		if game {
 			gs, err := a.zapret.TestSingleStrategyGame(filename)
 			a.singleTestMu.Lock()

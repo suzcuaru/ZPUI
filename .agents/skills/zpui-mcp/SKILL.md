@@ -40,7 +40,7 @@ ZPUI — настольное приложение для Windows, одним п
 Этот файл скилла лежит в папке установки: `<папка ZPUI>\skills\zpui-mcp\SKILL.md`.
 Программа поддерживает его актуальным сама (переписывает при обновлении).
 
-## Инструменты (11)
+## Инструменты (15)
 
 **Чтение — безопасны:**
 
@@ -50,6 +50,9 @@ ZPUI — настольное приложение для Windows, одним п
 | `list_strategies` | — | Список стратегий с пометкой `current:true` и замерами (score/availability/grade/ping/speed) |
 | `get_availability` | `hours` (1–720, дефолт 24) | История доступности по группам `standard` (34 ресурса), `key` (17 ключевых), `user` (пользовательские); записи раз в 10 минут, `pct` = процент живых |
 | `get_logs` | `lines` (дефолт 50, макс 500) | Хвост журнала по таблицам: `app_logs`, `updater_logs`, `zapret_logs`, `tgproxy_logs` |
+| `get_user_list` | — | Пользовательский список обхода: `{hosts:[...], count}` (`list-general-user.txt`) |
+| `get_socks_status` | — | Статус SOCKS5-прокси: `enabled`, `running`, `port`, `static_ip` |
+| `check_resource` | `url` | Диагностика блокировки URL: `report.Blocked`, `report.BlockType` (тип блокировки), `report.InUserList`, послойно `Direct.TCP` / `Direct.TLS` / `Direct.HTTP` |
 
 **Действия — меняют систему пользователя (спрашивать подтверждения, если задача явным
 их не требует):**
@@ -61,6 +64,7 @@ ZPUI — настольное приложение для Windows, одним п
 | `run_autoselect` | `mode`: `smart` (дефолт) / `full` / `game` / `startup` | Автоподбор стратегии асинхронно: сразу вернёт `{"started":true,"mode":...}`, прогресс — в UI приложения; готовность проверяй `get_status.auto_test_running` |
 | `dns_enable` | `enabled` (bool) | Включить/выключить замену DNS в системе |
 | `proxy_enable` | `enabled` (bool) | Включить/выключить локальный SOCKS5-прокси (порт 1080) |
+| `add_user_hosts` | `hosts` (массив строк) | Добавить домены в пользовательский список обхода → `{status, added, skipped}`. Движок перечитывает список сам, рестарт не нужен. Только домены: буквы, цифры, точки, дефисы, префикс `^` |
 
 ## Формат ответов
 

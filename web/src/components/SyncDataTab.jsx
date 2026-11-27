@@ -4,6 +4,7 @@ import { useT } from '../i18n';
 import { usePolling } from '../hooks/usePolling';
 import Switch from './ui/Switch';
 import Spinner from './ui/Spinner';
+import StatePill from './ui/StatePill';
 import SyncHistoryDrawer from './SyncHistoryDrawer';
 import { useToast } from '../context/ToastContext';
 import { FileDown, History } from 'lucide-react';
@@ -129,10 +130,14 @@ export default function SyncDataTab() {
       <div className="section">
         <div className="section-title set-section-title">
           <span>{t('syncd.statusTitle')}</span>
-          <span className={'syncd-pill' + (online ? ' on' : '')}>
-            <span className="syncd-pill-dot" />
-            {online ? t('syncd.online') : t('syncd.offline')}
-          </span>
+          <StatePill on={online}>{online ? t('syncd.online') : t('syncd.offline')}</StatePill>
+          {/* Состояние авторизации канала: relogin — сессия истекла,
+              auth_required — устройство не зарегистрировано/отпечаток не совпал */}
+          {info && (info.auth_state === 'relogin' || info.auth_state === 'auth_required') && (
+            <StatePill variant="warn">
+              {info.auth_state === 'relogin' ? t('sync.stateRelogin') : t('sync.stateAuthRequired')}
+            </StatePill>
+          )}
         </div>
 
         <div className="set-row">
@@ -234,29 +239,40 @@ export default function SyncDataTab() {
       <div className="section">
         <div className="section-title set-section-title">
           <span>{t('syncd.reqTitle')}</span>
-          <button className="btn btn-sm" onClick={() => setHistOpen(true)}>
-            <History size={13} strokeWidth={2.2} />
-            {t('syncd.hist.btn')}
-          </button>
         </div>
-        {(!info || !info.requests_log || info.requests_log.length === 0) ? (
-          <div className="syncd-empty">{t('syncd.reqEmpty')}</div>
-        ) : (
-          <div className="syncd-reqs">
-            {[...info.requests_log].reverse().map((e, i) => {
-              const names = (e.sections || []).map((op) => t('syncd.sec.' + secName(op))).join(', ');
-              return (
-                <div key={i} className="syncd-req">
-                  <span className="syncd-req-time mono">{fmtTime(e.at) || '—'}</span>
-                  <span className="syncd-req-text">
-                    {names || '—'}
-                    {e.skips ? ` · ${t('syncd.reqSkips')}` : ''}
-                  </span>
-                </div>
-              );
-            })}
+        {/* Слева — живой список последних запросов, справа (меньшая часть) —
+            карточка «История» с переходом в журнал с фильтрами */}
+        <div className="syncd-req-panel">
+          <div className="syncd-req-live">
+            {(!info || !info.requests_log || info.requests_log.length === 0) ? (
+              <div className="syncd-empty">{t('syncd.reqEmpty')}</div>
+            ) : (
+              <div className="syncd-reqs">
+                {[...info.requests_log].reverse().map((e, i) => {
+                  const names = (e.sections || []).map((op) => t('syncd.sec.' + secName(op))).join(', ');
+                  return (
+                    <div key={i} className="syncd-req">
+                      <span className="syncd-req-time mono">{fmtTime(e.at) || '—'}</span>
+                      <span className="syncd-req-text">
+                        {names || '—'}
+                        {e.skips ? ` · ${t('syncd.reqSkips')}` : ''}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
-        )}
+          <div className="syncd-hist-aside">
+            <span className="syncd-hist-icon"><History size={16} strokeWidth={2} /></span>
+            <span className="syncd-hist-name">{t('syncd.hist.title')}</span>
+            <span className="syncd-hist-hint">{t('syncd.hist.asideHint')}</span>
+            <button className="btn btn-sm syncd-hist-btn" onClick={() => setHistOpen(true)}>
+              <History size={13} strokeWidth={2.2} />
+              {t('syncd.hist.open')}
+            </button>
+          </div>
+        </div>
       </div>
 
       <SyncHistoryDrawer open={histOpen} onClose={() => setHistOpen(false)} />

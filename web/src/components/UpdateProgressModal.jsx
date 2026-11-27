@@ -13,7 +13,8 @@ export default function UpdateProgressModal() {
   const flow = useUpdateFlow();
   if (!flow.open || flow.phase === 'idle') return null;
 
-  const componentName = flow.component === 'zapret' ? t('nav.zapret') : 'ZPUI';
+  const isExt = flow.component === 'extension';
+  const componentName = flow.component === 'zapret' ? t('nav.zapret') : isExt ? t('extension.title') : 'ZPUI';
   const fmtVer = (v) => (v ? (v.startsWith('v') ? v : 'v' + v) : '');
   const busy = flow.phase === 'downloading' || flow.phase === 'installing' || flow.phase === 'launching';
   const closable = !busy;
@@ -24,7 +25,7 @@ export default function UpdateProgressModal() {
       case 'downloaded': return t('update.downloadComplete');
       case 'installing': return t('update.installingTitle', { component: componentName });
       case 'launching': return t('update.launchingTitle');
-      case 'done': return flow.noUpdate ? t('update.noUpdateTitle') : t('update.doneTitle', { component: componentName, version: fmtVer(flow.version) });
+      case 'done': return flow.noUpdate ? t('update.noUpdateTitle') : isExt ? t('extension.doneTitle') : t('update.doneTitle', { component: componentName, version: fmtVer(flow.version) });
       case 'error': return t('update.errorTitle');
       default: return '';
     }
@@ -98,6 +99,12 @@ export default function UpdateProgressModal() {
       <div className="upd-flow-body">
         <CheckCircle2 size={30} strokeWidth={1.8} className="upd-flow-icon ok" />
         <p className="upd-flow-text">{flow.noUpdate ? t('update.noUpdate') : t('update.doneBody', { version: fmtVer(flow.version) })}</p>
+        {isExt && !flow.noUpdate && (
+          <div className="upd-flow-note">
+            <span>{t('extension.doneWhere', { browsers: (flow.browsers || []).join(', ') })}</span>
+            <span>{t('extension.doneEnable')}</span>
+          </div>
+        )}
       </div>
     );
     footer = (

@@ -67,7 +67,7 @@
 .switch-track:focus-visible { box-shadow:0 0 0 var(--border-w-strong) var(--accent); outline:none; }
 .switch-thumb {
   width:14px; height:14px; border-radius:4px; background:#fff;
-  position:absolute; top:1px; left:1px;
+  position:absolute; top:0; left:0;
   transition:transform var(--dur-base) var(--ease-out);
   box-shadow:0 1px 2px rgba(0,0,0,0.15);
 }
@@ -77,9 +77,11 @@
 .switch-label { font-size:12px; color:var(--text-secondary); user-select:none; }
 /* Крупный герой-тумблер сервисных шапок (DNS/Прокси/Туннель): единые 44×24 —
    чуть компактнее прежних 48×26. Это единственный вид тумблера, локальные
-   переопределения размеров запрещены (Документы/Дизайн-и-типографика.md §5.2). */
+   переопределения размеров запрещены (Документы/Дизайн-и-типографика.md §5.2).
+   Бегунок центрируется в зоне внутри рамки (дорожка 44×24 минус 2px рамки —
+   поле 20px под бегунок 18px → отступ 1px со всех сторон). */
 .switch-lg .switch-track { width:44px; height:24px; border-radius:7px; }
-.switch-lg .switch-thumb { width:18px; height:18px; border-radius:5px; top:3px; left:3px; }
+.switch-lg .switch-thumb { width:18px; height:18px; border-radius:5px; top:1px; left:1px; }
 .switch-lg .switch-track[aria-checked="true"] .switch-thumb { transform:translateX(20px); }
 .switch-lg .switch-spinner { width:14px; height:14px; margin:-7px 0 0 -7px; }
 .switch-lg .switch-state { font-size:11.5px; min-width:26px; }
@@ -312,6 +314,13 @@
   font-size:var(--fs-lg); font-weight:var(--fw-heading); color:var(--text-primary);
   flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
   line-height:1.2;
+}
+/* Доп. элемент рядом с заголовком (например, версия набора подбора):
+   мелкий mono-чип на базовой линии заголовка */
+.modal-title-extra {
+  display:inline-flex; align-items:center; margin-left:8px;
+  font-size:10px; font-weight:600; font-family:var(--font-mono);
+  color:var(--text-tertiary); transform:translateY(-1px);
 }
 .modal-close {
   width:28px; height:28px; flex-shrink:0; padding:0;
@@ -560,7 +569,6 @@
 
 .lists-2col { display:grid; grid-template-columns:240px 1fr; gap:10px; flex:1; min-height:0; }
 .lists-left { display:flex; flex-direction:column; gap:8px; min-height:0; }
-.lists-list-section { flex-shrink:0; }
 .lists-list-section .strat-item.compact { padding:5px 8px; }
 /* Вкладка «Списки» занимает всю высоту вкладки (раньше внизу оставалось пусто) */
 .zp-lists-tab { flex:1; min-height:0; display:flex; flex-direction:column; gap:10px; }
@@ -579,7 +587,13 @@
 }
 .lists-add-input:focus { border-color:var(--accent); }
 .lists-add-desc { margin:0; font-size:10px; color:var(--text-tertiary); line-height:1.45; }
-.lists-sys-section { flex:1; min-height:0; overflow-y:auto; }
+/* Секции списков: заголовок закреплён, скроллится только сам список
+   (внутренняя обёртка). Секция пользователя умеет сжиматься — при длинном
+   списке скролл появляется внутри неё, не сдвигая «Системные списки». */
+.lists-list-section { flex-shrink:1; min-height:0; }
+.lists-user-scroll { flex:1; min-height:0; overflow-y:auto; display:flex; flex-direction:column; gap:6px; }
+.lists-sys-section { flex:1; min-height:0; }
+.lists-sys-scroll { flex:1; min-height:0; overflow-y:auto; display:flex; flex-direction:column; gap:6px; }
 .lists-sys-head { display:flex; align-items:center; gap:6px; }
 .lists-sys-head .refresh-icon-btn { margin-left:auto; }
 .lists-sys-grid { display:flex; flex-direction:column; gap:2px; }

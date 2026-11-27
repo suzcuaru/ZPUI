@@ -213,6 +213,34 @@ func GetOperatorStrategies(operatorKey string) ([]OperatorStrategy, error) {
 	return result, nil
 }
 
+// GetOperatorStrategyResults возвращает auto_test_results одной строки
+// стратегии ("" — строки или данных нет).
+func GetOperatorStrategyResults(operatorKey, strategy string) (string, error) {
+	var s sql.NullString
+	err := DB().QueryRow(`
+		SELECT auto_test_results FROM operator_strategies
+		WHERE operator_key = ? AND strategy = ?
+	`, operatorKey, strategy).Scan(&s)
+	if err == sql.ErrNoRows {
+		return "", nil
+	}
+	if err != nil {
+		return "", err
+	}
+	return s.String, nil
+}
+
+// SetOperatorStrategyAutoTestResults обновляет ТОЛЬКО auto_test_results строки
+// (live-балл активной стратегии из тактов проверки ресурсов). В отличие от
+// SaveOperatorStrategy не трогает applied_at/use_count/tested_at — история
+// применений и данные прогона остаются как были.
+func SetOperatorStrategyAutoTestResults(operatorKey, strategy, results string) error {
+	_, err := DB().Exec(`
+		UPDATE operator_strategies SET auto_test_results = ? WHERE operator_key = ? AND strategy = ?
+	`, results, operatorKey, strategy)
+	return err
+}
+
 // UpdateStrategyAvailability обновляет процент доступности стратегии.
 func UpdateStrategyAvailability(operatorKey, strategy string, pct float64) error {
 	_, err := DB().Exec(`

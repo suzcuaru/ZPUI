@@ -12,6 +12,7 @@ import { useToast } from '../context/ToastContext';
 import { subscribeEvent } from '../events';
 import { Plus, Trash2, Server, Network, User, PenLine, ShieldCheck, RefreshCw } from 'lucide-react';
 import Spinner from '../components/ui/Spinner';
+import StatusHero from '../components/ui/StatusHero';
 import { formatSyncTime } from '../utils';
 
 // Модель провайдеров: бэкенд сводит базовых провайдеров и пользовательские
@@ -366,29 +367,18 @@ export default function DnsPage({ status }) {
 
   return (
     <div className="dns-page stagger">
-      <div className={'dns-hero' + (on ? ' on' : '')}>
-        <div className="dns-hero-left">
-          <div className={'dns-hero-icon' + (on ? ' on' : '')}>
-            <Network size={24} strokeWidth={2} />
-          </div>
-          <div className="dns-hero-info">
-            <span className="dns-hero-title">{t('dns.title')}</span>
-            <span className={'dns-hero-desc' + (on ? ' on' : '')}>{stateLabel}</span>
-          </div>
-        </div>
-        <div className="dns-hero-state">
-          {/* Чип применения показываем только когда факт загружен: до того
-              он мигал «Не применён» перед «Применён» */}
-          {on && current != null && (
-            <span
-              className={'dns-apply-chip' + (appliedOk ? ' ok' : '')}
-              data-tooltip={t('dns.applyStateTip')}
-            >
-              {t(appliedOk ? 'dns.applied' : 'dns.notApplied')}
-            </span>
-          )}
-        </div>
-      </div>
+      <StatusHero on={on} icon={<Network size={24} strokeWidth={2} />} title={t('dns.title')} desc={stateLabel}>
+        {/* Чип применения показываем только когда факт загружен: до того
+            он мигал «Не применён» перед «Применён» */}
+        {on && current != null && (
+          <span
+            className={'dns-apply-chip' + (appliedOk ? ' ok' : '')}
+            data-tooltip={t('dns.applyStateTip')}
+          >
+            {t(appliedOk ? 'dns.applied' : 'dns.notApplied')}
+          </span>
+        )}
+      </StatusHero>
 
       {/* Состояние: провайдеры в системе + статический IP — одна панель сверху.
           Пока факт не загружен (netsh отвечает с задержкой) — скелетоны:

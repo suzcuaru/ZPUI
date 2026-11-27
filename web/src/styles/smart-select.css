@@ -11,7 +11,20 @@
 .asm2-step-n { width:11px; height:11px; border-radius:50%; background:var(--border-light); color:var(--text-secondary); font-size:8px; display:inline-flex; align-items:center; justify-content:center; }
 .asm2-scenario { font-size:10.5px; color:var(--text-tertiary); margin:-4px 0 8px; padding-left:2px; }
 
-.asm2-plan-list { display:flex; flex-direction:column; gap:4px; max-height:300px; overflow-y:auto; margin-bottom:10px; }
+.asm2-plan-list { display:flex; flex-direction:column; gap:4px; overflow-y:auto; margin-bottom:10px; }
+/* Тоггл свёрнутого плана «План (N)»: компактная строка вместо списка */
+.asm2-plan-toggle {
+  display:flex; align-items:center; gap:6px;
+  padding:5px 9px; margin-bottom:10px;
+  border:var(--border-w) solid var(--border-light); border-radius:9px;
+  background:var(--bg-inset); color:var(--text-secondary);
+  font-size:11px; font-weight:600; font-family:var(--font);
+  cursor:pointer; text-align:left;
+  transition:border-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+.asm2-plan-toggle:hover { border-color:var(--accent); color:var(--accent); }
+.asm2-plan-toggle-chev { display:inline-flex; transition:transform var(--dur-base) var(--ease-out); }
+.asm2-plan-toggle-chev.open { transform:rotate(180deg); }
 .asm2-plan-row {
   display:flex; align-items:center; gap:8px; padding:6px 9px;
   background:var(--bg-inset); border:var(--border-w) solid var(--border-light); border-radius:9px;
@@ -60,7 +73,7 @@
 .asm2-run-bar { flex:1; }
 .asm2-run-bar.pb-sm .pb-track { height:20px; border-radius:6px; }
 .asm2-run-pct {
-  flex:none; font-size:10.5px; font-weight:600; color:var(--text-secondary);
+  flex:none; font-size:var(--fs-lg); font-weight:600; color:var(--text-secondary);
   font-variant-numeric:tabular-nums;
 }
 
@@ -69,6 +82,10 @@
   font-size:11px; color:var(--text-tertiary);
   padding:2px 2px 0;
 }
+/* Модалка подбора: «проверяемая» строка прижата к правому краю композиции
+   (фидбек владельца 22.11) — имя стратегии и статус уходят вправо */
+.asm2-modal .asm2-now { justify-content:flex-end; }
+.asm2-modal .asm2-now-sp { flex:0 0 4px; }
 .asm2-now-name { color:var(--text-secondary); font-weight:600; }
 .asm2-now-sp { flex:1; }
 .asm2-now-count { color:var(--text-tertiary); }
@@ -192,11 +209,18 @@
 @keyframes statIn { from { opacity:0; transform:translateY(6px) scale(0.96); } }
 .asm2-live-item { animation-delay:calc(var(--ri, 0) * 45ms); }
 
-/* — Капы списков: скролл только у списка, модалка влезает в 640px окна
-     (592px доступно модалке минус шапка/футер/паддинги/зазоры) — */
-.asm2-plan-list { max-height:256px; overscroll-behavior:contain; }
-.asm2-live-list { max-height:244px; margin:0; overscroll-behavior:contain; }
-.asm2-strat-list { max-height:264px; overscroll-behavior:contain; }
+/* — Фиксированная компоновка модалки: тело не скроллится вовсе — сжимается
+     и скроллится только список (план / результаты / выбор стратегий),
+     прогресс-блок остаётся прибитым к низу. Границу списка держит
+     flex-сжатие (min-height:0) в пределах окна, прежние max-height-капы
+     сняты: узкий список — модалка компактная, длинный — скролл в списке. — */
+.modal.asm2-modal .modal-body { overflow:hidden; display:flex; flex-direction:column; }
+.asm2-plan-list, .asm2-live-list, .asm2-strat-list {
+  flex:0 1 auto; min-height:0; max-height:none;
+  overflow-y:auto; overscroll-behavior:contain;
+}
+.asm2-live-list { margin:0; }
+.asm2-gamepick { min-height:0; }
 
 /* — Гейм-пик: данные стратегии в строке + подсказка предвыбора — */
 .asm2-strat-meta { margin-left:auto; display:inline-flex; align-items:center; gap:8px; flex-shrink:0; }
@@ -226,6 +250,7 @@
   .asm2-best-stats > *, .modal-footer .btn, .asm2-now-name.swap,
   .asm2-live-item, .startup-card > *, .startup-row-nm.swap, .startup-row-eta.swap { animation:none; }
   .asm2-plan-row { transition:opacity var(--dur-fast) ease; }
+  .asm2-plan-toggle-chev { transition:none; }
 }
 
 /* ── Sync history drawer ────────────────

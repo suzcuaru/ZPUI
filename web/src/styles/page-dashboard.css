@@ -193,7 +193,7 @@
 .rp-head { display:grid; grid-template-columns:8px 1fr 64px 76px; align-items:center; gap:8px; padding:2px 8px 6px; border-bottom:var(--border-w) solid var(--border-light); margin-bottom:4px; }
 .rp-h-dot { width:8px; flex-shrink:0; }
 .rp-h-name { flex:1; font-size:10px; text-transform:uppercase; letter-spacing:0.04em; color:var(--text-tertiary); font-weight:600; }
-.rp-h-uptime { font-size:10px; text-transform:uppercase; letter-spacing:0.04em; color:var(--text-tertiary); font-weight:600; text-align:right; white-space:nowrap; }
+.rp-h-uptime,
 .rp-h-latency { font-size:10px; text-transform:uppercase; letter-spacing:0.04em; color:var(--text-tertiary); font-weight:600; text-align:right; white-space:nowrap; }
 .rp-latency { text-align:right; font-size:11px; color:var(--text-tertiary); }
 .rp-loading, .rp-empty { padding:24px 0; text-align:center; color:var(--text-tertiary); font-size:12px; }

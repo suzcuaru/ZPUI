@@ -8,6 +8,7 @@ REM === Read ALL versions from versions.txt (NO auto-increment) ===
 set "VERSION="
 set "VER_TGPROXY="
 set "VER_SERVICE="
+set "VER_EXT="
 
 if not exist "%BAT_DIR%versions.txt" (
     echo [ERROR] versions.txt not found
@@ -23,6 +24,7 @@ for /f "usebackq tokens=1,* delims==" %%a in ("%BAT_DIR%versions.txt") do (
     if "!key!"=="zpui" set "VERSION=!val!"
     if "!key!"=="tgproxy" set "VER_TGPROXY=!val!"
     if "!key!"=="service" set "VER_SERVICE=!val!"
+    if "!key!"=="extension" set "VER_EXT=!val!"
     if "!key!"=="server" set "SERVER_URL=!val!"
 )
 
@@ -33,6 +35,7 @@ if not defined VERSION (
 )
 
 if not defined VER_SERVICE set "VER_SERVICE=1.0.0"
+if not defined VER_EXT set "VER_EXT=1.0.0"
 
 REM === Мьютекс сборки: две одновременные сборки (параллельные сессии) молча
 REM === ломают dist и payload — вторая должна валиться сразу.
@@ -262,6 +265,57 @@ echo   [OK] ZPUI-Service.exe v%VER_SERVICE% - x86, in components only
 
 :service_done
 
+REM --- Browser extension: подписанный CRX3 из соседнего субпроекта
+REM     ZPUI-Extension -> components\extension\ в обоих деревьях. Ставит его
+REM     в браузеры приложение (internal\extension). Приватный ключ - в
+REM     ZPUI-Extension\build\key.pem, в дистрибутив не попадает.
+REM     ВАЖНО: в скобочных блоках echo без круглых скобок в тексте.
+set "EXT_SRC=%BAT_DIR%..\ZPUI-Extension"
+set "EXT_CRX=%VERDIR%\x64\components\extension\zpui-extension.crx"
+if not exist "%EXT_SRC%\manifest.json" goto ext_done
+if not exist "%EXT_SRC%\build\key.pem" goto ext_nokey
+mkdir "%VERDIR%\x64\components\extension"
+mkdir "%VERDIR%\x86\components\extension"
+pushd "%EXT_SRC%"
+go run ./tools/mkcrx.go -src . -key build/key.pem -version "%VER_EXT%" -out "%EXT_CRX%"
+set "EXT_RC=!errorlevel!"
+popd
+if not "!EXT_RC!"=="0" goto ext_fail
+copy /y "%EXT_CRX%" "%VERDIR%\x86\components\extension\zpui-extension.crx" > nul
+echo   [OK] zpui-extension.crx v%VER_EXT% in components\extension >> "%BUILDLOG%"
+echo   [OK] zpui-extension.crx v%VER_EXT% in components\extension
+goto ext_done
+
+:ext_nokey
+echo [WARN] ZPUI-Extension key not found, extension not packaged >> "%BUILDLOG%"
+echo [WARN] ZPUI-Extension key not found, extension not packaged
+goto ext_done
+
+:ext_fail
+echo [WARN] ZPUI-Extension CRX build failed, skipping >> "%BUILDLOG%"
+echo [WARN] ZPUI-Extension CRX build failed, skipping
+
+:ext_done
+
+REM --- Extension standalone installer: cmd\extsetup со встроенным свежим CRX
+REM     (копия из x64 дерева). Приложение обновляет расширение, запуская этот
+REM     exe тихо (-silent); вручную качают с сервера. Только amd64: Wails-GUI.
+REM     ВАЖНО: в скобочных блоках echo без круглых скобок в тексте.
+if not exist "%EXT_CRX%" goto extsetup_done
+if not exist "%BAT_DIR%cmd\extsetup\main.go" goto extsetup_done
+copy /y "%EXT_CRX%" "%BAT_DIR%cmd\extsetup\extension.crx" > nul
+go build -trimpath -tags desktop,production -ldflags "-s -w -H windowsgui -X main.version=%VER_EXT%" -o "%VERDIR%\x64\components\extension\ZPUI-Extension-Setup.exe" .\cmd\extsetup >> "%BUILDLOG%" 2>&1
+if errorlevel 1 goto extsetup_fail
+echo   [OK] ZPUI-Extension-Setup.exe v%VER_EXT% in components\extension >> "%BUILDLOG%"
+echo   [OK] ZPUI-Extension-Setup.exe v%VER_EXT% in components\extension
+goto extsetup_done
+
+:extsetup_fail
+echo [WARN] ZPUI-Extension-Setup build failed, skipping >> "%BUILDLOG%"
+echo [WARN] ZPUI-Extension-Setup build failed, skipping
+
+:extsetup_done
+
 REM --- TgProxy component: headless-мост Telegram из родной кодовой базы
 REM     tg-ws-proxy, без правок их файлов. Собирается integration\build.bat
 REM     проекта ..\ZPUI-TgProxy; версия берётся из proxy\__init__.py апстрима.
@@ -397,7 +451,7 @@ if exist "%BAT_DIR%.agents\skills\zpui-mcp\SKILL.md" (
     copy /y "%BAT_DIR%.agents\skills\zpui-mcp\SKILL.md" "%VERDIR%\x86\skills\zpui-mcp\SKILL.md" > nul
     copy /y "%BAT_DIR%.agents\skills\zpui-mcp\SKILL.md" "%VERDIR%\x64\skills\zpui-mcp\SKILL.md" > nul
 )
-powershell -NoProfile -Command "$j=[ordered]@{zpui='%VERSION%';build='%BUILDNUM%';tgproxy='%VER_TGPROXY%';service='%VER_SERVICE%'}|ConvertTo-Json; foreach($p in @('%VERDIR%\versions.json','%VERDIR%\x86\versions.json','%VERDIR%\x64\versions.json')){[IO.File]::WriteAllText($p,$j,(New-Object Text.UTF8Encoding $false))}"
+powershell -NoProfile -Command "$j=[ordered]@{zpui='%VERSION%';build='%BUILDNUM%';tgproxy='%VER_TGPROXY%';service='%VER_SERVICE%';extension='%VER_EXT%'}|ConvertTo-Json; foreach($p in @('%VERDIR%\versions.json','%VERDIR%\x86\versions.json','%VERDIR%\x64\versions.json')){[IO.File]::WriteAllText($p,$j,(New-Object Text.UTF8Encoding $false))}"
 if errorlevel 1 (echo [ERROR] versions.json generation failed >> "%BUILDLOG%" & echo [ERROR] versions.json generation failed & timeout /t 10 > nul & exit /b 1)
 echo Done.
 echo.

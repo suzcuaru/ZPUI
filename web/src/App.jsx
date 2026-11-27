@@ -13,6 +13,7 @@ import SyncChoiceModal from './components/feedback/SyncChoiceModal';
 import PromoRevealModal from './components/feedback/PromoRevealModal';
 import StarPromoModal, { starPromoDue } from './components/StarPromoModal';
 import EngineFailModal from './components/EngineFailModal';
+import BugReportModal from './components/feedback/BugReportModal';
 import SelectionStaleModal from './components/feedback/SelectionStaleModal';
 import TooltipLayer from './components/ui/TooltipLayer';
 import ResourceChecker from './components/ResourceChecker';
@@ -22,6 +23,7 @@ import StartupScreen from './components/StartupScreen';
 import DiagnosticsModal from './components/DiagnosticsModal';
 import CacheModal from './components/CacheModal';
 import McpModal from './components/McpModal';
+import ExtensionModal from './components/ExtensionModal';
 import UpdateAvailableModal from './components/UpdateAvailableModal';
 import UpdateProgressModal from './components/UpdateProgressModal';
 import { initUpdateEvents } from './hooks/useUpdateFlow';
@@ -95,6 +97,7 @@ const MAutoSelectModal = memo(AutoSelectModal);
 const MDiagnosticsModal = memo(DiagnosticsModal);
 const MCacheModal = memo(CacheModal);
 const MMcpModal = memo(McpModal);
+const MExtensionModal = memo(ExtensionModal);
 const MUpdateAvailableModal = memo(UpdateAvailableModal);
 const MUpdateProgressModal = memo(UpdateProgressModal);
 const MRecoveryModal = memo(RecoveryModal);
@@ -353,9 +356,16 @@ export default function App() {
   const [diagOpen, setDiagOpen] = useState(false);
   const [cacheOpen, setCacheOpen] = useState(false);
   const [mcpOpen, setMcpOpen] = useState(false);
+  const [extensionOpen, setExtensionOpen] = useState(false);
   const [zapretLoading, setZapretLoading] = useState(false);
   const [recovery, setRecovery] = useState({ open: false, steps: [], phase: 'progress' });
   const [recoveryReport, setRecoveryReport] = useState(null);
+  // Баг-репорт «как в 1С»: из тоста ошибки — модалка с кодом/текстом ошибки
+  // и отправкой JSON-диагностики на сервер.
+  const [bugReport, setBugReport] = useState({ open: false, code: '', error: '' });
+  const openBugReport = useCallback((payload) => {
+    setBugReport({ open: true, code: payload?.code || '', error: payload?.error || '' });
+  }, []);
   // Экономный режим: настройки из конфига + работа от батареи (для автоматики).
   // Источник истины — /api/status от бэкенда (он переживает переоткрытие окна);
   // локальные настройки нужны лишь до первого опроса статуса.
@@ -968,6 +978,8 @@ export default function App() {
   const openCache = useCallback(() => setCacheOpen(true), []);
   const openMcp = useCallback(() => setMcpOpen(true), []);
   const closeMcp = useCallback(() => setMcpOpen(false), []);
+  const openExtension = useCallback(() => setExtensionOpen(true), []);
+  const closeExtension = useCallback(() => setExtensionOpen(false), []);
   const openHealth = useCallback(() => setHealthOpen(true), []);
   const openAutoSelect = useCallback(() => setAutoSelectOpen(true), []);
   const closeAutoSelect = useCallback(() => {
@@ -1118,6 +1130,7 @@ export default function App() {
           onOpenLogs={openLogs}
           onOpenCache={openCache}
           onOpenMcp={openMcp}
+          onOpenExtension={openExtension}
           powerSaving={powerSaving}
           powerLevel={powerLevel}
         />
@@ -1142,6 +1155,7 @@ export default function App() {
       <MDiagnosticsModal open={diagOpen} onClose={closeDiagnostics} />
       <MCacheModal open={cacheOpen} onClose={closeCache} />
       <MMcpModal open={mcpOpen} onClose={closeMcp} />
+      <MExtensionModal open={extensionOpen} onClose={closeExtension} />
       <MUpdateAvailableModal
         data={updateModal}
         onClose={closeUpdateModal}
@@ -1161,7 +1175,7 @@ export default function App() {
          
         />
       )}
-      <MToast toasts={toasts} onRemove={removeToast} version={status?.mod?.version} onOpenLogs={handleOpenLogs} />
+      <MToast toasts={toasts} onRemove={removeToast} version={status?.mod?.version} onOpenLogs={handleOpenLogs} onReportBug={openBugReport} />
       <MProfileDrawer
         open={profileOpen}
         onClose={closeProfile}
@@ -1197,6 +1211,12 @@ export default function App() {
         <StarPromoModal onClose={() => setStarPromo(false)} />
       )}
       {startupDone && <EngineFailModal />}
+      <BugReportModal
+        open={bugReport.open}
+        code={bugReport.code}
+        error={bugReport.error}
+        onClose={() => setBugReport((b) => ({ ...b, open: false }))}
+      />
       </div>
     </div>
     <MTooltipLayer />

@@ -1,6 +1,7 @@
 {
-    "zpui":  "2.1.2",
-    "build":  "4",
+    "zpui":  "2.1.3",
+    "build":  "18",
     "tgproxy":  "1.11.3",
-    "service":  "1.0.0"
+    "service":  "1.0.0",
+    "extension":  "1.0.1"
 }

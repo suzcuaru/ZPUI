@@ -25,6 +25,11 @@ func (a *App) ZapretStart() map[string]interface{} {
 			return
 		}
 		a.zapretExpected.Store(true)
+		// Персистим сразу: SaveComponentStates сработает только при выходе,
+		// а крах приложения до него не должен «забыть» ручной запуск.
+		if err := a.cfg.SetLastZapretState(true); err != nil {
+			a.log.Warn("zapret", "persist last_zapret_state=true: "+err.Error())
+		}
 	})
 	return map[string]interface{}{"status": "starting"}
 }
@@ -37,6 +42,11 @@ func (a *App) ZapretStop() map[string]interface{} {
 	a.opGen.Add(1)
 	// Явная остановка пользователем — авто-восстановление не поднимает движок.
 	a.zapretExpected.Store(false)
+	// Персистим сразу: иначе крах приложения до SaveComponentStates оставил бы
+	// в конфиге «должен работать», и следующий старт заново поднял движок.
+	if err := a.cfg.SetLastZapretState(false); err != nil {
+		a.log.Warn("zapret", "persist last_zapret_state=false: "+err.Error())
+	}
 	a.zapret.Stop()
 	return okResp()
 }

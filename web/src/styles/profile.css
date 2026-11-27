@@ -131,10 +131,12 @@
 }
 .dns-panel { min-height:0; }
 .dns-panel-list { flex:1; overflow-y:auto; min-height:0; display:flex; flex-direction:column; gap:2px; }
-/* Единый шаблон статус-панелей: герои DNS/прокси и бар службы Запрета */
+/* Единый шаблон статус-панелей: герои DNS/прокси и бар службы Запрета.
+   Одна высота на всех вкладках: герой с двухстрочным описанием задаёт
+   минимум 60px (контент 36 + паддинг 20 + рамка 4), бар подтягивается до него. */
 .dns-hero, .zp-service-bar {
   flex:none; display:flex; align-items:center; justify-content:space-between; gap:12px;
-  min-height:52px; padding:10px 14px; border-radius:var(--radius-lg);
+  min-height:60px; padding:10px 14px; border-radius:var(--radius-lg);
   background:var(--bg-card); box-shadow:var(--shadow-sm);
   border:var(--border-w) solid transparent;
 }
@@ -165,8 +167,10 @@
 .dns-section-head .section-title { font-size:13px; }
 .dns-head-actions { margin-left:auto; display:flex; align-items:center; gap:6px; }
 .dns-sys-meta { font-size:10px; color:var(--text-tertiary); }
-/* Компактная иконка-кнопка «Обновить» (26px, тонкий бордер, hover акцентом) */
-.refresh-icon-btn {
+/* Компактная иконка-кнопка 26px с тонким бордером: «Обновить» и удаление
+   строки DNS (hover у них разный — акцент/опасность) */
+.refresh-icon-btn,
+.dns-row-del {
   flex:none; display:flex; align-items:center; justify-content:center;
   width:26px; height:26px; border-radius:6px; cursor:pointer;
   border:var(--border-w) solid var(--border); background:transparent;
@@ -197,12 +201,6 @@
 .dns-current-none { font-size:11px; color:var(--text-tertiary); }
 .dns-add-btn { margin-left:auto; }
 .dns-empty { font-size:11.5px; color:var(--text-tertiary); padding:8px 0; }
-.dns-row-del {
-  flex:none; display:flex; align-items:center; justify-content:center;
-  width:26px; height:26px; border-radius:6px; cursor:pointer;
-  border:var(--border-w) solid var(--border); background:transparent;
-  color:var(--text-tertiary); transition:all var(--dur-fast) ease;
-}
 .dns-row-del:hover { color:var(--danger); border-color:var(--danger); background:var(--danger-bg); }
 
 /* Панели в один столбец на всю ширину (страница скроллится) */

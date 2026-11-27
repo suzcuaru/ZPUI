@@ -9,9 +9,9 @@ package app
 //
 // Обновление «при запуске программы, на стартовом меню до начала подбора
 // или проверки стратегии»: RefreshAutoSelectCfg зовётся из RunStartupChecks
-// (до шага auto-select), перед каждым подбором (RunAutoSelectStream) и
-// одиночным тестом стратегии; фоновый часовой sync.pull применяет блок
-// через ApplyPull.
+// (до шага auto-select), перед каждым подбором (RunAutoSelectStream); перед
+// одиночным тестом стратегии — параллельно проверке (старт не ждёт сеть).
+// Фоновый часовой sync.pull применяет блок через ApplyPull.
 
 import (
 	"encoding/json"
@@ -70,7 +70,8 @@ func (a *App) applyAutoselectBlock(version int64, unchanged bool, raw json.RawMe
 
 // RefreshAutoSelectCfg — лёгкий sync.pull с курсором только по autoselect:
 // сервер отдаёт блок, если версия изменилась. Быстро (дельта), анонимно
-// (набор публичный) — зовётся синхронно перед подбором/тестом.
+// (набор публичный) — перед подбором синхронно, перед одиночным тестом
+// параллельно (не задерживает старт проверки).
 func (a *App) RefreshAutoSelectCfg() {
 	if ServerURL == "" {
 		return

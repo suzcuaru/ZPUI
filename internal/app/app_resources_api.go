@@ -193,7 +193,7 @@ func (a *App) GetAvailabilityHistory(hours int, typ string) map[string]interface
 		all = []database.AvailabilityRecord{}
 	}
 	// Фильтр по типу; type=key — агрегат по основным ресурсам (discord/
-	// youtube/steam) из per-host проверок:_pct на каждый такт проверки.
+	// youtube/steam) из per-host проверок: pct на каждый такт проверки.
 	var records []database.AvailabilityRecord
 	if typ == "key" {
 		hist, err := database.GetResourceAvailabilityHistory(since, "")

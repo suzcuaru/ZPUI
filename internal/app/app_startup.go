@@ -138,6 +138,21 @@ func (a *App) RunStartupChecks(log *StartupLogger) map[string]interface{} {
 		}
 	}
 
+	// Ручной останов: пользователь выключил движок тумблером — восстановление
+	// запускаем только если он «должен работать» (флаг переживает перезапуск
+	// приложения). Иначе каждый старт приложения молча поднимал остановленный
+	// движок. Повреждённые файлы (шаг 3 выше) чинятся и без запуска службы —
+	// сюда попадаем только при целых файлах и остановленной службе.
+	if !a.cfg.GetLastZapretState() && !a.zapretExpected.Load() {
+		a.zapretExpected.Store(false)
+		log.Write("SERVICE", "Движок был остановлен вручную — автозапуск не выполняем")
+		return map[string]interface{}{
+			"status":  "stopped_by_user",
+			"healthy": true,
+			"message": "Движок остановлен пользователем — автозапуск не выполняем",
+		}
+	}
+
 	log.Write("SERVICE", "Служба zapret остановлена — запускаем восстановление")
 	return a.runStartupRecovery(log)
 }

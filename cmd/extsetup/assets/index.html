@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Расширение ZPUI</title>
+<style>
+/* Дизайн-система ZPUI (Документы/Дизайн-заметки.md §5, тёмная тема) —
+   те же токены, что в cmd/setup/assets/index.html */
+:root{
+  --bg-page:#141418; --bg-card:#20202a; --bg-inset:#16161e;
+  --bg-hover:rgba(255,255,255,0.06); --bg-active:rgba(107,163,255,0.10);
+  --border:#2e2e38; --border-light:#262630;
+  --text-primary:#e5e5ed; --text-secondary:#9ea3b3; --text-tertiary:#8a8fa0;
+  --accent:#6ba3ff; --accent-hover:#82b3ff;
+  --accent-soft:rgba(107,163,255,0.12); --accent-text:#fff;
+  --grad-accent:linear-gradient(135deg,var(--accent),#9b6df2);
+  --success:#34d058; --success-bg:rgba(52,208,88,0.12);
+  --danger:#f55e5e; --danger-bg:rgba(245,94,94,0.10);
+  --radius-sm:6px; --radius-md:10px; --radius-lg:14px;
+  --font:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+  --font-mono:'JetBrains Mono','Cascadia Code','Consolas',monospace;
+  --ease-out:cubic-bezier(0.16,1,0.3,1);
+  --dur-fast:120ms; --dur-base:180ms;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:620px;height:500px;overflow:hidden}
+body{font-family:var(--font);font-size:13.5px;line-height:1.5;background:var(--bg-page);color:var(--text-primary);user-select:none;cursor:default}
+
+.win{display:flex;flex-direction:column;width:100%;height:100%;position:relative;overflow:hidden;background:var(--bg-page)}
+
+/* ── Тайтлбар как в приложении (34px, лого-градиент, тонкие глифы) ── */
+.tbar{flex:none;height:34px;display:flex;align-items:center;gap:10px;padding:0 0 0 14px;background:var(--bg-page);position:relative;z-index:2}
+.tbar-logo{font-size:17px;font-weight:800;letter-spacing:1px;line-height:34px;background:var(--grad-accent);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent}
+.tbar-title{font-size:12.5px;font-weight:600;color:var(--text-secondary)}
+.tbar-ver{font-family:var(--font-mono);font-size:11px;color:var(--text-tertiary)}
+.tbar-dev{font-family:var(--font-mono);font-size:10px;font-weight:700;padding:1px 8px;border-radius:8px;background:var(--danger-bg);color:var(--danger)}
+.tbar-sp{flex:1}
+.tbar-cap{width:46px;height:34px;display:flex;align-items:center;justify-content:center;border:none;border-radius:var(--radius-sm);background:transparent;color:var(--text-secondary);cursor:pointer;transition:background var(--dur-fast) ease,color var(--dur-fast) ease}
+.tbar-cap:hover{background:var(--bg-hover);color:var(--text-primary)}
+.tbar-cap:active{background:var(--bg-active)}
+.tbar-cap.close:hover{color:var(--danger)}
+.tbar-cap svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+
+/* ── Фирменный фон окон: пятна + сетка + вотермарк (Дизайн-заметки §3) ── */
+.bgfx{position:absolute;inset:34px 0 0 0;z-index:0;pointer-events:none;background:
+  radial-gradient(600px 400px at 15% 20%, rgba(91,140,255,.14), transparent 60%),
+  radial-gradient(700px 500px at 85% 80%, rgba(155,109,242,.12), transparent 60%)}
+.bgfx::after{content:"";position:absolute;inset:0;
+  background-image:linear-gradient(var(--border-light) 1px,transparent 1px),linear-gradient(90deg,var(--border-light) 1px,transparent 1px);
+  background-size:32px 32px;opacity:.25}
+.watermark{position:absolute;left:0;right:0;bottom:-32px;z-index:0;display:flex;justify-content:center;
+  font-size:170px;font-weight:800;letter-spacing:.05em;color:var(--text-primary);opacity:.025;pointer-events:none;user-select:none}
+
+.content{flex:1;min-height:0;display:flex;flex-direction:column;position:relative;z-index:1;padding:18px 32px 12px}
+
+.h{font-size:17px;font-weight:600;letter-spacing:-0.2px;color:var(--text-primary)}
+.hs{font-size:13px;color:var(--text-secondary);margin-top:3px}
+.caps{font-size:10.5px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:var(--text-tertiary)}
+
+/* Панель/карточка */
+.panel{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg)}
+.inset{background:var(--bg-inset);border-radius:var(--radius-md)}
+
+/* Кнопки — прямоугольники, радиус 6 */
+.btn{min-width:84px;height:30px;padding:0 14px;border-radius:var(--radius-sm);
+  border:1px solid var(--border);background:var(--bg-card);color:var(--text-primary);
+  font-family:var(--font);font-size:12.5px;font-weight:500;cursor:pointer;
+  display:inline-flex;align-items:center;justify-content:center;
+  transition:all var(--dur-fast) var(--ease-out)}
+.btn:hover{background:var(--bg-hover);border-color:var(--text-tertiary)}
+.btn:active{transform:scale(0.96)}
+.btn:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.btn.pri{background:var(--accent-soft);border-color:transparent;color:var(--accent);font-weight:600}
+.btn.pri:hover{background:var(--accent);color:var(--accent-text);transform:translateY(-1px);box-shadow:0 2px 8px var(--accent-soft)}
+.btn.pri:active{transform:scale(0.96)}
+.btn.done{background:var(--success-bg);border-color:transparent;color:var(--success);font-weight:600}
+.btn.done:hover{background:var(--success);border-color:var(--success);color:#fff;transform:translateY(-1px);box-shadow:0 2px 8px var(--success-bg)}
+.btn.done:active{transform:scale(0.96)}
+.btn.sm{min-width:0;height:26px;padding:0 10px;font-size:11.5px;border-radius:var(--radius-sm)}
+.btn[disabled]{opacity:.5;cursor:default;pointer-events:none}
+
+/* Чекбокс — квадратный со скруглением (язык тумблера ZPUI) */
+.chk{display:flex;gap:10px;align-items:center;font-size:12.5px;color:var(--text-primary);cursor:pointer}
+.cbx{width:18px;height:18px;border-radius:5px;border:1px solid var(--border);background:var(--bg-inset);
+  display:inline-flex;align-items:center;justify-content:center;flex:none;cursor:pointer;
+  transition:all var(--dur-fast) var(--ease-out)}
+.cbx:hover{border-color:var(--text-tertiary)}
+.cbx.on{background:var(--accent);border-color:var(--accent)}
+.cbx.on::after{content:"";width:5px;height:9px;border-left:2px solid #fff;border-bottom:2px solid #fff;transform:rotate(-45deg)}
+
+/* Бейдж версии */
+.badge{display:inline-flex;align-items:center;padding:2px 10px;border-radius:8px;
+  background:var(--accent-soft);color:var(--accent);font-family:var(--font-mono);font-size:11px;font-weight:600}
+.badge.off{background:var(--bg-inset);color:var(--text-tertiary);font-family:var(--font)}
+
+/* Скроллбар 4px */
+.scroll::-webkit-scrollbar{width:4px}
+.scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+
+/* ── Строки браузеров ── */
+.rows{flex:1;min-height:0;margin-top:14px;display:flex;flex-direction:column;gap:8px;overflow-y:auto;padding-right:2px;padding-bottom:4px}
+.row{flex:none;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-md);
+  padding:10px 12px;display:flex;gap:12px;align-items:center;cursor:pointer;
+  transition:all var(--dur-fast) var(--ease-out)}
+.row:hover{border-color:var(--text-tertiary)}
+.row.checked{border-color:var(--accent);background:var(--accent-soft)}
+.row .rt{font-size:13.5px;font-weight:600;color:var(--text-primary);line-height:1.3}
+.row .rmeta{display:flex;gap:8px;align-items:center;margin-top:3px;flex-wrap:wrap}
+.row .rhint{font-size:11px;color:var(--text-tertiary)}
+.row .rhint.warn{color:var(--accent)}
+.row .ractions{flex:none;margin-left:auto;display:flex;gap:6px}
+.row .ractions .btn{background:transparent}
+.row .ractions .btn:hover{background:var(--bg-hover)}
+.row .ractions .btn.del:hover{border-color:var(--danger);color:var(--danger)}
+
+.empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;color:var(--text-tertiary)}
+
+/* ── Баннер успеха ── */
+.banner{flex:none;margin-top:14px;padding:10px 12px;display:flex;gap:10px;align-items:flex-start;
+  background:var(--success-bg);border:1px solid var(--border);border-radius:var(--radius-md);
+  animation:pageIn var(--dur-base) var(--ease-out)}
+@keyframes pageIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.banner svg{flex:none;width:18px;height:18px;stroke:var(--success);fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;margin-top:2px}
+.banner .bt{font-size:12.5px;font-weight:600;color:var(--text-primary)}
+.banner .bd{font-size:12px;line-height:1.5;color:var(--text-secondary);margin-top:2px}
+
+.errline{flex:none;margin-top:10px;font-size:12px;color:var(--danger);display:none;user-select:text}
+.errline.on{display:block}
+
+/* ── Футер ── */
+.footer{flex:none;height:50px;display:flex;align-items:center;gap:8px;padding:0 16px;
+  background:var(--bg-page);border-top:1px solid var(--border-light);position:relative;z-index:2}
+.brand{margin-right:auto;font-size:11px;color:var(--text-tertiary)}
+
+@media (prefers-reduced-motion: reduce){*{animation:none !important;transition:none !important}}
+</style>
+</head>
+<body>
+<div class="win">
+  <div class="tbar" style="--wails-draggable: drag">
+    <span class="tbar-logo">ZPUI</span>
+    <span class="tbar-title">Расширение</span>
+    <span class="tbar-ver" id="ttver"></span>
+    <span class="tbar-dev" id="ttdev" style="display:none">sandbox</span>
+    <span class="tbar-sp"></span>
+    <button class="tbar-cap" id="btnMin" style="--wails-draggable: nodrag" aria-label="Свернуть"><svg viewBox="0 0 24 24"><path d="M5.5 12h13"/></svg></button>
+    <button class="tbar-cap close" id="btnClose" style="--wails-draggable: nodrag" aria-label="Закрыть"><svg viewBox="0 0 24 24"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg></button>
+  </div>
+
+  <div class="bgfx"></div>
+  <div class="watermark">ZPUI</div>
+
+  <div class="content">
+    <div class="h">Браузерное расширение</div>
+    <div class="hs">Пульт приложения ZPUI в браузере: статус обхода, стратегии, DNS и прокси</div>
+    <div style="display:flex;gap:8px;align-items:center;margin-top:10px">
+      <span class="badge" id="pkgBadge">…</span>
+      <span class="caps" id="pkgPath"></span>
+    </div>
+
+    <div class="banner" id="banner" style="display:none">
+      <svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
+      <div>
+        <div class="bt" id="bnTitle">Готово</div>
+        <div class="bd">Изменения применятся после перезапуска браузеров. Chromium включает внешние расширения в отключённом виде — на странице расширений включите ZPUI (один раз).</div>
+      </div>
+    </div>
+
+    <div class="rows scroll" id="rows"></div>
+
+    <div class="empty" id="empty" style="display:none">
+      <span class="h">Браузеры не найдены</span>
+      <span class="hs">Не найдено ни одного Chromium-браузера (Chrome, Edge, Яндекс, Opera, Brave, Vivaldi).</span>
+    </div>
+
+    <div class="errline" id="errline" role="alert"></div>
+  </div>
+
+  <div class="footer">
+    <span class="brand" id="brand">ZPUI · zpui-life.ru</span>
+    <button class="btn done" id="btnDone">Готово</button>
+    <button class="btn pri" id="btnInstall">Установить</button>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+
+let info = {version:'', extVersion:'', browsers:[], sandbox:false, dir:''};
+let checked = new Set();
+let busy = false;
+
+function showErr(msg) {
+  const el = $('errline');
+  el.textContent = msg;
+  el.classList.add('on');
+}
+function clearErr() { $('errline').classList.remove('on'); }
+
+function badgeFor(b) {
+  if (b.has_extension) {
+    const s = document.createElement('span');
+    s.className = 'badge';
+    s.textContent = 'установлено' + (b.installed_version ? ' v' + b.installed_version : '');
+    return s;
+  }
+  const s = document.createElement('span');
+  s.className = 'badge off';
+  s.textContent = 'не установлено';
+  return s;
+}
+
+function renderRows() {
+  const box = $('rows');
+  box.textContent = '';
+  const found = info.browsers.filter(b => b.found);
+  $('empty').style.display = found.length ? 'none' : 'flex';
+  for (const b of found) {
+    const row = document.createElement('div');
+    row.className = 'row' + (checked.has(b.id) ? ' checked' : '');
+
+    const cbx = document.createElement('span');
+    cbx.className = 'cbx' + (checked.has(b.id) ? ' on' : '');
+    row.appendChild(cbx);
+
+    const main = document.createElement('div');
+    const t = document.createElement('div');
+    t.className = 'rt';
+    t.textContent = b.name;
+    main.appendChild(t);
+    const meta = document.createElement('div');
+    meta.className = 'rmeta';
+    meta.appendChild(badgeFor(b));
+    if (b.running) {
+      const hint = document.createElement('span');
+      hint.className = 'rhint warn';
+      hint.textContent = 'запущен — перезапустите после установки';
+      meta.appendChild(hint);
+    }
+    main.appendChild(meta);
+    row.appendChild(main);
+
+    const acts = document.createElement('div');
+    acts.className = 'ractions';
+    if (b.has_extension) {
+      const open = document.createElement('button');
+      open.className = 'btn sm';
+      open.textContent = 'Открыть расширения';
+      open.setAttribute('aria-label', 'Открыть страницу расширений ' + b.name);
+      open.onclick = e => {
+        e.stopPropagation();
+        clearErr();
+        window.go.main.App.OpenPage(b.id).then(r => { if (r && r.error) showErr(r.error); }).catch(er => showErr(String(er)));
+      };
+      acts.appendChild(open);
+
+      const del = document.createElement('button');
+      del.className = 'btn sm del';
+      del.textContent = 'Удалить';
+      del.setAttribute('aria-label', 'Удалить расширение из ' + b.name);
+      del.onclick = e => { e.stopPropagation(); uninstall([b.id]); };
+      acts.appendChild(del);
+    }
+    row.appendChild(acts);
+
+    row.setAttribute('role', 'checkbox');
+    row.setAttribute('aria-checked', checked.has(b.id));
+    row.setAttribute('tabindex', '0');
+    const toggle = () => {
+      if (busy) return;
+      if (checked.has(b.id)) checked.delete(b.id); else checked.add(b.id);
+      renderRows();
+    };
+    row.onclick = toggle;
+    row.onkeydown = e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); toggle(); } };
+
+    box.appendChild(row);
+  }
+  if (checked.size) $('btnInstall').removeAttribute('disabled');
+  else $('btnInstall').setAttribute('disabled','');
+}
+
+function renderHead() {
+  $('ttver').textContent = 'v' + (info.extVersion || info.version);
+  $('ttdev').style.display = info.sandbox ? '' : 'none';
+  $('pkgBadge').textContent = info.sandbox
+    ? 'sandbox: ' + info.dir
+    : 'пакет v' + (info.extVersion || '?') + ' · сохраняется локально';
+  $('brand').textContent = 'ZPUI ' + (info.version || '') + ' · zpui-life.ru';
+}
+
+function refresh() {
+  return window.go.main.App.Info().then(i => {
+    info = i;
+    for (const b of info.browsers) {
+      if (b.found && b.selected) checked.add(b.id);
+    }
+    renderHead();
+    renderRows();
+  }).catch(e => showErr(String(e)));
+}
+
+function install() {
+  if (busy || !checked.size) return;
+  busy = true;
+  clearErr();
+  $('banner').style.display = 'none';
+  $('btnInstall').setAttribute('disabled','');
+  const ids = Array.from(checked);
+  window.go.main.App.Install(ids).then(r => {
+    busy = false;
+    if (r && r.error) { showErr(r.error); refresh(); return; }
+    $('bnTitle').textContent = 'Пакет v' + (info.extVersion || '') + ' установлен — изменения применятся после перезапуска браузеров';
+    $('banner').style.display = 'flex';
+    refresh();
+  }).catch(e => { busy = false; showErr(String(e)); refresh(); });
+}
+
+function uninstall(ids) {
+  if (busy) return;
+  busy = true;
+  clearErr();
+  $('banner').style.display = 'none';
+  window.go.main.App.Uninstall(ids).then(r => {
+    busy = false;
+    if (r && r.error) { showErr(r.error); }
+    refresh();
+  }).catch(e => { busy = false; showErr(String(e)); });
+}
+
+$('btnInstall').onclick = install;
+$('btnDone').onclick = () => window.go.main.App.Close();
+$('btnClose').onclick = () => window.go.main.App.Close();
+$('btnMin').onclick = () => window.go.main.App.Minimize();
+
+refresh();
+</script>
+</body>
+</html>

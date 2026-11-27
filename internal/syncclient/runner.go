@@ -4,7 +4,9 @@ package syncclient
 // на тике sync.pull → просроченные секции (максимум 1–2, по старшинству),
 // талонная логика (busy → тишина до следующего тика, повтор с талоном),
 // курсоры диффов и хеши «по изменению» — в флагах БД. Экономный режим:
-// Stretch растягивает тик, уровень 3 пропускает тики.
+// Stretch растягивает тик, уровень 3 пропускает тики. После auth_required/
+// banned — бэкофф: тишина, раз в 30 минут одна пробная попытка (hello+pull),
+// снятие по смене токена или успешной пробе (гашение 401-шторма).
 
 import (
 	"encoding/json"
@@ -89,7 +91,17 @@ type Runner struct {
 	pull        PullData
 	requestsLog []map[string]any
 	bootDone    bool
+
+	// Гашение 401-шторма: после auth_required/banned канал замолкает и раз в
+	// authProbeInterval делает одну пробную попытку. Блок привязан к значению
+	// токена на момент ошибки: смена токена (вход в аккаунт) снимает его сразу.
+	authBlockUntil time.Time
+	authBlockToken string
+	authState      string // "" | "auth_required" | "relogin" — для UI (Status)
 }
+
+// authProbeInterval — пауза между пробными попытками в режиме бэкоффа.
+const authProbeInterval = 30 * time.Minute
 
 type ticketState struct {
 	Op      string `json:"op"`
@@ -116,6 +128,7 @@ type Status struct {
 	TicketOp    string
 	Pull        PullData
 	RequestsLog []map[string]any
+	AuthState   string // "" — ок; "auth_required" — канал требует входа/паспорта; "relogin" — сессия истекла
 }
 
 func (r *Runner) now() time.Time {
@@ -272,6 +285,7 @@ func (r *Runner) statusSnap(fn func(Status)) {
 		TicketOp:    r.ticket.Op,
 		Pull:        r.pull,
 		RequestsLog: r.requestsLog,
+		AuthState:   r.authState,
 	})
 }
 
@@ -400,20 +414,46 @@ func (r *Runner) Tick(stop <-chan struct{}) bool {
 	}
 	now := r.now()
 
-	sent := false
-	// hello: регистрация/обновление паспорта — при старте и пока нет токена.
-	if !r.bootDone || token == "" {
-		if r.sendHello(dev, token) {
-			sent = true
+	// Бэкофф после auth_required/banned: пока токен не сменился (вход в
+	// аккаунт) — тишина; на границе интервала — одна пробная попытка.
+	if r.authBackoffActive(token, now) {
+		r.mu.Lock()
+		r.lastTick = now
+		r.mu.Unlock()
+		return false
+	}
+	probing := r.authProbeDue(token, now)
+	if probing {
+		if !r.probeAuth(dev, token) {
+			r.mu.Lock()
+			r.lastTick = now
+			r.mu.Unlock()
+			return false // проба не прошла — бэкофф продлён в handleEnvelopeError
 		}
+		r.clearAuthBlock()
+	}
+
+	sent := false
+	if probing {
+		// hello и pull уже ушли пробой — секции едут обычным порядком.
 		r.mu.Lock()
 		r.bootDone = true
 		r.mu.Unlock()
+		sent = true
+	} else {
+		// hello: регистрация/обновление паспорта — при старте и пока нет токена.
+		if !r.bootDone || token == "" {
+			if r.sendHello(dev, token) == nil {
+				sent = true
+			}
+			r.mu.Lock()
+			r.bootDone = true
+			r.mu.Unlock()
+		}
+		// 1. sync.pull — лёгкое чтение (списки, recommended, requests), каждый тик.
+		r.doPull(dev, token)
+		sent = true
 	}
-
-	// 1. sync.pull — лёгкое чтение (списки, recommended, requests), каждый тик.
-	r.doPull(dev, token)
-	sent = true
 
 	// 2. Просьбы сервера («пришли секцию сейчас») — приоритет над расписанием,
 	//    но не чаще раза в час на секцию (03 §4).
@@ -432,22 +472,31 @@ func (r *Runner) Tick(stop <-chan struct{}) bool {
 	return sent
 }
 
-func (r *Runner) sendHello(dev Dev, token string) bool {
+// probeAuth — одна пробная попытка после бэкоффа: hello (паспорт/регистрация)
+// + pull (индикатор авторизации — единственный лёгкий запрос с проверкой
+// сессии/паспорта). Секции в пробе не участвуют: при отказе они только
+// усугубили бы 401-шторм.
+func (r *Runner) probeAuth(dev Dev, token string) bool {
+	_ = r.sendHello(dev, token)
+	return r.doPull(dev, token) == nil
+}
+
+func (r *Runner) sendHello(dev Dev, token string) error {
 	start := time.Now()
 	resp, err := r.Backend.Call(OpHello, dev, token, "", map[string]any{})
 	r.recordCall(start, err)
 	r.jrn("device", OpHello, jrnErr(err))
 	if err != nil {
-		r.handleEnvelopeError(err)
-		return false
+		r.handleEnvelopeError(err, token)
+		return err
 	}
 	if resp != nil && resp.NextAfter > 0 {
 		r.setNextAfter(resp.NextAfter)
 	}
-	return true
+	return nil
 }
 
-func (r *Runner) doPull(dev Dev, token string) {
+func (r *Runner) doPull(dev Dev, token string) error {
 	start := time.Now()
 	resp, err := r.Backend.Call(OpPull, dev, token, "", map[string]any{
 		"have": map[string]int64{
@@ -458,8 +507,8 @@ func (r *Runner) doPull(dev Dev, token string) {
 	r.recordCall(start, err)
 	r.jrn("device", OpPull, jrnErr(err))
 	if err != nil {
-		r.handleEnvelopeError(err)
-		return
+		r.handleEnvelopeError(err, token)
+		return err
 	}
 	if resp.NextAfter > 0 {
 		r.setNextAfter(resp.NextAfter)
@@ -468,6 +517,7 @@ func (r *Runner) doPull(dev Dev, token string) {
 		r.Sources.ApplyPull(resp.Data)
 	}
 	r.parsePull(resp.Data)
+	return nil
 }
 
 func (r *Runner) parsePull(data json.RawMessage) {
@@ -531,24 +581,70 @@ func (r *Runner) recordCall(start time.Time, err error) {
 	} else {
 		r.online = true
 		r.lastErr = ""
+		r.authState = "" // любой успешный запрос — авторизация/паспорт в порядке
 	}
 }
 
-// handleEnvelopeError — реакции на коды конверта (banned → чистим токен).
-func (r *Runner) handleEnvelopeError(err error) {
+// ---- бэкофф после auth_required/banned ----
+
+// armAuthBlock — включить/продлить бэкофф для текущего значения токена.
+func (r *Runner) armAuthBlock(token string, now time.Time) {
+	r.mu.Lock()
+	r.authBlockUntil = now.Add(authProbeInterval)
+	r.authBlockToken = token
+	r.mu.Unlock()
+}
+
+func (r *Runner) clearAuthBlock() {
+	r.mu.Lock()
+	r.authBlockUntil = time.Time{}
+	r.authBlockToken = ""
+	r.authState = ""
+	r.mu.Unlock()
+}
+
+// authBackoffActive — тик должен промолчать: бэкофф включён, токен с момента
+// ошибки не менялся и до пробной попытки ещё не дошло.
+func (r *Runner) authBackoffActive(token string, now time.Time) bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return !r.authBlockUntil.IsZero() && token == r.authBlockToken && now.Before(r.authBlockUntil)
+}
+
+// authProbeDue — пора сделать единственную пробную попытку (hello + pull).
+func (r *Runner) authProbeDue(token string, now time.Time) bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return !r.authBlockUntil.IsZero() && token == r.authBlockToken && !now.Before(r.authBlockUntil)
+}
+
+// handleEnvelopeError — реакции на коды конверта: banned/auth_required гасят
+// токен через колбэки приложения и включают бэкофф, иначе раннер продолжал бы
+// долбить сервер 401-ами каждый тик.
+func (r *Runner) handleEnvelopeError(err error, token string) {
 	e, ok := AsError(err)
 	if !ok {
 		return
 	}
 	switch e.Code {
 	case "banned":
+		r.armAuthBlock(token, r.now())
 		if r.OnBanned != nil {
 			r.OnBanned()
 		}
 	case "auth_required":
-		// Сессии нет (истекла/потеряна на сервере), а токен в конфиге ещё
-		// стоит: гасим токен, приложение вернётся в неавторизованное
-		// состояние и предложит вход. Без этого канал ошибок не показывал.
+		// Сессии нет (истекла/потеряна на сервере) или анонимный путь отклонён
+		// (устройство не зарегистрировано/чужой отпечаток): гасим токен и
+		// замолкаем. С непустым токеном это «перевойти» (relogin), с пустым —
+		// проблема паспорта устройства (auth_required).
+		r.mu.Lock()
+		if token != "" {
+			r.authState = "relogin"
+		} else {
+			r.authState = "auth_required"
+		}
+		r.mu.Unlock()
+		r.armAuthBlock(token, r.now())
 		if r.OnAuthRequired != nil {
 			r.OnAuthRequired()
 		}
@@ -695,12 +791,16 @@ func (r *Runner) sendOne(dev Dev, token, op, ticket string, now time.Time) bool 
 		}
 	}
 
+	// Лимит тела: слишком тяжёлая секция усекается до лимита (не молча),
+	// иначе сервер отвечает 413 и секция остаётся просроченной навсегда.
+	payload = capSectionPayload(op, payload, r.Log)
+
 	start := time.Now()
 	resp, err := r.Backend.Call(op, dev, token, ticket, payload)
 	r.recordCall(start, err)
 	r.jrn("device", op, jrnErr(err))
 	if err != nil {
-		r.handleEnvelopeError(err)
+		r.handleEnvelopeError(err, token)
 		if e, ok := AsError(err); ok && e.Code == "busy" && e.Ticket != "" {
 			r.saveTicket(ticketState{Op: op, Ticket: e.Ticket, Issued: now.Unix(), Refresh: ticket != ""})
 			if r.Log != nil {

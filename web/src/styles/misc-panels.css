@@ -8,6 +8,7 @@
   color:var(--text-tertiary);
 }
 .syncd-pill.on { color:var(--success); }
+.syncd-pill.warn { color:var(--warning); }
 .syncd-pill-dot { width:7px; height:7px; border-radius:50%; background:currentColor; flex-shrink:0; }
 .syncd-pill.on .syncd-pill-dot { box-shadow:0 0 6px color-mix(in srgb, var(--success) 60%, transparent); }
 .syncd-val { font-size:12px; color:var(--text-secondary); text-align:right; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -40,11 +41,32 @@
 .syncd-skel { display:flex; flex-direction:column; gap:10px; padding:6px 0; }
 .syncd-skel-row { display:flex; justify-content:space-between; gap:12px; }
 .syncd-empty { font-size:12px; color:var(--text-tertiary); padding:4px 0; }
+/* Панель «Запросы сервера»: слева (бо́льшая часть) живой список последних
+   запросов со своим скроллом, справа (меньшая) — карточка «История». */
+.syncd-req-panel {
+  display:grid; grid-template-columns:minmax(0,1fr) 188px; gap:12px;
+  align-items:stretch;
+}
+.syncd-req-live { min-width:0; max-height:176px; overflow-y:auto; }
 .syncd-reqs { display:flex; flex-direction:column; }
 .syncd-req { display:flex; align-items:baseline; gap:10px; padding:5px 0; }
 .syncd-req + .syncd-req { border-top:var(--border-w) solid var(--border-light); }
 .syncd-req-time { font-size:11px; color:var(--text-tertiary); flex-shrink:0; min-width:64px; }
 .syncd-req-text { font-size:12px; color:var(--text-secondary); min-width:0; }
+.syncd-hist-aside {
+  display:flex; flex-direction:column; gap:4px; padding:10px 12px;
+  background:var(--bg-inset); border-radius:var(--radius-md);
+}
+.syncd-hist-icon { display:inline-flex; color:var(--text-tertiary); }
+.syncd-hist-name { font-size:12px; font-weight:600; color:var(--text-primary); }
+.syncd-hist-hint { font-size:10.5px; line-height:1.45; color:var(--text-tertiary); flex:1; }
+.syncd-hist-btn { margin-top:4px; width:100%; }
+
+/* ── История запросов (панель lg-*): колонки ДАТА/ВРЕМЯ/КТО/ЧТО на жёстком
+   гриде — один шаблон колонок у шапки и строк, съезжать нечему. ── */
+.lg-table-header.sh-grid,
+.lg-tr.sh-grid { display:grid; grid-template-columns:52px 64px 92px minmax(0,1fr); }
+.lg-tr.sh-grid .lg-td { min-width:0; }
 
 /* Строка «Сервер рекомендует» в карточке версии ZAPRET */
 .upd-rec-ver { font-size:10.5px; color:var(--text-tertiary); }
@@ -142,8 +164,15 @@
 .cache-warn-icon { animation: cacheWarnPulse 2s ease-in-out infinite; }
 @keyframes cacheWarnPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.55; } }
 
-/* ── Модалка «Кеш»: фиксированный размер, внутренний скролл ── */
+/* ── Модалка «Кеш»: фиксированный размер, внутренний скролл. Панели кеша
+   в asm2-рамке (sst-frame) — как строки плана подбора: иконка, текст,
+   кнопка очистки справа; warn подсвечен рамкой. ── */
 .cache-modal-body { height: 300px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+.cache-modal-body .diag2-cache-panel {
+  border: var(--border-w) solid var(--border-light);
+  border-radius: 9px;
+}
+.cache-modal-body .diag2-cache-panel.warn { border-color: var(--warning); }
 
 /* ── ui/Select: кастомный выпадающий список (нативный select выбивался из
    стиля приложения: системный фон/шрифт, белый в тёмной теме) ── */
@@ -198,10 +227,6 @@
   padding: 7px 10px; border-radius: var(--radius-sm);
   background: var(--bg-inset); color: var(--text-tertiary); font-size: 11.5px;
 }
-.mcp-error {
-  padding: 7px 10px; border-radius: var(--radius-sm);
-  background: var(--danger-bg); color: var(--danger); font-size: 11.5px;
-}
 .mcp-skill-path { overflow-wrap: anywhere; }
 .mcp-json {
   margin: 0; padding: 10px 12px; max-height: 170px; overflow: auto;
@@ -209,6 +234,64 @@
   border-radius: var(--radius-md); font-size: var(--fs-sm); line-height: 1.45;
   white-space: pre; user-select: all;
 }
+
+/* ── Модалка «Браузерный плагин» (сайдбар): расширение ZPUI в браузерах ──
+   Тот же каркас, что у MCP: секции, set-row, пилюли состояния. */
+.ext-body { display: flex; flex-direction: column; gap: 14px; }
+.ext-section { display: flex; flex-direction: column; gap: 6px; }
+.ext-browsers { display: flex; flex-direction: column; gap: 6px; }
+.ext-browser {
+  display: flex; align-items: center; gap: 10px;
+  padding: 7px 10px; cursor: pointer;
+  background: var(--bg-inset); border: var(--border-w) solid var(--border);
+  border-radius: var(--radius-md);
+}
+.ext-browser:hover { border-color: var(--text-tertiary); }
+.ext-browser input[type="checkbox"] {
+  width: 14px; height: 14px; margin: 0; accent-color: var(--accent);
+  cursor: pointer; flex-shrink: 0;
+}
+.ext-browser-name {
+  flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  color: var(--text-primary); font-weight: 600; font-size: var(--fs-sm);
+}
+.ext-browser .syncd-pill { flex-shrink: 0; }
+.ext-browser .syncd-pill .mono { font-size: 10px; }
+.ext-browser-hint {
+  display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0;
+  color: var(--text-tertiary); font-size: var(--fs-xs);
+}
+.ext-empty {
+  padding: 7px 10px; border-radius: var(--radius-sm);
+  background: var(--bg-inset); color: var(--text-tertiary); font-size: 11.5px;
+}
+.ext-update {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 9px 12px; border-radius: var(--radius-md);
+  background: var(--accent-soft);
+}
+.ext-update-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ext-update-title { color: var(--accent); font-weight: 600; font-size: var(--fs-md); }
+.ext-update-notes { color: var(--text-secondary); font-size: var(--fs-sm); line-height: 1.4; }
+.ext-missing {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 10px 12px; border-radius: var(--radius-md);
+  background: var(--warning-bg);
+}
+.ext-missing-text { flex: 1; min-width: 0; color: var(--warning); font-size: var(--fs-sm); line-height: 1.5; }
+.ext-server-hint { color: var(--text-tertiary); font-size: var(--fs-sm); }
+.ext-hint {
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 10px 12px; border-radius: var(--radius-md);
+  background: var(--success-bg);
+}
+.ext-hint-text { color: var(--text-secondary); font-size: var(--fs-sm); line-height: 1.5; }
+.ext-enable-rows { display: flex; flex-direction: column; gap: 6px; }
+.ext-enable-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 5px 8px; border-radius: var(--radius-sm); background: var(--bg-inset);
+}
+.ext-enable-name { color: var(--text-primary); font-size: var(--fs-sm); font-weight: 600; }
 
 /* ── EngineFailModal — запрет не запустился ── */
 .efail-body { display:flex; flex-direction:column; gap:12px; }
@@ -238,3 +321,17 @@
   0%, 100% { opacity:1; transform:scale(1); }
   50% { opacity:0.45; transform:scale(1.12); }
 }
+
+/* BugReportModal — баг-репорт из модалки ошибки (код + текст + отправка). */
+.bugreport-error { display:flex; align-items:flex-start; gap:8px; padding:10px 12px; margin-bottom:12px;
+  border-radius:10px; background:var(--danger-soft, rgba(220,60,60,.08)); border:1px solid var(--danger-border, rgba(220,60,60,.25)); }
+.bugreport-error .toast-error-code { flex-shrink:0; margin-top:1px; }
+.bugreport-error-text { font-size:12.5px; line-height:1.45; word-break:break-word; }
+.bugreport-details-toggle { display:flex; align-items:center; gap:5px; background:none; border:none;
+  padding:0; margin-bottom:6px; font-size:11.5px; color:var(--text-tertiary); cursor:pointer; }
+.bugreport-details-toggle:hover { color:var(--text-secondary); }
+.bugreport-details-toggle svg { transition:transform .15s; }
+.bugreport-details-toggle svg.up { transform:rotate(180deg); }
+.bugreport-details { margin:0 0 4px; padding-left:18px; font-size:11.5px; line-height:1.6; color:var(--text-tertiary); }
+.ext-enable-state { color: var(--text-tertiary); font-size: var(--fs-xs); flex: 1; min-width: 0; text-align: right; }
+.ext-meta { color: var(--text-tertiary); font-size: var(--fs-xs); }

@@ -853,7 +853,7 @@
             "h": "License"
           },
           {
-            "lead": "ZPUI is proprietary software distributed under a closed license (the LICENSE file and the agreement during installation): free personal use, but distribution, modification and resale are prohibited. The copyright holder assumes no liability for the use of the program or its consequences."
+            "lead": "ZPUI is free software licensed under the MIT license (the LICENSE file and the agreement during installation): you may freely use, modify and distribute it, including in commercial projects, provided the copyright notice is preserved. The software is provided without warranty; the authors are not liable for its use or consequences."
           }
         ]
       },
@@ -1027,6 +1027,7 @@
     "lists": "Lists",
     "strategyApplied": "Strategy applied",
     "stratLockedOff": "Zapret is off — enable it to switch strategies",
+    "stratTestBusy": "Wait for the strategy switch to finish",
     "autoTestComplete": "Auto-test complete",
     "noStrategies": "No strategies found",
     "autoSelect": "Auto-select strategy",
@@ -1071,16 +1072,6 @@
     "autoUpdateCheckDesc": "Check for updates on startup",
     "listSaved": "List saved",
     "userLists": "Custom lists",
-    "editor": {
-      "ctxEdit": "Edit a copy",
-      "copyCreated": "Copy created: {name}",
-      "title": "Strategy: {name}",
-      "check": "Check",
-      "checkOk": "No errors — the strategy is valid",
-      "save": "Save",
-      "saved": "Strategy {name} saved",
-      "hint": "Copies survive app updates. Changes take effect on the next engine start: select the strategy in the list or restart the engine."
-    },
     "selectList": "Select a list on the left",
     "textareaPlaceholder": "Enter domains or IPs, one per line...",
     "listsSyntaxHint": "\"^\" before a domain means the rule matches that exact host only, without subdomains. An entry without \"^\" covers the domain and all its subdomains.",
@@ -1334,67 +1325,9 @@
     "asmCountFilter": "filter {done}/{total} · passed {survivors}",
     "asmAlgoStats": "Algorithm: {probed} probed, {finalists} passed the ≥{threshold}% filter → full test",
     "autoCfgBadge": "selection v{v}",
+    "asmPlanToggle": "Plan ({n})",
     "autoCfgCustomTip": "Selection parameter set from the server (version {v})",
     "autoCfgDefaultTip": "Built-in selection parameters (no server set received yet)",
-    "luaTab": "Lua",
-    "luaFunctionsTitle": "Lua functions",
-    "luaFunctionsHint": "Engine functions used by this strategy. See the Lua tab for details.",
-    "luaCheck": "Test with engine",
-    "luaCheckOk": "Engine accepted the strategy",
-    "luaCheckFail": "Engine rejected the strategy",
-    "luaCheckRun": "Checking...",
-    "lua": {
-      "intro1": "A strategy is the bypass engine command line. Profiles are separated by the --new token: profile filters (--filter-tcp/--filter-udp, --filter-l7, --payload, --hostlist/--ipset) select the traffic, and --lua-desync=function:param=value functions decide what to do with it.",
-      "intro2": "Interception is global: --wf-tcp-out/--wf-udp-out for ports, --wf-raw-part for precise WinDivert filter files (windivert.filter folder). Fake packets are attached as blobs: --blob=name:@file; libraries load via --lua-init=@file.",
-      "intro3": "You can build your own strategy from any bundled one: right-click a strategy card and pick “Edit a copy” — the editor validates the syntax before saving.",
-      "copyExample": "Copy example",
-      "manualHint": "Full engine manual:",
-      "manualLink": "zapret · docs/readme.md",
-      "fns": {
-        "fake": "Fake packets ahead of the real one: DPI inspects the fake, the server drops it. Params: blob, repeats, tcp_seq (seq overlap), tls_mod, ip_autottl, tcp_md5.",
-        "multisplit": "Splits the outgoing packet into segments at position pos; seqovl and seqovl_pattern add a fake-pattern overlap.",
-        "fakedsplit": "Split with a fake first part: DPI sees the fake, the server gets the real segments.",
-        "multidisorder": "Segments are sent out of order; only the server reassembles them correctly.",
-        "fakeddisorder": "Out-of-order segments plus a fake part.",
-        "hostfakesplit": "Split at the host marker (pos=host) with a fake sent ahead.",
-        "wssize": "Lowers the window scale for the whole connection so DPI cannot see the full picture; limit with --out-range.",
-        "wsize": "Changes the TCP window size.",
-        "synack": "Desync at the SYN/SYN-ACK stage.",
-        "synack_split": "Splits the first packet after the handshake.",
-        "pktmod": "Arbitrary packet modification (basic primitive).",
-        "http_domcase": "Mixed-case domain in the HTTP request.",
-        "http_hostcase": "Rewrites the case/value of the Host header.",
-        "http_methodeol": "Line break after the HTTP method — breaks signatures.",
-        "http_unixeol": "Replaces CRLF with LF in HTTP headers.",
-        "tls_client_hello_clone": "Clones the TLS ClientHello to fill the window.",
-        "syndata": "Data carried in the SYN packet.",
-        "rst": "Sends a TCP RST as the client.",
-        "drop": "Silently drops the packet.",
-        "send": "Sends arbitrary data.",
-        "tcpseg": "Manual TCP segmentation of arbitrary data.",
-        "oob": "Part of the data is sent as TCP Urgent (out-of-band).",
-        "udplen": "Increases the UDP packet length with padding.",
-        "dht_dn": "Modifies BitTorrent DHT packets."
-      },
-      "introShort": "A strategy is bypass engine arguments: profiles via --new, functions via --lua-desync, blobs via --blob. This tab holds Lua scripts: yours in lua-user, engine libraries in lua. Functions defined in scripts can be called from any strategy.",
-      "sectionMine": "My scripts",
-      "sectionLibs": "Engine libraries",
-      "create": "Create script",
-      "createPlaceholder": "script_name.lua",
-      "emptyMine": "No scripts yet — create the first one",
-      "editor": "Lua editor",
-      "select": "Pick a script on the left",
-      "hintUser": "Your own script. Wire it into a strategy: --lua-init=@\"%ROOT%lua-user\\<name>.lua\", call its functions via --lua-desync=name. Scripts survive app updates.",
-      "hintLib": "Bundled engine library. Edit carefully: engine updates overwrite the file; changes apply after an engine restart.",
-      "saved": "Script saved",
-      "created": "Script created: {name}",
-      "deleted": "Script deleted",
-      "delete": "Delete",
-      "deleteConfirm": "Sure?",
-      "ref": "Reference",
-      "refTitle": "Reference: how strategies work"
-    },
-    "fnsToggleHint": "A disabled function is not passed to the engine — applied after restart",
     "editorTitle": "Editor:"
   },
   "proxy": {
@@ -1569,6 +1502,10 @@
       "yandex": "Yandex Disk",
       "github": "GitHub",
       "ghproxy": "GitHub proxy"
+    },
+    "ext": {
+      "notInstalled": "Not installed",
+      "serverOffline": "Server unavailable"
     }
   },
   "themeEditor": {
@@ -1719,6 +1656,9 @@
       "serviceCheckTimeout": "Service health check timed out (no network?). Try again or continue without Zapret.",
       "serviceInstallFailed": "Service installation failed: {error}",
       "serviceInstallFailedLog": "Service installation failed. See log."
+    },
+    "soft": {
+      "removeService": "Failed to remove the system service — Zapret setup was skipped"
     },
     "installLog": "Install log",
     "autoSelect": {
@@ -2249,7 +2189,9 @@
       "emptyHint": "Entries appear as the channel talks to the server and are kept for 30 days",
       "whoAll": "All",
       "count": "Records: {n}",
-      "filterEmpty": "Nothing matches this filter"
+      "filterEmpty": "Nothing matches this filter",
+      "asideHint": "Filters: today · 7 days · 30 days · all / server / device",
+      "open": "Open"
     }
   },
   "feedback": {
@@ -2277,6 +2219,45 @@
       "other": "Other"
     }
   },
+  "extension": {
+    "title": "Browser extension",
+    "secBrowsers": "Browsers",
+    "updateAvailable": "Version {version} available",
+    "update": "Update",
+    "updating": "Updating...",
+    "updateDone": "Extension updated",
+    "serverOffline": "Server unreachable — could not check for updates",
+    "packageMissing": "The extension package is missing from the app folder. Download it from the server with the Update button or reinstall the app.",
+    "noBrowsers": "No browsers found",
+    "installed": "installed",
+    "notInstalled": "not installed",
+    "restartBrowser": "restart the browser",
+    "restartHint": "Changes apply after the browser restarts.",
+    "enableHint": "Browsers add third-party plugins disabled — click \"Enable\" next to a browser: it opens the extensions page on the ZPUI card; enable the plugin once.",
+    "enable": "Enable",
+    "install": "Install",
+    "installing": "Installing...",
+    "installDone": "Extension installed",
+    "uninstallConfirm": "Remove the extension from the selected browsers? The browser will delete it on its next launch.",
+    "uninstallDone": "Extension removed from the selected browsers",
+    "doneTitle": "Plugin installed",
+    "doneWhere": "The plugin is installed in: {browsers}.",
+    "doneEnable": "Restart the browser and enable the plugin on its card — once.",
+    "stateEnabled": "enabled",
+    "stateDisabled": "disabled",
+    "statePending": "waiting for browser restart",
+    "rowDisabled": "disabled — enable on its card",
+    "rowPending": "restart the browser, then enable",
+    "installedWhere": "The plugin is installed in: {browsers}.",
+    "installDownload": "Download and install",
+    "packageWillDownload": "The plugin package is missing from the app folder — it will be downloaded from the server on install.",
+    "packageMissingOffline": "The plugin package is missing from the app folder and the management server is unreachable. Check your connection or reinstall the app.",
+    "packageAt": "Package {version} · {source}",
+    "sourceApp": "app folder",
+    "sourceLocal": "user folder",
+    "outdatedInBrowsers": "Browsers ({browsers}) have an older package — {version} is available now.",
+    "updateBrowsers": "Update in browsers"
+  },
   "mcp": {
     "title": "MCP",
     "toggle": "Let AI agents control the app",
@@ -2290,7 +2271,7 @@
     "urlLabel": "Address",
     "port": "Port",
     "skillTitle": "Agent skill",
-    "skillDesc": "An instruction file for AI agents: it explains how to connect and which tools are available. It lives in the app folder and is updated along with the app.",
+    "skillDesc": "How to connect an agent and the command list — in this file.",
     "skillOpenFolder": "File location",
     "skillOpenFail": "Could not open the folder",
     "secAgents": "Agents",
@@ -2314,7 +2295,9 @@
     "restored": "Restored: {what}",
     "thisDevice": "This device — synced {date}",
     "slots": "Sync slots used: {used} of {limit}",
-    "loadErr": "Failed to load the device list."
+    "loadErr": "Failed to load the device list.",
+    "stateRelogin": "Sign-in required",
+    "stateAuthRequired": "Checking channel…"
   },
   "regpromo": {
     "title": "Registration gift",
@@ -2354,5 +2337,23 @@
     "hvciLine": "Memory Integrity (HVCI)",
     "reportNote": "Please send this message — it already includes the details.",
     "note": "Without the bypass, blocked sites may not open."
+  },
+  "bugreport": {
+    "title": "Report a problem",
+    "hint": "Describe what you were doing when the error occurred — we will receive the report with technical details (error code, engine state, diagnostics).",
+    "sendBtn": "Report a problem",
+    "actionLabel": "What were you doing when the error occurred? *",
+    "actionPh": "E.g.: pressed “Start”, opened DNS settings…",
+    "commentLabel": "Comment (optional)",
+    "commentPh": "Any details: what you expected, what happened…",
+    "detailsToggle": "What will be sent in the report",
+    "detail": {
+      "action": "Your description of the action and comment",
+      "error": "Error code and text",
+      "device": "Device and app version",
+      "engine": "Zapret engine state (status, strategy, version)",
+      "diagnostics": "Auto-diagnostics results",
+      "errors": "Recent errors from the log"
+    }
   }
 }

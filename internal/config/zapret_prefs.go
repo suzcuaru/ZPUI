@@ -172,6 +172,23 @@ func (c *Config) GetZapretSkipped() bool {
 	return c.ZapretSkipped
 }
 
+// GetLastZapretState — состояние движка на момент последнего останова
+// приложения (SaveComponentStates) или последнего ручного стопа. false =
+// движок был остановлен пользователем — автозапуск/автовосстановление его
+// не поднимают.
+func (c *Config) GetLastZapretState() bool {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.LastZapretState
+}
+
+func (c *Config) SetLastZapretState(run bool) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.LastZapretState = run
+	return c.save()
+}
+
 func (c *Config) SetZapretSkipped(skipped bool) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()

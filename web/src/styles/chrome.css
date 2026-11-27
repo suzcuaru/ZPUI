@@ -141,6 +141,8 @@
 .ft-dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; background:var(--text-tertiary); }
 .ft-dot.ok { background:var(--success); box-shadow:0 0 4px color-mix(in srgb, var(--success) 50%, transparent); }
 .ft-dot.err { background:var(--danger); }
+/* Требуется вход/проверка канала (auth_state от /api/sync/info) */
+.ft-dot.warn { background:var(--warning); }
 .ft-dot.wait { background:var(--accent); animation:ftWaitPulse 1.6s ease-in-out infinite; }
 @keyframes ftWaitPulse { 0%,100% { opacity:1; } 50% { opacity:0.35; } }
 :is(body.power-save, body.render-lite) .ft-dot.wait { animation:none; }

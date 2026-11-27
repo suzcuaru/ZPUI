@@ -429,11 +429,14 @@ func (a *App) Startup(ctx context.Context) {
 	a.supRegistry()
 
 	a.supervisedGo("startup-cleanup", a.runStartupCleanup)
-	// Остатки обновлений (%TEMP%\ZPUI-Setup-*.exe и пр.) — отложенно, чтобы не
-	// конкурировать со стартовыми загрузками и не задерживать запуск.
+	// Свой мусор прошлых обновлений (%TEMP%\ZPUI-Setup-*.exe, zpui-user-* и
+	// пр. + легаси в корне установки) — отложенно, чтобы не конкурировать со
+	// стартовыми загрузками и не задерживать запуск.
 	a.safeGo(func() {
 		time.Sleep(2 * time.Minute)
-		pkginst.CleanupUpdateLeftovers(a.exeDir)
+		freed, removed, skipped := pkginst.CleanupUpdateLeftovers(a.exeDir)
+		a.log.Info("cleanup", fmt.Sprintf("removed %d own temp files, freed %s, skipped %d",
+			removed, fmtBytesRu(freed), skipped))
 	})
 	// Автозапуск (миграция схемы, запросы к schtasks — секунды) и служба ZPUI:
 	// в фоне и ПОСЛЕДОВАТЕЛЬНО (hello службе передаёт актуальное состояние
@@ -446,6 +449,11 @@ func (a *App) Startup(ctx context.Context) {
 
 	// Recovery: если прошлое обновление zapret прервалось (крах) — восстановить.
 	needAutoStart := a.checkAndRecoverZapret()
+
+	// «Движок должен работать» — стартовая точка из персистентного состояния:
+	// если пользователь вручную остановил движок перед выходом/стопом, флаг
+	// остаётся false, и health-монитор/стартовые проверки его не поднимают.
+	a.zapretExpected.Store(needAutoStart || a.cfg.GetLastZapretState())
 
 	a.supervisedGo("monitor", a.startDeviceTracker)
 	a.supervisedGo("traffic", a.startTrafficSnapshots)

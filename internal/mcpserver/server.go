@@ -26,11 +26,16 @@ type Handler func(args map[string]interface{}) (interface{}, error)
 // Options — зависимости сервера. Всё колбэками: пакет не импортирует
 // internal/app (нет цикла), приложение само собирает реестр инструментов.
 type Options struct {
-	Version  string
-	Key      func() string // актуальный Bearer-ключ из config.json
-	Tools    func() []Tool
-	Dispatch func(name string, args map[string]interface{}) (interface{}, error)
-	Notify   func(level, msg string) // nil = молча
+	Version string
+	Key     func() string // актуальный Bearer-ключ из config.json
+	// ExtensionID — ID браузерного расширения ZPUI (выводится из ключа
+	// подписи пакета). Запросы с ровно таким Origin допускаются без ключа:
+	// браузер не даёт страницам подделать Origin, а другой расширение с тем же
+	// ID выпустить нельзя. Пусто — только Bearer-ключ.
+	ExtensionID string
+	Tools       func() []Tool
+	Dispatch    func(name string, args map[string]interface{}) (interface{}, error)
+	Notify      func(level, msg string) // nil = молча
 }
 
 // Server — локальный streamable-HTTP MCP-сервер. Только 127.0.0.1,
@@ -137,10 +142,16 @@ func (s *Server) logf(level, msg string) {
 
 // authorize — Bearer-ключ в константном времени; запрет чужих Origin
 // (DNS-rebinding): браузерная страница с чужого origin не должна уметь
-// дёргать локальный сервер.
+// дёргать локальный сервер. Исключение — расширения Chromium
+// (chrome-extension://): fetch из MV3-воркера всегда шлёт такой Origin,
+// доступ по-прежнему только по Bearer-ключу.
 func (s *Server) authorize(r *http.Request) (int, bool) {
-	if o := r.Header.Get("Origin"); o != "" && !isLocalOrigin(o) {
+	if o := r.Header.Get("Origin"); o != "" && !isLocalOrigin(o) && !isExtensionOrigin(o) {
 		return http.StatusForbidden, false
+	}
+	// Своё расширение: Origin chrome-extension://<ID> вместо ключа.
+	if s.isOwnExtension(r) {
+		return 0, true
 	}
 	auth := r.Header.Get("Authorization")
 	const prefix = "Bearer "
@@ -161,6 +172,34 @@ func (s *Server) authorize(r *http.Request) (int, bool) {
 	return http.StatusUnauthorized, false
 }
 
+// extensionOrigin — origin своего расширения: chrome-extension://<ID>.
+func (s *Server) extensionOrigin() string {
+	if s.opts.ExtensionID == "" {
+		return ""
+	}
+	return "chrome-extension://" + s.opts.ExtensionID
+}
+
+func (s *Server) isOwnExtension(r *http.Request) bool {
+	want := s.extensionOrigin()
+	return want != "" && strings.EqualFold(r.Header.Get("Origin"), want)
+}
+
+// corsExtension — заголовки для своего расширения: ответ читается фоном,
+// preflight закрыт (в т.ч. Private Network Access к 127.0.0.1).
+func (s *Server) corsExtension(w http.ResponseWriter) {
+	origin := s.extensionOrigin()
+	if origin == "" {
+		return
+	}
+	h := w.Header()
+	h.Set("Access-Control-Allow-Origin", origin)
+	h.Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+	h.Set("Access-Control-Allow-Headers", "Authorization, Content-Type, MCP-Protocol-Version")
+	h.Set("Access-Control-Allow-Private-Network", "true")
+	h.Set("Vary", "Origin")
+}
+
 func isLocalOrigin(origin string) bool {
 	o := strings.ToLower(strings.TrimPrefix(strings.TrimPrefix(origin, "https://"), "http://"))
 	host := o
@@ -171,4 +210,12 @@ func isLocalOrigin(origin string) bool {
 		host = strings.Trim(host, "[]")
 	}
 	return host == "127.0.0.1" || host == "localhost" || host == "::1" || host == "[::1]"
+}
+
+// isExtensionOrigin — origin расширения Chromium: схема chrome-extension://<id>
+// одинакова во всех форках (Chrome, Яндекс, Opera, Edge). Расширения —
+// доверенные локальные клиенты: пропуск на уровне Origin, авторизация
+// остаётся за Bearer-ключом.
+func isExtensionOrigin(origin string) bool {
+	return strings.HasPrefix(strings.ToLower(origin), "chrome-extension://")
 }

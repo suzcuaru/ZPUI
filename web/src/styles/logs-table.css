@@ -334,23 +334,16 @@
   to   { opacity:1; transform:none; }
 }
 
-/* Модалка проверки одной стратегии (ПКМ) */
+/* Модалка проверки одной стратегии (ПКМ) — каркас в стиле asm2:
+   чипы этапов/баннеры/строка статуса берутся из smart-select/modals-diag,
+   здесь только ширина и локальные строки. */
+.modal.sst-frame { max-width:470px; }
 .sst-modal { display:flex; flex-direction:column; gap:10px; min-width:320px; }
 .sst-name {
   font-size:12.5px; font-weight:600; color:var(--text-primary);
   font-family:var(--font-mono); word-break:break-all;
 }
-.sst-state {
-  display:flex; align-items:center; gap:10px; padding:12px 13px;
-  border-radius:var(--radius-md); font-size:12px; font-weight:500;
-}
-.sst-state.running { background:var(--accent-soft); color:var(--accent); }
-.sst-state.passed { background:var(--success-bg); color:var(--success); }
-.sst-state.failed { background:var(--warning-bg); color:var(--warning); }
-.sst-state.error { background:var(--danger-bg); color:var(--danger); }
-.sst-detail { font-size:11px; color:var(--text-secondary); }
 .sst-kv { color:var(--text-primary); }
-.sst-actions { display:flex; gap:8px; justify-content:flex-end; }
 .sst-note { font-size:10.5px; color:var(--text-tertiary); line-height:1.45; }
 
 /* Выбор режима автоподбора */

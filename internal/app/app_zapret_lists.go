@@ -172,6 +172,22 @@ func (a *App) GetLists() map[string]interface{} {
 	return map[string]interface{}{"lists": result, "server": a.serverListsInfoMap()}
 }
 
+// getUserList — содержимое пользовательского списка обхода для MCP
+// (браузерное расширение показывает «уже в списке» и дедупит).
+func (a *App) getUserList() map[string]interface{} {
+	path := filepath.Join(a.cfg.ListsDir(), "list-general-user.txt")
+	hosts := []string{}
+	if data, err := os.ReadFile(path); err == nil {
+		for _, l := range strings.Split(string(data), "\n") {
+			l = strings.TrimSpace(l)
+			if l != "" && !strings.HasPrefix(l, "#") {
+				hosts = append(hosts, l)
+			}
+		}
+	}
+	return map[string]interface{}{"hosts": hosts, "count": len(hosts)}
+}
+
 func (a *App) SaveList(name string, content string) map[string]interface{} {
 	if name == "" {
 		return errResp("name required")

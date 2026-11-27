@@ -125,6 +125,7 @@ const GET_ROUTES = {
   '/api/dns/current': (app) => app.GetCurrentDns(),
   '/api/socks/status': (app) => app.GetSocksStatus(),
   '/api/mcp/info': (app) => app.GetMcpInfo(),
+  '/api/extension/info': (app) => app.GetExtensionInfo(),
   '/api/system/hvci': (app) => app.GetHvciFix(),
   '/api/zapret/engine': (app) => app.GetZapretEngine(),
   '/api/zapret/expert-settings': (app) => app.GetZapret2Settings(),
@@ -173,6 +174,11 @@ const POST_ROUTES = {
   '/api/mcp/port': (app, b) => app.SetMcpPort(Number(b && b.port) || 0),
   '/api/mcp/regen-key': (app) => app.RegenerateMcpKey(),
   '/api/mcp/open-skill-folder': (app) => app.OpenMcpSkillFolder(),
+  // ── Браузерный плагин: пакет из components\extension\ в Chromium-браузеры ──
+  '/api/extension/install': (app, b) => app.InstallExtension((b && b.ids) || []),
+  '/api/extension/uninstall': (app, b) => app.UninstallExtension((b && b.ids) || []),
+  '/api/extension/open': (app, b) => app.OpenExtensionPage((b && b.id) || ''),
+  '/api/extension/update': (app, b) => app.UpdateExtension(...((b && b.ids) || [])),
   '/api/system/fix-hvci': (app) => app.FixHvci(),
   '/api/zapret/install-engine': (app) => app.InstallZapretEngine(),
   '/api/zapret/restart': (app) => app.ZapretRestart(),
@@ -202,6 +208,13 @@ const POST_ROUTES = {
   '/api/account/devices/kill': (app, b) => app.V4SessionKill(Number(b && b.session_id) || 0),
   '/api/account/devices/unbind': (app, b) => app.V4DeviceUnbind((b && b.device_id) || ''),
   '/api/feedback/send': (app, b) => app.V4FeedbackSend((b && b.topic) || '', (b && b.message) || ''),
+  // Баг-репорт из модалки ошибки: на сервер уходит обычное обращение (тема
+  // bug), но в message — JSON с действием пользователя, кодом/текстом
+  // ошибки, состоянием движка, диагностика́ми и хвостом журнала (собирает
+  // бэкенд, см. app_bugreport.go).
+  '/api/feedback/bug-report': (app, b) => app.BugReportSend(
+    (b && b.code) || '', (b && b.error) || '', (b && b.action) || '', (b && b.comment) || ''
+  ),
   '/api/account/sync/push': (app) => app.DeviceSyncPush(),
   '/api/account/sync/restore': (app, b) => app.DeviceSyncRestore((b && b.device_id) || ''),
   '/api/account/promo/activate': (app, b) => app.V4PromoActivate((b && b.code) || ''),

@@ -10,6 +10,20 @@ import Spinner from '../components/ui/Spinner';
 import { useToast } from '../context/ToastContext';
 import { AlertTriangle, Gauge, RotateCw } from 'lucide-react';
 
+// Чип легенды доступности: точка группы + процент + счётчик ok/total.
+function LegendChip({ panelId, label, dot, pct, ok, total, openPanel }) {
+  return (
+    <button className="avail-chip avail-chip-click" onClick={() => openPanel(panelId, label)}>
+      <span className="avail-chip-dot" style={{ background: dot }} />
+      <span className="avail-chip-label">{label}</span>
+      <span className="avail-chip-val" style={{ color: pct >= 80 ? 'var(--success)' : pct >= 50 ? 'var(--warning)' : 'var(--danger)' }}>
+        {pct >= 0 ? `${pct}%` : '—'}
+      </span>
+      <span className="avail-chip-count mono">{ok}/{total}</span>
+    </button>
+  );
+}
+
 export default function DashboardPage({ status, onNavigate, onOpenCheckerWithUrl }) {
   const showToast = useToast();
   const { t } = useT();
@@ -361,30 +375,9 @@ export default function DashboardPage({ status, onNavigate, onOpenCheckerWithUrl
 
         {/* Legend + current stats — три кликабельные панели */}
         <div className="avail-legend">
-          <button className="avail-chip avail-chip-click" onClick={() => openPanel('standard', t('dashboard.standard'))}>
-            <span className="avail-chip-dot" style={{ background: 'var(--accent)' }} />
-            <span className="avail-chip-label">{t('dashboard.standard')}</span>
-            <span className="avail-chip-val" style={{ color: defPct >= 80 ? 'var(--success)' : defPct >= 50 ? 'var(--warning)' : 'var(--danger)' }}>
-              {defPct >= 0 ? `${defPct}%` : '—'}
-            </span>
-            <span className="avail-chip-count mono">{defOk}/{defRes.length}</span>
-          </button>
-          <button className="avail-chip avail-chip-click" onClick={() => openPanel('key', t('dashboard.keyResources'))}>
-            <span className="avail-chip-dot" style={{ background: 'var(--warning)' }} />
-            <span className="avail-chip-label">{t('dashboard.keyResources')}</span>
-            <span className="avail-chip-val" style={{ color: keyPanel.pct >= 80 ? 'var(--success)' : keyPanel.pct >= 50 ? 'var(--warning)' : 'var(--danger)' }}>
-              {keyPanel.pct >= 0 ? `${keyPanel.pct}%` : '—'}
-            </span>
-            <span className="avail-chip-count mono">{keyPanel.ok}/{keyPanel.total}</span>
-          </button>
-          <button className="avail-chip avail-chip-click" onClick={() => openPanel('user', t('dashboard.custom'))}>
-            <span className="avail-chip-dot" style={{ background: 'var(--success)' }} />
-            <span className="avail-chip-label">{t('dashboard.custom')}</span>
-            <span className="avail-chip-val" style={{ color: userPct >= 80 ? 'var(--success)' : userPct >= 50 ? 'var(--warning)' : 'var(--danger)' }}>
-              {userPct >= 0 ? `${userPct}%` : '—'}
-            </span>
-            <span className="avail-chip-count mono">{userOk}/{userRes.length}</span>
-          </button>
+          <LegendChip panelId="standard" label={t('dashboard.standard')} dot="var(--accent)" pct={defPct} ok={defOk} total={defRes.length} openPanel={openPanel} />
+          <LegendChip panelId="key" label={t('dashboard.keyResources')} dot="var(--warning)" pct={keyPanel.pct} ok={keyPanel.ok} total={keyPanel.total} openPanel={openPanel} />
+          <LegendChip panelId="user" label={t('dashboard.custom')} dot="var(--success)" pct={userPct} ok={userOk} total={userRes.length} openPanel={openPanel} />
         </div>
       </div>
 

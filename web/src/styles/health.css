@@ -314,11 +314,15 @@
   mask-image:linear-gradient(90deg, transparent 0, rgba(0,0,0,0.45) 18px, #000 64px, #000 calc(100% - 64px), rgba(0,0,0,0.45) calc(100% - 18px), transparent 100%);
 }
 .startup-card-slim .startup-pct { font-size:26px; min-width:74px; }
+/* ── Контейнер 1: бар + название этапа — жёсткий слот. Слот статуса всегда
+   в DOM с фиксированной высотой и clip: смена текста (в т.ч. «Почти готово»)
+   не меняет высоту карточки — бар, проценты и заголовок стоят на месте. ── */
+.startup-progress { width:100%; }
 .startup-status {
   position:relative;
   margin-top:28px; width:100%;
   display:flex; align-items:center; justify-content:center;
-  min-height:28px;
+  height:28px; overflow:hidden;
 }
 .startup-status-msg {
   max-width:100%;
@@ -327,9 +331,43 @@
   animation:statusSlideUp 450ms var(--ease-out);
 }
 @keyframes statusSlideUp {
-  from { opacity:0; transform:translateY(70%); }
+  from { opacity:0; transform:translateY(40%); }
   to   { opacity:1; transform:translateY(0); }
 }
+
+/* ── Контейнер 2: подробности (автоподбор) + софт-ошибка. Оба слота всегда
+   в DOM с зарезервированной высотой (2 строки / 1 строка) — появление и
+   исчезновение строк не смещает бар и весь центрированный экран. ── */
+.startup-details { width:100%; }
+.startup-live {
+  margin-top:6px; width:100%;
+  display:flex; align-items:center; justify-content:center; gap:8px;
+  flex-wrap:wrap;
+  min-height:32px;
+  font-size:12px; color:var(--text-tertiary);
+}
+.startup-live > * { white-space:nowrap; }
+.startup-live-strat {
+  max-width:220px; overflow:hidden; text-overflow:ellipsis;
+  font-size:12px; font-weight:600; color:var(--text-secondary);
+}
+.startup-live-count { color:var(--text-tertiary); }
+
+/* ── Неблокирующая ошибка шага под баром: свой зарезервированный слот ── */
+.startup-status-err {
+  margin-top:2px; width:100%;
+  display:flex; align-items:center; justify-content:center; gap:6px;
+  min-height:18px;
+  font-size:12px; color:var(--danger);
+  overflow:hidden; white-space:nowrap;
+}
+.startup-status-err span { overflow:hidden; text-overflow:ellipsis; }
+.startup-status-err svg { flex:none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .startup-status-msg, .startup-live > *, .startup-status-err > * { animation:none; }
+}
+
 .startup-card-slim .startup-skip-btn {
   position:absolute; right:0; top:50%; transform:translateY(-50%);
 }

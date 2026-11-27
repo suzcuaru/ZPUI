@@ -4,9 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
+	"regexp"
 	"strconv"
+	"strings"
 
 	"zpui/internal/executil"
+	"zpui/internal/extension"
 	"zpui/internal/mcpserver"
 )
 
@@ -18,10 +21,11 @@ import (
 
 func (a *App) buildMcpServer() *mcpserver.Server {
 	return mcpserver.New(mcpserver.Options{
-		Version:  a.mcpVersion(),
-		Key:      a.cfg.GetMcpKey,
-		Tools:    a.mcpTools,
-		Dispatch: a.mcpDispatch,
+		Version:     a.mcpVersion(),
+		Key:         a.cfg.GetMcpKey,
+		ExtensionID: extension.ID,
+		Tools:       a.mcpTools,
+		Dispatch:    a.mcpDispatch,
 		Notify: func(level, msg string) {
 			if level == "warn" {
 				a.log.Warn("mcp", msg)
@@ -54,7 +58,9 @@ func (a *App) mcpTools() []mcpserver.Tool {
 		}
 		return m
 	}
-	str := func(desc string) map[string]interface{} { return map[string]interface{}{"type": "string", "description": desc} }
+	str := func(desc string) map[string]interface{} {
+		return map[string]interface{}{"type": "string", "description": desc}
+	}
 	return []mcpserver.Tool{
 		{Name: "get_status", Description: "Полный статус ZPUI: движок обхода (zapret), SOCKS-прокси, DNS, канал данных.", InputSchema: obj(nil)},
 		{Name: "engine_start", Description: "Запустить движок обхода блокировок.", InputSchema: obj(nil)},
@@ -79,6 +85,30 @@ func (a *App) mcpTools() []mcpserver.Tool {
 		{Name: "get_logs", Description: "Хвост журнала событий программы.", InputSchema: obj(map[string]interface{}{
 			"lines": map[string]interface{}{"type": "integer", "description": "сколько строк (по умолчанию 50, максимум 500)"},
 		})},
+		{Name: "add_user_hosts", Description: "Добавить хосты в пользовательский список обхода (list-general-user.txt). Движок перечитывает список автоматически — рестарт не нужен.", InputSchema: obj(map[string]interface{}{
+			"hosts": map[string]interface{}{"type": "array", "items": map[string]interface{}{"type": "string"}, "description": "хосты для добавления"},
+		}, "hosts")},
+		{Name: "get_user_list", Description: "Текущий пользовательский список обхода (list-general-user.txt).", InputSchema: obj(nil)},
+		{Name: "get_socks_status", Description: "Статус SOCKS5-прокси: включён, запущен, порт.", InputSchema: obj(nil)},
+		{Name: "tgproxy_status", Description: "Статус и настройки прокси для Telegram (MTProto): запущен, порт, ссылка подключения.", InputSchema: obj(nil)},
+		{Name: "tgproxy_start", Description: "Запустить прокси для Telegram.", InputSchema: obj(nil)},
+		{Name: "tgproxy_stop", Description: "Остановить прокси для Telegram.", InputSchema: obj(nil)},
+		{Name: "tgproxy_set", Description: "Настройки прокси для Telegram: порт, автозапуск, домен маскировки.", InputSchema: obj(map[string]interface{}{
+			"port":            map[string]interface{}{"type": "integer", "description": "порт"},
+			"auto_start":      map[string]interface{}{"type": "boolean", "description": "запускать вместе с программой"},
+			"fake_tls_domain": str("домен маскировки (Fake TLS)"),
+		})},
+		{Name: "get_dns_config", Description: "Настройки замены DNS: включена ли, серверы и режим.", InputSchema: obj(nil)},
+		{Name: "remove_user_hosts", Description: "Убрать хосты из пользовательского списка обхода.", InputSchema: obj(map[string]interface{}{
+			"hosts": map[string]interface{}{"type": "array", "items": map[string]interface{}{"type": "string"}},
+		}, "hosts")},
+		{Name: "get_extension_info", Description: "Состояние браузерного плагина ZPUI: локальная и свежая версии, обновление, браузеры.", InputSchema: obj(nil)},
+		{Name: "update_extension", Description: "Обновить браузерный плагин до выпуска на сервере и перерегистрировать в браузерах (ids — выбранные браузеры, пусто — где стоит). Прогресс — в приложении; после нужно перезапустить браузер.", InputSchema: obj(map[string]interface{}{
+			"ids": map[string]interface{}{"type": "array", "items": map[string]interface{}{"type": "string"}},
+		})},
+		{Name: "check_resource", Description: "Проверка доступности URL с диагностикой блокировки (TCP/TLS/HTTP, тип блокировки, наличие в пользовательском списке).", InputSchema: obj(map[string]interface{}{
+			"url": str("URL, например https://youtube.com"),
+		}, "url")},
 	}
 }
 
@@ -143,8 +173,107 @@ func (a *App) mcpDispatch(name string, args map[string]interface{}) (interface{}
 			lines = int(v)
 		}
 		return a.GetAllLogs("", lines, 0), nil
+	case "add_user_hosts":
+		hosts, ok := args["hosts"].([]interface{})
+		if !ok || len(hosts) == 0 {
+			return nil, fmt.Errorf("аргумент hosts обязателен (непустой массив)")
+		}
+		for _, h := range hosts {
+			s, isStr := h.(string)
+			if !isStr || !validMcpHost(s) {
+				return nil, fmt.Errorf("некорректный хост: %v", h)
+			}
+		}
+		return a.AddHostsToUserList(hosts), nil
+	case "get_user_list":
+		return a.getUserList(), nil
+	case "get_socks_status":
+		return a.GetSocksStatus(), nil
+	case "check_resource":
+		u, _ := args["url"].(string)
+		if u == "" {
+			return nil, fmt.Errorf("аргумент url обязателен")
+		}
+		return a.CheckResource(u), nil
+	case "tgproxy_status":
+		st := a.GetTgProxyStatus()
+		if c, ok := a.GetTgProxyConfig().(map[string]interface{}); ok {
+			for _, k := range []string{"port", "auto_start", "fake_tls_domain"} {
+				if v, ok := c[k]; ok {
+					st[k] = v
+				}
+			}
+		}
+		return st, nil
+	case "tgproxy_start":
+		return a.TgProxyStart(), nil
+	case "tgproxy_stop":
+		return a.TgProxyStop(), nil
+	case "tgproxy_set":
+		opts := map[string]interface{}{}
+		if v, ok := args["port"].(float64); ok && v >= 1024 && v <= 65535 {
+			opts["port"] = v
+		}
+		if v, ok := args["auto_start"].(bool); ok {
+			opts["auto_start"] = v
+		}
+		if v, ok := args["fake_tls_domain"].(string); ok && v != "" {
+			opts["fake_tls_domain"] = v
+		}
+		if len(opts) == 0 {
+			return nil, fmt.Errorf("нет настроек: port | auto_start | fake_tls_domain")
+		}
+		return a.SetTgProxyConfig(opts), nil
+	case "get_dns_config":
+		return a.GetDnsConfig(), nil
+	case "remove_user_hosts":
+		hosts, ok := args["hosts"].([]interface{})
+		if !ok || len(hosts) == 0 {
+			return nil, fmt.Errorf("аргумент hosts обязателен (непустой массив)")
+		}
+		gone := map[string]bool{}
+		for _, h := range hosts {
+			if s, isStr := h.(string); isStr && validMcpHost(s) {
+				gone[strings.TrimSpace(s)] = true
+			}
+		}
+		if len(gone) == 0 {
+			return nil, fmt.Errorf("нет корректных хостов")
+		}
+		cur := a.getUserList()
+		keep := []string{}
+		removed := 0
+		for _, h := range cur["hosts"].([]string) {
+			if gone[h] {
+				removed++
+				continue
+			}
+			keep = append(keep, h)
+		}
+		if res := a.SaveList("list-general-user.txt", strings.Join(keep, "\n")+"\n"); isErrorResp(res) {
+			return res, nil
+		}
+		a.log.Info("lists", fmt.Sprintf("user list: removed %d hosts from plugin", removed))
+		return map[string]interface{}{"removed": removed, "count": len(keep), "hosts": keep}, nil
+	case "get_extension_info":
+		return a.GetExtensionInfo(), nil
+	case "update_extension":
+		ids := []interface{}{}
+		if v, ok := args["ids"].([]interface{}); ok {
+			ids = v
+		}
+		return a.UpdateExtension(ids), nil
 	}
 	return nil, fmt.Errorf("неизвестный инструмент: %s", name)
+}
+
+// validMcpHost — базовая проверка хоста для add_user_hosts: буквы/цифры,
+// точки, дефисы, префикс «^» (синтаксис zapret: хост без сабдоменов).
+var mcpHostRe = regexp.MustCompile(`^[A-Za-z0-9._^-]+$`)
+
+func validMcpHost(s string) bool {
+	s = strings.TrimSpace(s)
+	return s != "" && len(s) <= 253 && mcpHostRe.MatchString(s)
 }
 
 // ---------- биндинги модалки ----------
@@ -210,7 +339,7 @@ func (a *App) OpenMcpSkillFolder() map[string]interface{} {
 		a.log.Warn("mcp", "skill materialize: "+err.Error())
 		return errResp(err.Error())
 	}
-	if err := executil.HiddenCmd("explorer.exe", "/select,\""+path+"\"").Start(); err != nil {
+	if err := executil.HiddenCmd("explorer.exe", "/select,", path).Start(); err != nil {
 		return errResp(err.Error())
 	}
 	return okRespWithData(map[string]interface{}{"path": path})
@@ -289,7 +418,7 @@ func (a *App) mcpStart() error {
 	}
 	if try != port {
 		_ = a.cfg.SetMcpPort(try)
-		a.log.Info("mcp", "port " + strconv.Itoa(port) + " busy, moved to " + strconv.Itoa(try))
+		a.log.Info("mcp", "port "+strconv.Itoa(port)+" busy, moved to "+strconv.Itoa(try))
 	}
 	return nil
 }
@@ -299,8 +428,17 @@ func (a *App) startMcp() {
 	if _, err := mcpserver.MaterializeSkill(a.exeDir); err != nil {
 		a.log.Warn("mcp", "skill materialize: "+err.Error())
 	}
-	if !a.cfg.GetMcpConfig().Enabled {
+	if a.cfg.GetMcpConfig().Enabled {
+		_ = a.mcpStart()
 		return
 	}
-	_ = a.mcpStart()
+	// Сервер выключен, а браузерный плагин стоит: он управляется только через
+	// этот сервер. Запускаем его на сеанс (тумблер не трогаем — агентам с
+	// ключом он по-прежнему «выключен»), чтобы плагин связывался сам.
+	for _, b := range extension.List(a.exeDir) {
+		if b.HasExtension {
+			_ = a.mcpStart()
+			return
+		}
+	}
 }
