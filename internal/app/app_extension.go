@@ -188,6 +188,37 @@ func (a *App) InstallExtension(ids []interface{}) map[string]interface{} {
 	return okRespWithData(map[string]interface{}{"browsers": extBrowserNames(list)})
 }
 
+// autoInstallExtension — стартовая саморегистрация плагина: пакет идёт в
+// дистрибутиве (components\extension), поэтому после установки/обновления
+// программы регистрируем его во всех найденных Chromium-браузерах сами.
+// Где запись уже есть — не трогаем; неудача не мешает остальным.
+func (a *App) autoInstallExtension() {
+	path, ver, _ := extension.Local(a.exeDir)
+	if path == "" {
+		return
+	}
+	browsers := extension.List(a.exeDir)
+	targets := []string{}
+	for _, b := range browsers {
+		if b.Found && !b.HasExtension {
+			targets = append(targets, b.ID)
+		}
+	}
+	if len(targets) == 0 {
+		return
+	}
+	if fails := extension.InstallPath(path, ver, targets); len(fails) > 0 {
+		msgs := make([]string, 0, len(fails))
+		for id, msg := range fails {
+			msgs = append(msgs, id+": "+msg)
+		}
+		a.log.Warn("extension", "auto install: "+strings.Join(msgs, "; "))
+		return
+	}
+	a.log.Info("extension", "auto-installed to: "+strings.Join(targets, ", "))
+	a.ensureExtLink()
+}
+
 // ensureExtLink — плагин управляется через локальный MCP-сервер приложения:
 // при установке включаем его, чтобы связь сработала сама, без ключа руками.
 func (a *App) ensureExtLink() {

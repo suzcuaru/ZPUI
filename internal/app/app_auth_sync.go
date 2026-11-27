@@ -380,8 +380,13 @@ func (a *App) V4RegisterStart(nick, email, password, keyword string) map[string]
 	}
 	out := okRespWithData(map[string]interface{}{})
 	if data != nil {
-		if v, ok := data["reg_token"].(string); ok {
+		if v, ok := data["reg_token"].(string); ok && v != "" {
 			out["reg_token"] = v
+		} else if reg, ok := data["reg"].(map[string]any); ok {
+			// Фолбэк: старые сборки сервера кладут токен заявки в reg.token.
+			if v, ok := reg["token"].(string); ok && v != "" {
+				out["reg_token"] = v
+			}
 		}
 		if t, ok := data["totp"].(map[string]any); ok {
 			out["totp_secret"], _ = t["secret"].(string)

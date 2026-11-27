@@ -29,11 +29,9 @@ import (
 	"zpui/internal/zsvc"
 )
 
-
 // BuildNum — номер сборки (ldflags -X zpui/internal/app.BuildNum из
 // build.bat, счётчик build\buildnumber.txt). Пусто — собрано без build.bat.
 var BuildNum string
-
 
 // App — главный контекст Wails-приложения.
 // Все экспортируемые методы автоматически привязываются к frontend через Wails bindings.
@@ -53,7 +51,6 @@ type App struct {
 
 	// Канал готовности контекста (для tray, который ждёт пока Wails запустится)
 	ctxReady chan struct{}
-
 
 	// opGen — поколение операций с движком: деструктивные действия (стоп,
 	// удаление службы, полная перестановка) инкрементируют счётчик, и любые
@@ -180,7 +177,6 @@ type App struct {
 	// dnsFailStreak — подряд идущие неудачные циклы здоровья DNS-провайдеров
 	// (2 подряд — авто-выключение DNS); атомарно: циклы могут перекрываться.
 	dnsFailStreak atomic.Int32
-
 
 	// nxStreak — подряд идущие NXDOMAIN-сэмплы на хост; после 3 подряд хост
 	// авто-исключается из проверок как мёртвый (см. trackNXDomains).
@@ -317,20 +313,20 @@ func (a *App) Startup(ctx context.Context) {
 	a.setCtx(ctx)
 	a.log.Info("app", "Wails application started")
 
-		sl, _ := NewStartupLogger(a.cfg.LogsDir())
-		if sl != nil {
-			sl.Write("BOOT", "Wails application started")
-			sl.Writef("BOOT", "Version: %s", a.version)
-			if BuildNum != "" {
-				sl.Writef("BOOT", "Build: #%s", BuildNum)
-			}
-			sl.Writef("BOOT", "ExeDir: %s", a.exeDir)
-			sl.Write("BOOT", "Загрузка конфигурации...")
-		}
-		a.startupLog = sl
+	sl, _ := NewStartupLogger(a.cfg.LogsDir())
+	if sl != nil {
+		sl.Write("BOOT", "Wails application started")
+		sl.Writef("BOOT", "Version: %s", a.version)
 		if BuildNum != "" {
-			a.log.Info("app", "Build: #"+BuildNum)
+			sl.Writef("BOOT", "Build: #%s", BuildNum)
 		}
+		sl.Writef("BOOT", "ExeDir: %s", a.exeDir)
+		sl.Write("BOOT", "Загрузка конфигурации...")
+	}
+	a.startupLog = sl
+	if BuildNum != "" {
+		a.log.Info("app", "Build: #"+BuildNum)
+	}
 
 	// Синхронизируем флаг видимости окна с реальным стартовым состоянием
 	a.windowMu.Lock()
@@ -471,6 +467,10 @@ func (a *App) Startup(ctx context.Context) {
 	// MCP-сервер управления ИИ-агентами: стартует только если включён
 	// тумблером в модалке «MCP» (config.mcp.enabled).
 	a.supervisedGo("mcp", a.startMcp)
+	// Браузерный плагин идёт в дистрибутиве (components\extension): на
+	// старте регистрируем его в найденных Chromium-браузерах сами —
+	// после установки программы плагин «уже есть», без ручной установки.
+	a.safeGo(a.autoInstallExtension)
 	a.supervisedGo("server-ping", a.startServerPingLoop)
 	// График «Трафик»: скорости копятся в бэкенде с самого старта — при
 	// открытии монитора график уже с историей, а не с нуля.
